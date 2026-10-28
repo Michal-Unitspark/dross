@@ -22,11 +22,12 @@ import (
 type OpenOpts struct {
 	Provider   string // one of configenum.ShipProviders
 	URL        string // canonical https URL of the repo
-	APIBase    string // forgejo/gitea/gitlab/bitbucket: base of the REST API; ignored for github
-	AuthEnv    string // env var name holding the token; only used for forgejo/gitea/gitlab/bitbucket
+	APIBase    string // forgejo/gitea/gitlab/bitbucket/azure-devops: base of the REST API; ignored for github
+	AuthEnv    string // env var name holding the token; only used for forgejo/gitea/gitlab/bitbucket/azure-devops
 	AuthUser   string // bitbucket: account user for HTTP Basic auth (user:token)
-	AuthScheme string // gitlab: "private-token" (default) | "bearer"
+	AuthScheme string // gitlab: "private-token" (default) | "bearer"; azure-devops: "bearer" or Basic :PAT
 	ProjectID  string // gitlab: numeric project-id override; empty = derive from URL
+	APIVersion string // azure-devops: api-version sent on every call; empty = 7.1
 	HeadBranch string // e.g. "pr/01-x"
 	BaseBranch string // e.g. "main"
 	Title      string

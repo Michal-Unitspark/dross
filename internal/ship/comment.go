@@ -17,11 +17,12 @@ import (
 type CommentOpts struct {
 	Provider   string // one of configenum.ShipProviders
 	URL        string // canonical https URL of the repo
-	APIBase    string // forgejo/gitea/gitlab/bitbucket: REST API base; ignored for github
-	AuthEnv    string // env var holding the token; only forgejo/gitea/gitlab/bitbucket
+	APIBase    string // forgejo/gitea/gitlab/bitbucket/azure-devops: REST API base; ignored for github
+	AuthEnv    string // env var holding the token; only forgejo/gitea/gitlab/bitbucket/azure-devops
 	AuthUser   string // bitbucket: account user for HTTP Basic auth (user:token)
-	AuthScheme string // gitlab: "private-token" (default) | "bearer"
+	AuthScheme string // gitlab: "private-token" (default) | "bearer"; azure-devops: "bearer" or Basic :PAT
 	ProjectID  string // gitlab: numeric project-id override; empty = derive from URL
+	APIVersion string // azure-devops: api-version sent on every call; empty = 7.1
 	PRNumber   int    // PR / MR / issue number to comment on (gitlab: MR iid)
 	Body       string // comment body, markdown
 

@@ -126,6 +126,17 @@ func TestBackendErrorsRedacted(t *testing.T) {
 				PRNumber: 3, Body: "panel findings",
 			})
 		}},
+		{"azure-devops adoRequest", func(t *testing.T, apiBase string) error {
+			c, err := adoOpenConn(OpenOpts{
+				URL: "https://dev.azure.com/o/p/_git/r", APIBase: apiBase,
+				AuthEnv: shipCanaryEnv, Hosts: hostallow.Derive(apiBase, nil),
+			})
+			if err != nil {
+				t.Fatalf("connect: %v", err)
+			}
+			_, _, err = adoRequest(c, "GET", c.repoAPI()+"/pullRequests/3", nil)
+			return err
+		}},
 		{"forgejo comment", func(t *testing.T, apiBase string) error {
 			return PostComment(CommentOpts{
 				Provider: "forgejo", URL: "https://forge.example/me/p", APIBase: apiBase,
@@ -171,10 +182,11 @@ var shipBodyIdents = map[string]bool{"respBody": true, "rb": true, "body": true,
 // Each reads the body and scrubs it before returning, so every downstream
 // interpolation is safe by construction.
 var scrubbingHelpers = map[string]bool{
-	"jsonGet":   true,
-	"jsonPost":  true,
-	"bbRequest": true,
-	"gitlabReq": true,
+	"jsonGet":    true,
+	"jsonPost":   true,
+	"bbRequest":  true,
+	"gitlabReq":  true,
+	"adoRequest": true,
 }
 
 // TestEveryShipBodyInterpolationRedacts enumerates rather than samples.
