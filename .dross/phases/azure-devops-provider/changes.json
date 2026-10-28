@@ -2,5 +2,812 @@
   "phase": "azure-devops-remote",
   "base": "milestone/v1.8",
   "base_commit": "a7cda9b45a234b206a465b0c215297494b0264b9",
-  "tasks": {}
+  "tasks": {
+    "t-1": {
+      "files": [
+        "internal/project/azuredevops.go",
+        "internal/project/azuredevops_test.go",
+        "internal/project/remote.go",
+        "internal/project/remote_test.go",
+        "README.md"
+      ],
+      "commit": "223244d",
+      "completed_at": "2026-10-28T11:02:31.890152547Z",
+      "landmarks": [
+        {
+          "feature": "Azure DevOps remote identity",
+          "symbol": "ParseAzureDevOpsRemote",
+          "loc": "internal/project/azuredevops.go:48",
+          "what": "splits every Services/Server ADO remote form around _git into canonical https url, org/collection api_base, base, decoded project and repo"
+        }
+      ]
+    },
+    "t-10": {
+      "files": [
+        "internal/cmd/ship_test.go",
+        "internal/ship/hostguard_test.go"
+      ],
+      "commit": "8da931e",
+      "completed_at": "2026-10-28T12:46:29.379799176Z",
+      "landmarks": [
+        {
+          "feature": "Azure DevOps ship end to end",
+          "symbol": "TestShipAzureDevOpsFullFlow",
+          "loc": "internal/cmd/ship_test.go:2321",
+          "what": "cmd-level ship against a mock Server collection configured via project set (lookup, create, dedupe, refusal, reviewer warning, comment thread) plus ADO rows in the hostguard refuse/allow tables"
+        }
+      ]
+    },
+    "t-11": {
+      "files": [
+        "assets/prompts/init.md",
+        "assets/prompts/onboard.md",
+        "internal/cmd/prompt_provider_list_test.go"
+      ],
+      "commit": "0dabb8e",
+      "completed_at": "2026-10-28T12:58:36.98103591Z",
+      "landmarks": [
+        {
+          "feature": "init/onboard Azure DevOps guidance",
+          "symbol": "TestPromptsTeachAzureDevOps",
+          "loc": "internal/cmd/prompt_provider_list_test.go:98",
+          "what": "prompts teach ADO url shapes, org/collection api_base, public=false, auth_env AZURE_DEVOPS_EXT_PAT, Server api_version values and keeping a Server [remote].url in https form; pinned per bullet"
+        }
+      ]
+    },
+    "t-12": {
+      "files": [
+        "assets/prompts/options.md",
+        "internal/cmd/options_docs_test.go"
+      ],
+      "commit": "b31e63a",
+      "completed_at": "2026-10-28T11:33:30.72580887Z",
+      "landmarks": [
+        {
+          "feature": "options walkthrough",
+          "symbol": "remote.api_version bullet",
+          "loc": "assets/prompts/options.md:73",
+          "what": "documents azure-devops auth (Basic :PAT, bearer for Entra, private-token/basic ineffective, auth_user ignored), api_version default 7.1 and Server caps, http-only TFS refused"
+        }
+      ]
+    },
+    "t-13": {
+      "files": [
+        "internal/defaults/defaults.go",
+        "internal/defaults/defaults_test.go",
+        "internal/cmd/init_test.go"
+      ],
+      "commit": "01f188b",
+      "completed_at": "2026-10-28T13:03:38.381604939Z",
+      "landmarks": [
+        {
+          "feature": "foreign-provider default credentials",
+          "symbol": "Defaults.Apply",
+          "loc": "internal/defaults/defaults.go:68",
+          "what": "auth_env and reviewers saved for one provider are not seeded onto a remote detected as another (a GITHUB_TOKEN never rides onto an ADO repo); init-level proofs for ADO autodetect and origin PAT stripping"
+        }
+      ]
+    },
+    "t-2": {
+      "files": [
+        "internal/secretscan/rules.go",
+        "internal/secretscan/secretscan_test.go",
+        "internal/hostallow/hostallow.go",
+        "internal/hostallow/hostallow_test.go"
+      ],
+      "commit": "184e29b",
+      "completed_at": "2026-10-28T11:09:21.805816353Z",
+      "landmarks": [
+        {
+          "feature": "secret detection",
+          "symbol": "rules[azure-devops-pat]",
+          "loc": "internal/secretscan/rules.go:71",
+          "what": "flags new-format 84-char Azure DevOps PATs by the AZDO signature at 76-79; hostallow knows dev.azure.com, vssps.dev.azure.com and *.visualstudio.com"
+        }
+      ]
+    },
+    "t-3": {
+      "files": [
+        "internal/ship/azuredevops.go",
+        "internal/ship/azuredevops_test.go",
+        "internal/ship/open.go",
+        "internal/ship/comment.go",
+        "internal/secretscan/sinks.go",
+        "internal/ship/redact_test.go",
+        "internal/secretscan/sinks_test.go"
+      ],
+      "commit": "f58debd",
+      "completed_at": "2026-10-28T11:25:15.739526269Z",
+      "landmarks": [
+        {
+          "feature": "Azure DevOps ship transport",
+          "symbol": "adoRequest",
+          "loc": "internal/ship/azuredevops.go:135",
+          "what": "single ADO HTTP entry: host check before token read, payload screen, one Basic :PAT or Bearer header, validated api-version (default 7.1), no redirects, sign-in pages as auth errors, scrubbed bodies"
+        }
+      ]
+    },
+    "t-4": {
+      "files": [
+        "internal/ship/azuredevops_open.go",
+        "internal/ship/azuredevops_open_test.go"
+      ],
+      "commit": "12dc6dc",
+      "completed_at": "2026-10-28T11:45:32.130725741Z",
+      "landmarks": [
+        {
+          "feature": "Azure DevOps PR open",
+          "symbol": "openAzureDevOpsPR",
+          "loc": "internal/ship/azuredevops_open.go:36",
+          "what": "creates an Azure Repos PR (refs/heads/ refs, isDraft, 4000-unit description cap) returning the browser URL, then adds each reviewer as optional via GUID or Identities lookup, non-fatally"
+        }
+      ]
+    },
+    "t-5": {
+      "files": [
+        "internal/ship/azuredevops_comment.go",
+        "internal/ship/azuredevops_comment_test.go"
+      ],
+      "commit": "787f49a",
+      "completed_at": "2026-10-28T11:49:40.450744078Z",
+      "landmarks": [
+        {
+          "feature": "Azure DevOps PR comment",
+          "symbol": "postAzureDevOpsComment",
+          "loc": "internal/ship/azuredevops_comment.go:19",
+          "what": "posts the body as a new statusless thread (one root text comment) so it never gates the merge; adoThreadStatus is the one-line closed fallback"
+        }
+      ]
+    },
+    "t-6": {
+      "files": [
+        "internal/ship/azuredevops_pr.go",
+        "internal/ship/azuredevops_pr_test.go",
+        "internal/ship/headpr.go",
+        "internal/ship/headpr_test.go"
+      ],
+      "commit": "4737537",
+      "completed_at": "2026-10-28T12:00:20.031152129Z",
+      "landmarks": [
+        {
+          "feature": "Azure DevOps PR status and dedupe",
+          "symbol": "adoOpenPRBySource",
+          "loc": "internal/ship/azuredevops_pr.go:60",
+          "what": "finds the active PR by full source ref with client-side source/status/fork re-checks (failures never read as none); azureDevOpsPRStatus reports merged only on completed and the target branch minus refs/heads/"
+        }
+      ]
+    },
+    "t-7": {
+      "files": [
+        "internal/project/project.go",
+        "internal/project/project_test.go",
+        "internal/cmd/testdata/pathfence_scan/not_paths.txt",
+        "internal/cmd/project.go",
+        "internal/cmd/project_test.go",
+        "internal/cmd/ship.go",
+        "internal/cmd/ship_test.go",
+        "ARCHITECTURE.md"
+      ],
+      "commit": "9508c52",
+      "completed_at": "2026-10-28T12:12:24.794769767Z",
+      "landmarks": [
+        {
+          "feature": "remote.api_version",
+          "symbol": "APIVersion.UnmarshalTOML",
+          "loc": "internal/project/project.go:258",
+          "what": "[remote].api_version decodes from a string or a bare TOML number (6.0 -\u003e \"6.0\") and buildOpenOpts/buildCommentOpts carry it to the Azure DevOps transport"
+        }
+      ]
+    },
+    "t-8": {
+      "files": [
+        "internal/configenum/configenum.go",
+        "internal/configenum/configenum_test.go",
+        "internal/project/remote.go",
+        "internal/project/remote_test.go",
+        "internal/ship/open.go",
+        "internal/ship/comment.go",
+        "internal/ship/merged.go",
+        "internal/ship/azuredevops_dispatch_test.go",
+        "assets/prompts/init.md",
+        "assets/prompts/onboard.md"
+      ],
+      "commit": "b076159",
+      "completed_at": "2026-10-28T12:26:38.097082906Z",
+      "landmarks": [
+        {
+          "feature": "Azure DevOps recognition and dispatch",
+          "symbol": "DetectRemote",
+          "loc": "internal/project/remote.go:37",
+          "what": "azure-devops joins ShipProviders/KnownHostProviders; Services remotes (incl. \u003corg\u003e.visualstudio.com) autodetect with the canonical url, org api_base and public=false, Server _git remotes get the url only; OpenPR/PostComment/GetPRStatus route to the ADO backends"
+        }
+      ]
+    },
+    "t-9": {
+      "files": [
+        "internal/cmd/doctor.go",
+        "internal/cmd/doctor_test.go",
+        "internal/diag/combinations.go",
+        "internal/diag/diag_test.go"
+      ],
+      "commit": "ed1b002",
+      "completed_at": "2026-10-28T12:39:32.843073764Z",
+      "landmarks": [
+        {
+          "feature": "doctor Azure DevOps remotes",
+          "symbol": "sameRemoteURL",
+          "loc": "internal/cmd/doctor.go:1051",
+          "what": "compares ADO remotes by canonical url (ssh v3/user@/case/Server port spellings match); origin lines strip userinfo; RemoteCombination warns on no-op auth_scheme/auth_user and a Server api_base off the url's collection"
+        }
+      ]
+    }
+  },
+  "reviews": {
+    "t-1": {
+      "outcome": "pass",
+      "rounds": 1,
+      "findings": [
+        {
+          "round": 1,
+          "kind": "quality",
+          "severity": "FLAG",
+          "criterion": "c-2",
+          "text": "Short remote forms where the repo shares the project's name come out wrong under the lock's segment rule: https://tfs.corp/tfs/DefaultCollection/_git/R gives base 'tfs' and project 'DefaultCollection', and https://o.visualstudio.com/DefaultCollection/_git/r gives project 'DefaultCollection'. Both are real older TFS/VSTS clone URLs. The code matches the repo_identity lock, so this does not block, but the lock may need a /tfs or DefaultCollection special case or a documented limitation.",
+          "resolution": "non-blocking, left"
+        },
+        {
+          "round": 1,
+          "kind": "quality",
+          "severity": "FLAG",
+          "text": "README.md (milestone v1.8 status changed from 'planning' to 'active') is in the diff but not in the task's file list. It looks like dross's own bookkeeping, not part of t-1.",
+          "resolution": "non-blocking, left"
+        },
+        {
+          "round": 1,
+          "kind": "quality",
+          "severity": "NOTE",
+          "text": "ParseAzureDevOpsRemote always writes https:// and keeps any non-ssh port, so a plain-http Server remote such as http://tfs.corp:8080/tfs/DefaultCollection/P/_git/R becomes https://tfs.corp:8080/... The c-2 criterion only covers https remotes, so this is outside the claimed scope.",
+          "resolution": "non-blocking, left"
+        }
+      ]
+    },
+    "t-10": {
+      "outcome": "pass",
+      "rounds": 1,
+      "findings": [
+        {
+          "round": 1,
+          "kind": "quality",
+          "severity": "NOTE",
+          "text": "The 'azure-devops identity lookup' guard row only tests a Server-shaped api_base, where the identities base equals api_base. It proves hosts.Check runs before the request, but not the Services case its own comment describes (identities on vssps.dev.azure.com).",
+          "resolution": "non-blocking, left"
+        },
+        {
+          "round": 1,
+          "kind": "quality",
+          "severity": "NOTE",
+          "criterion": "c-4",
+          "text": "The host-guard rows catch a request reaching the fake host, not the moment the token is read. Token-read ordering is still covered by the existing TestHostguardChecksBeforeReadingEnv and TestNoGetenvOutsideHostguard.",
+          "resolution": "non-blocking, left"
+        }
+      ]
+    },
+    "t-11": {
+      "outcome": "pass",
+      "rounds": 3,
+      "findings": [
+        {
+          "round": 1,
+          "kind": "quality",
+          "severity": "FLAG",
+          "criterion": "c-1",
+          "text": "In init.md the dev.azure.com and visualstudio.com substring checks of TestPromptsTeachAzureDevOps were already satisfied by the pre-existing provider bullet, so removing the new URL/api_base/api_version prose from init.md would not fail the test; only remote.api_version, the auth_env bullet and the Server line actually pin init.md's new content.",
+          "resolution": "non-blocking, left"
+        },
+        {
+          "round": 1,
+          "kind": "quality",
+          "severity": "FLAG",
+          "criterion": "c-1",
+          "text": "Described defaults public = false for azure-devops, api_base = the org URL, and the Server api_version values (2019 5.0 / 2020 6.0 / 2022 7.0) are present in both prompts but no test pins them; they can drift silently (not claimed by the test_contract, so not a spec gap).",
+          "resolution": "non-blocking, left"
+        },
+        {
+          "round": 1,
+          "kind": "quality",
+          "severity": "NOTE",
+          "text": "The r-01 'make install' step named in the description is a runtime action and cannot be verified from the diff.",
+          "resolution": "non-blocking, left"
+        },
+        {
+          "round": 1,
+          "kind": "quality",
+          "severity": "NOTE",
+          "text": "TestPromptsTeachAzureDevOps ranges over a map whose two values are the identical label '- **auth_env** —'; a plain file slice would read more directly.",
+          "resolution": "non-blocking, left"
+        },
+        {
+          "round": 2,
+          "kind": "quality",
+          "severity": "FLAG",
+          "text": "TestPromptsTeachAzureDevOps only checks that the public bullet contains 'azure-devops', not that the default is 'no'. If the prose drifted to 'Default yes ... for azure-devops', the locked public = false default would no longer be guarded and the test would still pass.",
+          "resolution": "non-blocking, left"
+        },
+        {
+          "round": 2,
+          "kind": "quality",
+          "severity": "NOTE",
+          "text": "The api_version check looks for 5.0, 6.0 and 7.0 anywhere in the bullet but does not tie them to 2019, 2020 and 2022. Swapping the pairs would still pass.",
+          "resolution": "non-blocking, left"
+        },
+        {
+          "round": 2,
+          "kind": "quality",
+          "severity": "NOTE",
+          "text": "The onboard Server paragraph says onboard 'leaves provider empty', but seedRemote layers the global defaults.toml over the detected remote, so a saved default provider can pre-fill it. The surrounding prose already mentions this overlay.",
+          "resolution": "non-blocking, left"
+        },
+        {
+          "round": 2,
+          "kind": "quality",
+          "severity": "NOTE",
+          "text": "r-01 (make install after prompt edits) is a process step and cannot be checked from the diff.",
+          "resolution": "non-blocking, left"
+        },
+        {
+          "round": 3,
+          "kind": "quality",
+          "severity": "FLAG",
+          "criterion": "c-1",
+          "text": "The host mapping the description names (dev.azure.com / \u003corg\u003e.visualstudio.com -\u003e azure-devops) is only on init.md's Provider bullet, and it was there before this diff. TestPromptsTeachAzureDevOps never checks that bullet: it finds dev.azure.com and visualstudio.com on the url and api_base bullets instead, so the mapping clause could be deleted with the test still green. onboard.md's provider bullet has no host mapping at all.",
+          "resolution": "non-blocking, left"
+        },
+        {
+          "round": 3,
+          "kind": "quality",
+          "severity": "NOTE",
+          "text": "The Server api_base and url examples hard-code the /tfs/ virtual directory (https://\u003chost\u003e/tfs/\u003cCollection\u003e), and the test requires it. Fresh Azure DevOps Server 2019+ installs serve collections at https://\u003chost\u003e/\u003cCollection\u003e with no /tfs. The prose does say 'the collection URL' first, so this is only an example a user might copy too literally.",
+          "resolution": "non-blocking, left"
+        },
+        {
+          "round": 3,
+          "kind": "quality",
+          "severity": "NOTE",
+          "text": "`dross defaults save` still extracts only provider/api_base/log_api/auth_env/reviewers, so a Server's api_version is never saved as a default. The prompts do not claim it is, so this is consistent, just worth knowing.",
+          "resolution": "non-blocking, left"
+        }
+      ]
+    },
+    "t-12": {
+      "outcome": "pass",
+      "rounds": 2,
+      "findings": [
+        {
+          "round": 1,
+          "kind": "quality",
+          "severity": "FLAG",
+          "criterion": "c-1",
+          "text": "The \"`bearer`\" check in TestOptionsCoversTheProviderConditionalRemoteFields passes on the auth_scheme line's existing generic list (`private-token` (default) · `bearer` · `basic`), so it does not pin the azure-devops bearer/Entra guidance. Dropping that sentence would not fail the test. Check only the text after 'On azure-devops', or look for 'Entra'.",
+          "resolution": "non-blocking, left"
+        },
+        {
+          "round": 1,
+          "kind": "quality",
+          "severity": "FLAG",
+          "text": "options.md lists remote.api_version as an editable field and the walk-through runs `dross project set` on Change, but the project schema has no such field and writeDotted/readDotted in internal/cmd/project.go have no remote.api_version case. Until a sibling task adds it, the prompt points at a set command that fails.",
+          "resolution": "non-blocking, left"
+        },
+        {
+          "round": 1,
+          "kind": "quality",
+          "severity": "FLAG",
+          "text": "options.md says `dross doctor` flags private-token/basic on azure-devops and a set auth_user, but diag.RemoteCombination has no azure-devops branch. It does not flag private-token or a set auth_user, and for basic it shows the generic 'auth_user is not set ... will 401' warning, which is misleading here. The doc is ahead of the code at this commit.",
+          "resolution": "non-blocking, left"
+        },
+        {
+          "round": 1,
+          "kind": "quality",
+          "severity": "NOTE",
+          "text": "The doc's TFS claim is accurate: hostallow.Check refuses non-https for any non-loopback host whatever is in allow_hosts, so 'allow_hosts widens the set of hosts, never the scheme' matches the code.",
+          "resolution": "non-blocking, left"
+        },
+        {
+          "round": 2,
+          "kind": "quality",
+          "severity": "FLAG",
+          "criterion": "c-1",
+          "text": "options.md documents things not yet in the tree: remote.api_version has no project.Remote field and no readDotted/writeDotted case in internal/cmd/project.go, doctor has no azure-devops auth_scheme/auth_user flag, and azure-devops is not yet a ship provider in the config enum. An agent following the prompt would currently get a refusal from `dross project set remote.api_version`. The new test checks only the prose, not that the documented key can be set, so a sibling task that never adds the field would leave the doc wrong with no test catching it.",
+          "resolution": "non-blocking, left"
+        },
+        {
+          "round": 2,
+          "kind": "quality",
+          "severity": "NOTE",
+          "text": "The doc comment above TestOptionsCoversTheProviderConditionalRemoteFields still says 'These three are the fields', while the list now holds eight keys plus azure-devops, and options.md itself now says 'Four of those'.",
+          "resolution": "non-blocking, left"
+        },
+        {
+          "round": 2,
+          "kind": "quality",
+          "severity": "NOTE",
+          "text": "The new options.md paragraph on api_base forms and the refusal of http-only on-prem TFS by hostallow has no test pinning it. The test_contract does not ask for one, and the claim matches hostallow.Check.",
+          "resolution": "non-blocking, left"
+        }
+      ]
+    },
+    "t-13": {
+      "outcome": "pass",
+      "rounds": 1,
+      "findings": [
+        {
+          "round": 1,
+          "kind": "quality",
+          "severity": "NOTE",
+          "criterion": "c-4",
+          "text": "An Azure DevOps Server remote is an unknown host to DetectRemote (Provider empty), so saved GitHub defaults still seed provider github, api.github.com and GITHUB_TOKEN onto it. This is intentional and documented behaviour for unknown hosts, and the hostallow check plus the init prompt confirmation keep the token off the wrong host.",
+          "resolution": "non-blocking, left"
+        },
+        {
+          "round": 1,
+          "kind": "quality",
+          "severity": "NOTE",
+          "text": "In the foreign case, api_base and log_api are still seeded from the other provider's defaults when the remote leaves them empty. Today DetectRemote always fills api_base for a recognised provider, so this does no harm.",
+          "resolution": "non-blocking, left"
+        }
+      ]
+    },
+    "t-2": {
+      "outcome": "pass",
+      "rounds": 1,
+      "findings": [
+        {
+          "round": 1,
+          "kind": "quality",
+          "severity": "NOTE",
+          "criterion": "c-9",
+          "text": "azure-devops-pat sets Prefix to AZDO, a fixed signature in the middle of the value rather than a true prefix. The rule comment explains it and the fingerprint still copies nothing from the match, but reports will say prefix=AZDO for a value that does not start with it.",
+          "resolution": "non-blocking, left"
+        },
+        {
+          "round": 1,
+          "kind": "quality",
+          "severity": "NOTE",
+          "criterion": "c-9",
+          "text": "Because the rule is bounded by \\b, a PAT directly next to an underscore (e.g. x_\u003cpat\u003e or \u003cpat\u003e_y) is not matched. This is the same posture as the github-token rule; a labelled assignment such as token = \u003cpat\u003e is still caught by key-context.",
+          "resolution": "non-blocking, left"
+        }
+      ]
+    },
+    "t-3": {
+      "outcome": "pass",
+      "rounds": 1,
+      "findings": [
+        {
+          "round": 1,
+          "kind": "quality",
+          "severity": "FLAG",
+          "text": "internal/secretscan/sinks_test.go is modified but not in the task's declared files list (the change is a forced registry-count bump from 10 to 11)",
+          "resolution": "non-blocking, left"
+        },
+        {
+          "round": 1,
+          "kind": "quality",
+          "severity": "FLAG",
+          "criterion": "c-4",
+          "text": "TestScreenPrecedesRequestInEveryScreenedTransport only loops over registered entries and its minimum is still 8 (the message says 'the 8 in the registry'), but 9 Screened entries now exist. An unregistered adoRequest would not fail it by name, contrary to the test_contract line; TestEveryOutboundSeamIsRegistered and the exact count in sinks_test.go still catch the removal",
+          "resolution": "non-blocking, left"
+        },
+        {
+          "round": 1,
+          "kind": "quality",
+          "severity": "NOTE",
+          "text": "adoCommentConn is not yet called anywhere, including tests; presumably a sibling task wires it into PostComment",
+          "resolution": "non-blocking, left"
+        },
+        {
+          "round": 1,
+          "kind": "quality",
+          "severity": "NOTE",
+          "text": "adoRequest sends the credential to whatever endpoint it is given without checking that endpoint's host against the policy. This matches bbRequest and gitlabReq, but the planned Identities lookup on vssps.dev.azure.com is a host other than api_base and will need its own check",
+          "resolution": "non-blocking, left"
+        },
+        {
+          "round": 1,
+          "kind": "quality",
+          "severity": "NOTE",
+          "text": "q.Encode() re-encodes the caller's existing query string (e.g. $top becomes %24top); the server should decode it, but it is worth knowing when the PR-list callers land",
+          "resolution": "non-blocking, left"
+        }
+      ]
+    },
+    "t-4": {
+      "outcome": "pass",
+      "rounds": 2,
+      "findings": [
+        {
+          "round": 1,
+          "kind": "quality",
+          "severity": "FLAG",
+          "criterion": "c-5",
+          "text": "TestOpenAzureDevOpsPRLongDescription's no-split assertion is effectively vacuous: the 80-byte ASCII truncation note leaves a 3920-byte budget that is a multiple of both the 2-byte (ż/é) and 4-byte (emoji) runes used, so a naive body[:limit-len(note)] byte slice passes every assertion. A 3-byte rune (e.g. €) or an odd prefix would make utf8.ValidString able to fail.",
+          "resolution": "non-blocking, left"
+        },
+        {
+          "round": 1,
+          "kind": "quality",
+          "severity": "FLAG",
+          "criterion": "c-5",
+          "text": "'no reviewers key in the create body' is asserted only with opts.Reviewers = nil; an implementation that put reviewers in the create body only when some are configured would pass, and TestOpenAzureDevOpsPRReviewers never inspects the create POST body.",
+          "resolution": "non-blocking, left"
+        },
+        {
+          "round": 1,
+          "kind": "quality",
+          "severity": "FLAG",
+          "criterion": "c-5",
+          "text": "The filterValue=\u003cescaped\u003e part of the reviewers contract is not pinned: alice@corp.example decodes identically whether or not it is query-escaped, so dropping url.Values.Encode would go unnoticed (an input with + or \u0026 would catch it).",
+          "resolution": "non-blocking, left"
+        },
+        {
+          "round": 1,
+          "kind": "quality",
+          "severity": "NOTE",
+          "criterion": "c-5",
+          "text": "The contract places 'a create 500 returns (nil, err)' in TestOpenAzureDevOpsPRReviewerFailureNonFatal; it is asserted in TestOpenAzureDevOpsPRResultURL instead. The behaviour is covered.",
+          "resolution": "non-blocking, left"
+        },
+        {
+          "round": 1,
+          "kind": "quality",
+          "severity": "NOTE",
+          "text": "The description cap counts UTF-16 code units (the .NET length Azure enforces) rather than runes; this is stricter than, and implies, the contract's 'at most 4000 runes'.",
+          "resolution": "non-blocking, left"
+        },
+        {
+          "round": 1,
+          "kind": "quality",
+          "severity": "NOTE",
+          "text": "openAzureDevOpsPR is not yet wired into OpenPR's dispatch, consistent with the guard_atomicity decision that dispatch lands together with the enum change.",
+          "resolution": "non-blocking, left"
+        },
+        {
+          "round": 2,
+          "kind": "quality",
+          "severity": "NOTE",
+          "criterion": "c-5",
+          "text": "The test_contract places the 'create 500 returns (nil, err)' case under TestOpenAzureDevOpsPRReviewerFailureNonFatal, but it is tested in TestOpenAzureDevOpsPRResultURL. It is still covered, just under a different test name.",
+          "resolution": "non-blocking, left"
+        },
+        {
+          "round": 2,
+          "kind": "quality",
+          "severity": "NOTE",
+          "text": "TestOpenAzureDevOpsIdentityHostIsChecked does not directly check that no request is made. If the host check ever broke, the test would try a real outbound connection to elsewhere.example before failing on the error text.",
+          "resolution": "non-blocking, left"
+        },
+        {
+          "round": 2,
+          "kind": "quality",
+          "severity": "NOTE",
+          "text": "openAzureDevOpsPR is not yet wired into the OpenPR dispatch. That is expected: under the guard_atomicity decision, a sibling task adds the enum and the dispatch together.",
+          "resolution": "non-blocking, left"
+        }
+      ]
+    },
+    "t-5": {
+      "outcome": "pass",
+      "rounds": 1,
+      "findings": [
+        {
+          "round": 1,
+          "kind": "quality",
+          "severity": "NOTE",
+          "criterion": "c-7",
+          "text": "postAzureDevOpsComment is not yet reachable from PostComment's dispatch in internal/ship/comment.go; per the guard_atomicity lock that wiring lands with the enum/dispatch change in a sibling task, so it is not this task's surface",
+          "resolution": "non-blocking, left"
+        },
+        {
+          "round": 1,
+          "kind": "quality",
+          "severity": "NOTE",
+          "text": "the `if adoThreadStatus != \"\"` branch is dead while the const is empty; this is intended so the locked closed fallback stays a one-line change, but no test covers the populated branch",
+          "resolution": "non-blocking, left"
+        },
+        {
+          "round": 1,
+          "kind": "quality",
+          "severity": "NOTE",
+          "text": "the secret scan runs after resolveToken has read the PAT, the same order as the other backends; the request is still never built, which is what c-7 requires",
+          "resolution": "non-blocking, left"
+        }
+      ]
+    },
+    "t-6": {
+      "outcome": "pass",
+      "rounds": 2,
+      "findings": [
+        {
+          "round": 1,
+          "kind": "quality",
+          "severity": "FLAG",
+          "criterion": "c-6",
+          "text": "adoOpenPRBySource silently skips a hit whose source, status and fork checks all match but whose pullRequestId is missing or \u003c= 0, and can return (nil, nil). Its own doc comment calls (nil, nil) on a malformed response the duplicate-authorizing outcome. A matching entry with no id is better reported as an error, the same way a missing value list is. The path is rare, and ADO's own duplicate-PR refusal would probably catch it.",
+          "resolution": "non-blocking, left"
+        },
+        {
+          "round": 1,
+          "kind": "quality",
+          "severity": "NOTE",
+          "criterion": "c-8",
+          "text": "azureDevOpsPRStatus is not yet called by GetPRStatus, and azure-devops is not yet in ShipProviders. This is consistent with guard_atomicity, which lands the OpenPR/PostComment/GetPRStatus dispatch with the enum in one change, but the function only becomes reachable in production when that task lands.",
+          "resolution": "non-blocking, left"
+        },
+        {
+          "round": 1,
+          "kind": "quality",
+          "severity": "NOTE",
+          "text": "The status read uses /pullRequests/\u003cn\u003e and the lookup uses /pullrequests. ADO paths are case-insensitive, so this is harmless, just inconsistent.",
+          "resolution": "non-blocking, left"
+        },
+        {
+          "round": 1,
+          "kind": "quality",
+          "severity": "NOTE",
+          "text": "The updated ErrHeadPRLookupUnsupported comment says 'every shipped provider answers today, azure-devops included', but azure-devops is not yet a shipped provider (absent from configenum.ShipProviders) at this commit.",
+          "resolution": "non-blocking, left"
+        },
+        {
+          "round": 2,
+          "kind": "quality",
+          "severity": "NOTE",
+          "criterion": "c-8",
+          "text": "azureDevOpsPRStatus is not yet dispatched from GetPRStatus (merged.go has no azure-devops arm), so it is reached only from tests until the guard_atomicity change adds azure-devops to ShipProviders and the OpenPR/PostComment/GetPRStatus switches; consistent with the locked decision and not claimed by this task",
+          "resolution": "non-blocking, left"
+        },
+        {
+          "round": 2,
+          "kind": "quality",
+          "severity": "NOTE",
+          "criterion": "c-6",
+          "text": "adoOpenPRBySource compares the returned sourceRefName to the local ref case-sensitively; Azure Repos refs are case-insensitive server-side, so a server-stored casing that differs from the local head would read as (nil, nil). Rare for dross-generated phase branches, and ADO itself rejects a second active PR with the same source and target",
+          "resolution": "non-blocking, left"
+        },
+        {
+          "round": 2,
+          "kind": "quality",
+          "severity": "NOTE",
+          "criterion": "c-6",
+          "text": "the active-PR list is read as a single page with no $top/$skip paging; harmless with the server-side sourceRefName filter, but the 'server ignored the filter' defence only guards against false positives, not a match that falls past the first page",
+          "resolution": "non-blocking, left"
+        }
+      ]
+    },
+    "t-7": {
+      "outcome": "pass",
+      "rounds": 1,
+      "findings": [
+        {
+          "round": 1,
+          "kind": "quality",
+          "severity": "NOTE",
+          "criterion": "c-2",
+          "text": "test_contract line 4 assigns the saved-line, byte-identical and omitted-field checks to TestExpandedDottedPathsRoundTrip; that test only does the in-memory set/get round-trip, and the file-level checks are in the new TestProjectSetAPIVersionIsLossless. The behaviour is covered, but under a different test name than the contract gives.",
+          "resolution": "non-blocking, left"
+        },
+        {
+          "round": 1,
+          "kind": "quality",
+          "severity": "NOTE",
+          "text": "writeDotted accepts any string for remote.api_version; a malformed value such as 'abc' is rejected only when an Azure DevOps call is made (adoAPIVersionShape in internal/ship/azuredevops.go), not by `dross project set`.",
+          "resolution": "non-blocking, left"
+        }
+      ]
+    },
+    "t-8": {
+      "outcome": "pass",
+      "rounds": 2,
+      "findings": [
+        {
+          "round": 1,
+          "kind": "quality",
+          "severity": "FLAG",
+          "criterion": "c-1",
+          "text": "DetectRemote assigns ado.URL whenever ParseAzureDevOpsRemote succeeds, including on known non-ADO hosts and unknown self-hosted forges; a one-segment-before-_git path is rewritten (https://gitlab.com/g/_git/r -\u003e https://gitlab.com/g/r/_git/r) while Provider stays gitlab. Rare (needs a group literally named _git), but the url rewrite could be limited to remotes not already claimed by another provider.",
+          "resolution": "non-blocking, left"
+        },
+        {
+          "round": 1,
+          "kind": "quality",
+          "severity": "NOTE",
+          "text": "The dev.azure.com / ssh.dev.azure.com / vs-ssh.visualstudio.com entries in KnownHostProviders never change DetectRemote's result: every remote on those hosts is either claimed by the ADO parse or forced back to unknown. They only feed the TestRemoteWriterSubsetOfShipProviders walker.",
+          "resolution": "non-blocking, left"
+        },
+        {
+          "round": 1,
+          "kind": "quality",
+          "severity": "NOTE",
+          "text": "init.md/onboard.md now list azure-devops but carry no ADO url shape (the URL bullet still says \u003cowner\u003e/\u003crepo\u003e), no ADO api_base, and no AZURE_DEVOPS_EXT_PAT auth_env default from the autodetect_defaults lock. The task says 'wiring only', so this presumably belongs to a sibling task; confirm one covers it.",
+          "resolution": "non-blocking, left"
+        },
+        {
+          "round": 2,
+          "kind": "quality",
+          "severity": "FLAG",
+          "criterion": "c-1",
+          "text": "The deferred surfaces (ListPRComments, PRHeadOf, AuthenticatedUser, OpenPRsTargeting) now reject azure-devops with a message that contradicts itself: unsupported provider \"azure-devops\" (expected github | forgejo | gitea | gitlab | bitbucket | azure-devops). OpenPRsTargeting's doc comment says a plain error means a misconfiguration and ErrBasePRLookupUnsupported means a known provider with no backend. azure-devops is now the second case but returns the first shape. An explicit arm returning a 'not yet supported on azure-devops' error would keep it fail-closed and stop misleading users.",
+          "resolution": "non-blocking, left"
+        },
+        {
+          "round": 2,
+          "kind": "quality",
+          "severity": "NOTE",
+          "text": "DetectRemote now rewrites the url of any unknown host whose path has _git as its second-to-last segment: the host is lowercased and the segments are decoded and re-escaped. A non-ADO self-hosted forge with that path shape gets a canonicalized url. Provider stays empty, so this is harmless. Known non-ADO hosts are protected, and the gitlab _git row tests that.",
+          "resolution": "non-blocking, left"
+        },
+        {
+          "round": 2,
+          "kind": "quality",
+          "severity": "NOTE",
+          "text": "TestDetectRemoteServerSSHAllowsItsAPIBase includes a discriminator check proving a :22 url would refuse the collection api_base, so the port-drop assertion cannot pass vacuously.",
+          "resolution": "non-blocking, left"
+        }
+      ]
+    },
+    "t-9": {
+      "outcome": "pass",
+      "rounds": 2,
+      "findings": [
+        {
+          "round": 1,
+          "kind": "spec",
+          "severity": "BLOCKING",
+          "criterion": "c-3",
+          "text": "test_contract says TestDoctorCarriesNoProviderLiterals fails if remote equivalence is done with a provider switch in doctor.go, but that test (unchanged by this diff) only bans the configenum List() strings and the literals `case \"forgejo\"`, `case \"youtrack\"` and `case \"\", \"version\"`; a `case \"azure-devops\":` switch or an `== \"azure-devops\"` branch in doctor.go would leave it green. No test in the diff can fail on the guarded regression.",
+          "resolution": "fixed in the fix round"
+        },
+        {
+          "round": 1,
+          "kind": "quality",
+          "severity": "FLAG",
+          "text": "azureDevOpsCombination compares api_base against the parser's always-https canonical APIBase, so a Server reached over plain http (api_base http://tfs:8080/tfs/C, which is the right collection) gets a false 'every ship call will miss the project' warning on a scheme-only difference.",
+          "resolution": "non-blocking, left"
+        },
+        {
+          "round": 1,
+          "kind": "quality",
+          "severity": "NOTE",
+          "text": "originForDisplay copies the URL branch of project.withoutUserinfo line for line; exporting the project helper would keep the userinfo cut in one place.",
+          "resolution": "non-blocking, left"
+        },
+        {
+          "round": 1,
+          "kind": "quality",
+          "severity": "NOTE",
+          "text": "Because the canonical_host lock drops a Server ssh port and keeps an https port, an ssh origin against a [remote].url on a non-default web port (https://tfs:8443/...) reads as a mismatch and counts as a doctor issue. This follows the locked decision but is a rare false failure.",
+          "resolution": "non-blocking, left"
+        },
+        {
+          "round": 2,
+          "kind": "quality",
+          "severity": "NOTE",
+          "text": "originForDisplay in internal/cmd/doctor.go is a line-for-line copy of project.withoutUserinfo (unexported in internal/project/remote.go); two copies of the credential-stripping cut can drift apart",
+          "resolution": "non-blocking, left"
+        },
+        {
+          "round": 2,
+          "kind": "quality",
+          "severity": "NOTE",
+          "text": "sameRemoteURL does not apply DetectRemote's guard that a known non-ADO host keeps its own url, so a github/gitlab path with a group named _git is compared through the ADO canonical form (case-insensitively). Equivalent forms still match, so this has no practical impact today",
+          "resolution": "non-blocking, left"
+        },
+        {
+          "round": 2,
+          "kind": "quality",
+          "severity": "NOTE",
+          "text": "the (azure-devops, empty, me) TestCombinationWarnings row only checks for the substring 'auth_user', not 'ignored'. It still fails if the warning is missing or duplicated, so it meets the contract, just loosely",
+          "resolution": "non-blocking, left"
+        }
+      ]
+    }
+  }
 }

@@ -1,6 +1,6 @@
 [project]
   name = "dross"
-  version = "1.7.26.4"
+  version = "1.8.1.0"
   description = "A leaner successor to GSD for working with Claude Code on real projects."
   created = "2026-06-19"
 
