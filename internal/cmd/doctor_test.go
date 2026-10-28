@@ -31,6 +31,20 @@ func TestSameRemoteURL(t *testing.T) {
 		{"https://github.com/Rivil/dross", "https://github.com/other/dross", false},
 		{"https://github.com/Rivil/dross", "https://gitlab.com/Rivil/dross", false},
 		{"", "", true}, // both empty are equal — caller handles "missing" before calling
+
+		// Azure DevOps: every spelling of one repo is the same remote.
+		{"git@ssh.dev.azure.com:v3/o/p/r", "https://dev.azure.com/o/p/_git/r", true},
+		{"https://o@dev.azure.com/o/p/_git/r", "https://dev.azure.com/o/p/_git/r", true},
+		{"https://dev.azure.com/o/p/_git/r.git", "https://dev.azure.com/o/p/_git/r", true},
+		{"https://dev.azure.com/O/P/_git/R", "https://dev.azure.com/o/p/_git/r", true},
+		{"o@vs-ssh.visualstudio.com:v3/o/p/r", "https://o.visualstudio.com/p/_git/r", true},
+		{"ssh://tfs.corp:22/tfs/Coll/P/_git/R", "https://tfs.corp/tfs/Coll/P/_git/R", true},
+		// ...and a different repo, project or host is not.
+		{"git@ssh.dev.azure.com:v3/o/p/other", "https://dev.azure.com/o/p/_git/r", false},
+		{"git@ssh.dev.azure.com:v3/o/q/r", "https://dev.azure.com/o/p/_git/r", false},
+		{"https://dev.azure.com/o/p/_git/r", "https://o.visualstudio.com/p/_git/r", false},
+		// A url without _git names no repo, however close it reads.
+		{"git@ssh.dev.azure.com:v3/o/p/r", "https://dev.azure.com/o/p/r", false},
 	}
 	for _, tc := range tests {
 		got := sameRemoteURL(tc.a, tc.b)
@@ -73,6 +87,92 @@ func TestDoctorFlagsMismatchedRemote(t *testing.T) {
 	if !strings.Contains(out, "does not match") {
 		t.Errorf("expected mismatch warning, got:\n%s", out)
 	}
+}
+
+// TestDoctorAcceptsAzureDevOpsRemote: an ssh v3 origin, initialised and then
+// diagnosed, is the same remote as the https url init wrote, and azure-devops
+// is a provider ship can open a PR for. Another repo is flagged, and so is a
+// [remote].url that drops _git.
+func TestDoctorAcceptsAzureDevOpsRemote(t *testing.T) {
+	dir := t.TempDir()
+	gitInit(t, dir, "git@ssh.dev.azure.com:v3/acme/proj/widget")
+	chdir(t, dir)
+	if err := runCmd(t, Init()); err != nil {
+		t.Fatalf("init: %v", err)
+	}
+	doctor := func() string { return captureStdout(t, func() { _ = runCmd(t, Doctor()) }) }
+
+	var healthyErr error
+	out := captureStdout(t, func() { healthyErr = runCmd(t, Doctor()) })
+	if !strings.Contains(out, "git origin matches [remote].url (https://dev.azure.com/acme/proj/_git/widget)") {
+		t.Errorf("the ssh v3 origin does not match the url init wrote:\n%s", out)
+	}
+	if healthyErr != nil {
+		t.Fatalf("the freshly initialised ADO repo fails doctor (%v) — the _git check below would prove nothing:\n%s", healthyErr, out)
+	}
+	if strings.Contains(out, "cannot open a PR") {
+		t.Errorf("azure-devops reported as a provider ship cannot dispatch:\n%s", out)
+	}
+
+	mustGit(t, dir, "remote", "set-url", "origin", "git@ssh.dev.azure.com:v3/acme/proj/other")
+	if out := doctor(); !strings.Contains(out, "does not match") {
+		t.Errorf("an origin on another repo was not flagged:\n%s", out)
+	}
+
+	mustGit(t, dir, "remote", "set-url", "origin", "git@ssh.dev.azure.com:v3/acme/proj/widget")
+	if err := runCmd(t, Project(), "set", "remote.url", "https://dev.azure.com/acme/proj/widget"); err != nil {
+		t.Fatalf("project set: %v", err)
+	}
+	var err error
+	out = captureStdout(t, func() { err = runCmd(t, Doctor()) })
+	if strings.Contains(out, "git origin matches") || !strings.Contains(out, "does not match") {
+		t.Errorf("a [remote].url without _git matched the origin:\n%s", out)
+	}
+	if err == nil {
+		t.Error("a [remote].url without _git is an issue, but doctor passed")
+	}
+}
+
+// TestDoctorMismatchStripsUserinfo: an https origin carries a PAT in its
+// userinfo as often as not, and neither line that prints the origin may print
+// the PAT.
+func TestDoctorMismatchStripsUserinfo(t *testing.T) {
+	t.Run("does not match", func(t *testing.T) {
+		dir := t.TempDir()
+		gitInit(t, dir, "https://dev.azure.com/o/p/_git/r")
+		chdir(t, dir)
+		if err := runCmd(t, Init()); err != nil {
+			t.Fatalf("init: %v", err)
+		}
+		mustGit(t, dir, "remote", "set-url", "origin", "https://o:SECRETPAT@dev.azure.com/o/p/_git/other")
+		out := captureStdout(t, func() { _ = runCmd(t, Doctor()) })
+		if !strings.Contains(out, "git origin (https://dev.azure.com/o/p/_git/other) does not match") {
+			t.Errorf("want the mismatch line with the origin minus its userinfo:\n%s", out)
+		}
+		if strings.Contains(out, "SECRETPAT") {
+			t.Errorf("doctor printed the PAT from origin:\n%s", out)
+		}
+	})
+
+	t.Run("no [remote]", func(t *testing.T) {
+		dir := t.TempDir()
+		gitInit(t, dir, "https://dev.azure.com/o/p/_git/r")
+		chdir(t, dir)
+		if err := runCmd(t, Init()); err != nil {
+			t.Fatalf("init: %v", err)
+		}
+		if err := runCmd(t, Project(), "set", "--unset", "remote.url"); err != nil {
+			t.Fatalf("unset url: %v", err)
+		}
+		mustGit(t, dir, "remote", "set-url", "origin", "https://o:SECRETPAT@dev.azure.com/o/p/_git/r")
+		out := captureStdout(t, func() { _ = runCmd(t, Doctor()) })
+		if !strings.Contains(out, "git origin = https://dev.azure.com/o/p/_git/r but project.toml has no [remote]") {
+			t.Errorf("want the no-[remote] line with the origin minus its userinfo:\n%s", out)
+		}
+		if strings.Contains(out, "SECRETPAT") {
+			t.Errorf("doctor printed the PAT from origin:\n%s", out)
+		}
+	})
 }
 
 func TestDoctorFlagsMissingAuthEnv(t *testing.T) {
@@ -1177,6 +1277,13 @@ func TestDoctorCarriesNoProviderLiterals(t *testing.T) {
 			t.Errorf("doctor.go still carries a literal enum switch: %s", lit)
 		}
 	}
+	// Azure DevOps remote equivalence keys off the url's shape, never
+	// [remote].provider: a Server remote autodetects with no provider and must
+	// still compare by its canonical url. Any branch on the provider name in
+	// doctor.go — a case arm or an == — is that regression.
+	if strings.Contains(src, `"azure-devops"`) {
+		t.Error(`doctor.go branches on "azure-devops"; compare remotes through project.ParseAzureDevOpsRemote, whatever the provider`)
+	}
 }
 
 // --- cross-field combination warnings (phase validator-truth, c-5 + c-6) ---
@@ -1277,7 +1384,7 @@ func TestDoctorWarnsUnshippableRemoteProvider(t *testing.T) {
 
 	// An unset provider likewise. runDoctorEnum cannot express "set to empty",
 	// so the empty case is asserted against the check directly.
-	if w := diag.RemoteCombination("", "", ""); len(w) != 0 {
+	if w := diag.RemoteCombination(project.Remote{}); len(w) != 0 {
 		t.Errorf("an unset remote provider must stay silent, got: %v", w)
 	}
 }
