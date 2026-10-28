@@ -48,8 +48,8 @@
 
 [[decisions]]
   key = "repo_identity"
-  choice = "Provider literal is azure-devops. Org/collection, project and repo derive from remote.url around its _git segment: everything before <project>/_git/<repo> is the org/collection base, and api_base is scheme://host/<that base>. A one-segment base before _git means repo == project. No new identity fields."
-  why = "Zero config on Services; one marker rule covers Server collections at any depth (/tfs/Coll or host root). Mirrors bitbucket/gitlab deriving identity from the url."
+  choice = "Provider literal is azure-devops. Org/collection, project and repo derive from remote.url around its _git segment: everything before <project>/_git/<repo> is the org/collection base, and api_base is scheme://host/<that base>. A one-segment path before _git (dev.azure.com/<org>/_git/<repo>) is the base alone, and repo == project. On *.visualstudio.com the org is the host's first label, not a path segment, so the base is counted after it: o.visualstudio.com/p/_git/r is project p with an empty base (api_base https://o.visualstudio.com), o.visualstudio.com/_git/r means repo == project, and o.visualstudio.com/DefaultCollection/p/_git/r keeps DefaultCollection as the base. No new identity fields."
+  why = "Zero config on Services; one marker rule covers Server collections at any depth (/tfs/Coll or host root). Mirrors bitbucket/gitlab deriving identity from the url. Amended at plan time (2026-10-28): read literally, the one-segment rule parsed legacy <org>.visualstudio.com/<project>/_git/<repo> as base=<project>, contradicting c-1's api_base = the org URL."
   locked = true
 
 [[decisions]]
