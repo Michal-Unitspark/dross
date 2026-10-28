@@ -1,0 +1,106 @@
+[phase]
+  id = "azure-devops-provider"
+  title = "Azure DevOps ship provider — recognition, auth, open/dedupe/comment/status"
+  milestone = "v1.8"
+
+[[criteria]]
+  id = "c-1"
+  text = "dross init/onboard autodetect provider azure-devops from every Services remote form — https dev.azure.com/<org>/<project>/_git/<repo>, <user>@dev.azure.com/..., git@ssh.dev.azure.com:v3/<org>/<project>/<repo>, and legacy <org>.visualstudio.com (https and vs-ssh) — writing a canonical https url and api_base (the org URL); percent-encoded project/repo names survive the round-trip, and the init/onboard/options prompts list azure-devops."
+
+[[criteria]]
+  id = "c-2"
+  text = "An Azure DevOps Server remote (https://<host>[/tfs]/<collection>/<project>/_git/<repo>, and its ssh://<host>:22/... form) is accepted with provider/url/api_base/auth_env set by hand; collection, project and repo are derived from the url around its _git segment, so every ship call addresses the right repo with no extra identity fields. Unit tests cover a /tfs/DefaultCollection URL and a collection at the host root."
+
+[[criteria]]
+  id = "c-3"
+  text = "dross doctor on an azure-devops remote reports 'origin matches [remote].url' when origin is any equivalent form (ssh v3 vs https, user@ prefix, .git suffix) and a mismatch when it is not, and warns on a combination that would fail or be silently ignored at ship time (auth_scheme private-token/basic, a stray auth_user)."
+
+[[criteria]]
+  id = "c-4"
+  text = "Every Azure DevOps call sends exactly one credential header — HTTP Basic with an empty user and the PAT from auth_env by default, or Authorization: Bearer <token> when auth_scheme = bearer. The token never lands in project.toml, and an api_base outside the derived host allowlist is refused before the token is read; dev.azure.com, *.visualstudio.com and vssps.dev.azure.com are built-in known hosts."
+
+[[criteria]]
+  id = "c-5"
+  text = "dross ship on azure-devops opens an Azure Repos PR — source/target as refs/heads/<branch>, title, description, isDraft for a draft — and returns the PR id plus the browser URL (.../_git/<repo>/pullrequest/<id>), which is printed. Configured reviewers are added as optional reviewers (a GUID as-is, an email/UPN resolved through the Identities API); a failed lookup or assignment warns and still returns the opened PR, never failing the ship."
+  deferred = ["08c4b7d2d98b673e"]
+
+[[criteria]]
+  id = "c-6"
+  text = "When the phase record carries no PR number, dross ship on azure-devops queries active PRs by sourceRefName and records an existing PR instead of opening a second; a failed lookup stops the ship rather than falling through to create."
+
+[[criteria]]
+  id = "c-7"
+  text = "dross ship comment on azure-devops posts the body as a new thread on the PR (POST .../pullRequests/<id>/threads), screened by the secret scanner before the request is built; a non-2xx response returns an error that never includes the token."
+
+[[criteria]]
+  id = "c-8"
+  text = "The PR status lookup on azure-devops reports merged only when the PR's status is completed — abandoned and active are both not merged, so a thrown-away PR never false-completes a phase — and reports the current base branch (targetRefName without refs/heads/) so a retargeted PR is detected."
+
+[[criteria]]
+  id = "c-9"
+  text = "The secret scanner flags a new-format Azure DevOps PAT (84 chars, fixed AZDO signature at positions 76-80) in a PR title, body, comment or persisted artifact, exactly as it does GitHub/GitLab tokens; a placeholder like <your-pat> does not trip it. Old 52-char tokens are left to the existing key-context rule — their bare shape is too generic to match alone."
+
+[[decisions]]
+  key = "guard_atomicity"
+  choice = "azure-devops joins configenum.ShipProviders, project.KnownHostProviders, the DetectRemote api-base switch and the OpenPR/PostComment/GetPRStatus dispatch in one change, so the enum_divergence guards stay green at every commit."
+  why = "The guards treat recognition and the core dispatch trio as one unit; the milestone was re-split at exactly this boundary."
+  locked = true
+
+[[decisions]]
+  key = "repo_identity"
+  choice = "Provider literal is azure-devops. Org/collection, project and repo derive from remote.url around its _git segment: everything before <project>/_git/<repo> is the org/collection base, and api_base is scheme://host/<that base>. A one-segment base before _git means repo == project. No new identity fields."
+  why = "Zero config on Services; one marker rule covers Server collections at any depth (/tfs/Coll or host root). Mirrors bitbucket/gitlab deriving identity from the url."
+  locked = true
+
+[[decisions]]
+  key = "canonical_host"
+  choice = "The canonical url keeps origin's own host. ssh forms map to https on the matching web host (ssh.dev.azure.com:v3/o/p/r -> dev.azure.com/o/p/_git/r; vs-ssh.visualstudio.com:v3/o/p/r -> o.visualstudio.com/p/_git/r; Server ssh drops the port). Legacy visualstudio.com is not rewritten to dev.azure.com."
+  why = "Doctor's origin match and the host allowlist both key off the remote's authority; rewriting would introduce a host the user never configured."
+  locked = true
+
+[[decisions]]
+  key = "auth_scheme"
+  choice = "Empty auth_scheme on azure-devops = HTTP Basic with an empty user and the PAT; auth_scheme = bearer sends Authorization: Bearer (Entra ID tokens). private-token and basic are flagged by doctor as ineffective; auth_user is ignored and flagged when set."
+  why = "Basic :PAT is ADO's documented wire form; bearer covers Entra tokens without a sign-in flow (milestone non-goal: credentials come from an env var only)."
+  locked = true
+
+[[decisions]]
+  key = "api_version"
+  choice = "New optional [remote].api_version, default 7.1, sent as api-version=<v> on every Azure DevOps call; an older Server sets it lower (2019 5.0, 2020 6.0, 2022 7.0)."
+  why = "Services accepts 7.1; Server caps the version by release. One explicit field beats a pinned old surface or a probing round-trip."
+  locked = true
+
+[[decisions]]
+  key = "reviewers"
+  choice = "Configured reviewers are added as optional (isRequired=false). A GUID-shaped entry passes through; anything else is resolved via the Identities API (Services: vssps.dev.azure.com/<org>; Server: the collection base). Lookup or assignment failure warns and returns the opened PR."
+  why = "ADO's payload needs identity ids, but config should stay human-readable; mirrors bitbucket's per-entry shape and forgejo/gitlab's non-fatal reviewer failure."
+  locked = true
+
+[[decisions]]
+  key = "comment_thread_status"
+  choice = "dross-posted threads are non-blocking: created without a resolvable status; fall back to status closed if the live smoke run shows a statusless thread still counts under a comment-resolution policy."
+  why = "Parity with GitHub/GitLab/Bitbucket, where a PR comment never gates the merge; the merge gate stays dross's own ship.md section 6 question."
+  locked = true
+
+[[decisions]]
+  key = "autodetect_defaults"
+  choice = "Autodetect writes public = false for an ADO remote; the prompts' default auth_env is AZURE_DEVOPS_EXT_PAT."
+  why = "ADO repos are typically private; AZURE_DEVOPS_EXT_PAT is the az devops CLI convention, so an existing setup needs no new env var."
+  locked = true
+
+[[decisions]]
+  key = "transport"
+  choice = "Raw REST over net/http, no az CLI. Same posture as bitbucket.go: secretscan.ScanPayload before encoding, redact.Scrub on every response body at the single transport entry, hostallow check before the token is read."
+  why = "Single static binary with no runtime deps (stack.locked); mirrors the forgejo/gitlab/bitbucket transports and their screening."
+  locked = true
+
+[[decisions]]
+  key = "verify_posture"
+  choice = "httptest-mock tests are the per-criterion bar. A live smoke run against the user's real org (open -> dedupe -> comment -> merged-status) happens at verify and is recorded separately; mock-verified is never reported as live-verified."
+  why = "The provider test contract is mocked HTTP; milestone criterion 5 asks for a live run, and the user has an org + PAT."
+  locked = true
+
+[[deferred]]
+  text = "Remaining Azure DevOps ship surfaces: /dross-respond comment listing, PR head and authenticated user plus pr reply; /dross-watch open-PR listing; milestone-dependents open-PRs-targeting lookup; ship.md CI-watch (builds/policy for the head SHA) and squash-merge."
+  why = "Re-split at the guard boundary: this phase delivers recognition + the dispatch trio + dedupe; the rest is azure-devops-ship-loop."
+  target = "azure-devops-ship-loop"

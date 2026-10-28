@@ -1,4 +1,4 @@
-phases = ["azure-devops-remote", "azure-devops-provider", "azure-boards-backend"]
+phases = ["azure-devops-provider", "azure-devops-ship-loop", "azure-boards-backend"]
 
 [milestone]
   version = "v1.8"
