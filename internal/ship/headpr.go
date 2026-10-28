@@ -12,7 +12,8 @@ import (
 // provider whose open-PR-by-head query isn't wired. Ship announces the skip
 // and falls through to opening a PR — an unwired backend is a supported shape,
 // distinguishable from a lookup that failed. Every shipped provider answers
-// today; the sentinel stays declared for the deferred azure-devops arm.
+// today, azure-devops included; the sentinel stays declared so a provider
+// added without a lookup has a shape ship already knows how to skip.
 var ErrHeadPRLookupUnsupported = errors.New("open-PR-by-head lookup is not supported for this provider")
 
 // FindOpenPRByHead returns the open PR whose head branch is exactly head, or
@@ -33,6 +34,8 @@ func FindOpenPRByHead(opts OpenOpts, head string) (*OpenResult, error) {
 		return gitlabOpenMRBySource(opts, head)
 	case "bitbucket":
 		return bbOpenPRBySource(opts, head)
+	case "azure-devops":
+		return adoOpenPRBySource(opts, head)
 	default:
 		return nil, fmt.Errorf("unsupported provider %q (expected %s)", opts.Provider, configenum.ShipProviders.List())
 	}
