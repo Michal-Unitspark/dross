@@ -1,9 +1,12 @@
-phases = ["azure-devops-provider"]
+phases = ["azure-devops-remote", "azure-devops-provider", "azure-boards-backend"]
 
 [milestone]
   version = "v1.8"
-  status = "planning"
-  started = "2026-09-11"
-  base = "milestone/v1.7"
+  title = "1.8 Azure DevOps — ship and board sync reach a fifth forge"
+  status = "active"
+  started = "2026-10-28"
+  base = "main"
 
 [scope]
+  success_criteria = ["An Azure DevOps remote is recognised without hand-configuration: every Services URL form (https dev.azure.com, user@dev.azure.com, ssh.dev.azure.com v3, legacy <org>.visualstudio.com) autodetects provider azure-devops with its org/project/repo identity and API base. An on-prem Azure DevOps Server remote (https://host/<collection>/<project>/_git/<repo>) is fully configurable by hand, and dross doctor validates either.", "On an Azure DevOps remote, dross ship opens an Azure Repos pull request (draft and reviewers supported). Every ship-side follow-up works as it does on the other four forges: merged/base status lookup, open-PR-by-head dedupe, dross ship comment, and /dross-respond's comment listing and reply.", "/dross-ship completes end-to-end on Azure DevOps. CI for the head commit is watched to a pass/fail verdict, and an ambiguous state (no build, policy waiting) is surfaced to the user rather than guessed. The PR then squash-merges with no provider-side source-branch delete, and dross phase complete stays the only teardown owner.", "With [board] provider = azure-devops, board sync mirrors milestones, phases and tasks onto Azure Boards work items. It moves them through the project's process states (Agile, Scrum and Basic defaults, plus a custom state_map), and inbound pull, linking and finalize-on-complete work as they do on YouTrack and Jira.", "A live smoke run against a real Azure DevOps organisation passes. It covers PR open -> status -> comment -> merged-status and work-item create -> transition -> close, and is recorded next to the mocked suite. Mock-verified is never reported as live-verified."]
+  non_goals = ["dross protect rulesets and auto-merge chore PRs stay GitHub-only, as on GitLab/Forgejo/Bitbucket today; Azure DevOps branch policies are neither applied nor read.", "Azure Pipelines is read for CI status only; dross never creates, edits or queues a pipeline.", "No interactive sign-in: credentials come from an env var (PAT, optionally a bearer token) as with every other provider; no Entra ID device-code/OAuth flow and no az CLI login.", "Azure Repos Git only; TFVC repositories are out of scope."]
