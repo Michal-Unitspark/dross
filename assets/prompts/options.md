@@ -63,13 +63,16 @@ Fields: `repo.layout`, `repo.root_run_dir`, `repo.workspaces` (csv), `repo.git_m
 
 ## 5. Remote / git host
 
-Fields: `remote.url`, `remote.provider`, `remote.public` (bool), `remote.api_base`, `remote.log_api` (bool), `remote.auth_env`, `remote.auth_user`, `remote.auth_scheme`, `remote.project_id`, `remote.reviewers` (csv).
+Fields: `remote.url`, `remote.provider`, `remote.public` (bool), `remote.api_base`, `remote.log_api` (bool), `remote.auth_env`, `remote.auth_user`, `remote.auth_scheme`, `remote.project_id`, `remote.api_version`, `remote.reviewers` (csv).
 
-Three of those are provider-conditional — surface them only when the provider calls for them, and say why:
+Four of those are provider-conditional — surface them only when the provider calls for them, and say why:
 
-- `remote.auth_scheme` — `private-token` (default) · `bearer` · `basic`. Only `basic` needs `remote.auth_user`.
-- `remote.auth_user` — the account **user/email** for HTTP Basic (bitbucket, and jira on the board side). It is a username, never a token; the token stays in the env var named by `auth_env`.
+- `remote.auth_scheme` — `private-token` (default) · `bearer` · `basic`. Only `basic` needs `remote.auth_user`. On azure-devops an empty scheme sends HTTP Basic with an empty user and the PAT; `bearer` sends an Entra ID token instead, and `private-token` and `basic` have no effect there (`dross doctor` flags them).
+- `remote.auth_user` — the account **user/email** for HTTP Basic (bitbucket, and jira on the board side). It is a username, never a token; the token stays in the env var named by `auth_env`. azure-devops ignores it — its Basic credential has an empty user — and `dross doctor` flags one that is set.
 - `remote.project_id` — gitlab only: numeric project-id override when it can't be derived from the URL.
+- `remote.api_version` — azure-devops only: the `api-version` sent on every call. Empty means `7.1`, which Azure DevOps Services takes; an Azure DevOps Server caps it by release — `5.0` for Server 2019, `6.0` for 2020, `7.0` for 2022.
+
+On azure-devops the org/collection, project and repo all derive from `remote.url` around its `_git` segment, so there is no identity field to set. `remote.api_base` is the org URL (`https://dev.azure.com/<org>`, or `https://<org>.visualstudio.com` on a legacy host) or, on a Server, the collection URL (`https://<host>/tfs/<collection>`). An on-prem TFS reachable only over plain http stays refused: dross sends a token over https alone, and `allow_hosts` widens the set of hosts, never the scheme.
 
 Cross-check: if `remote.url` is set, run `git remote get-url origin` and warn if it differs.
 

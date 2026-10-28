@@ -113,7 +113,8 @@ func TestOptionsCoversEveryProjectSection(t *testing.T) {
 func TestOptionsCoversTheProviderConditionalRemoteFields(t *testing.T) {
 	prompt := optionsPrompt(t)
 	for _, want := range []string{
-		"remote.auth_user", "remote.auth_scheme", "remote.project_id",
+		"remote.auth_user", "remote.auth_scheme", "remote.project_id", "remote.api_version",
+		"azure-devops",
 		"board.auth_user", "board.github_project", "board.milestone_mode",
 		"stack.profile",
 	} {
@@ -121,6 +122,36 @@ func TestOptionsCoversTheProviderConditionalRemoteFields(t *testing.T) {
 			t.Errorf("options.md does not mention %q", want)
 		}
 	}
+
+	// The azure-devops auth guidance follows the auth_scheme lock: Basic :PAT by
+	// default, bearer for Entra, private-token/basic ineffective, auth_user
+	// ignored. The api_version bullet carries its default and the Server caps.
+	for key, wants := range map[string][]string{
+		"remote.auth_scheme": {"azure-devops", "`bearer` sends an Entra ID token", "`private-token` and `basic` have no effect"},
+		"remote.auth_user":   {"azure-devops ignores it"},
+		"remote.api_version": {"azure-devops", "`7.1`", "`5.0`", "`6.0`", "`7.0`"},
+	} {
+		bullet := optionsBullet(prompt, key)
+		if bullet == "" {
+			t.Errorf("options.md has no `- `%s`` bullet", key)
+			continue
+		}
+		for _, want := range wants {
+			if !strings.Contains(bullet, want) {
+				t.Errorf("the %s bullet does not say %q: %s", key, want, bullet)
+			}
+		}
+	}
+}
+
+// optionsBullet returns the options.md bullet line that documents key.
+func optionsBullet(prompt, key string) string {
+	for _, line := range strings.Split(prompt, "\n") {
+		if strings.HasPrefix(line, "- `"+key+"` —") {
+			return line
+		}
+	}
+	return ""
 }
 
 // TestOptionsSaysMutationIsNotSettableThroughProjectSet.
