@@ -50,6 +50,8 @@ func PostComment(opts CommentOpts) error {
 		return postGitLabComment(opts)
 	case "bitbucket":
 		return postBitbucketComment(opts)
+	case "azure-devops":
+		return postAzureDevOpsComment(opts)
 	default:
 		return fmt.Errorf("unsupported provider %q (expected %s)", opts.Provider, configenum.ShipProviders.List())
 	}

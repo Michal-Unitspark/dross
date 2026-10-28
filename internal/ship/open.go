@@ -59,6 +59,8 @@ func OpenPR(opts OpenOpts) (*OpenResult, error) {
 		return openGitLabPR(opts)
 	case "bitbucket":
 		return openBitbucketPR(opts)
+	case "azure-devops":
+		return openAzureDevOpsPR(opts)
 	default:
 		return nil, fmt.Errorf("unsupported provider %q (expected %s)", opts.Provider, configenum.ShipProviders.List())
 	}

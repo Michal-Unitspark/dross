@@ -85,7 +85,7 @@ var ForgeRESTProviders = newSet("", "forgejo", "gitea", "gitlab")
 // "none" is a sentinel meaning "this repo has no remote", handled at the call
 // sites, and is deliberately not a member: it names the absence of a backend,
 // not one of them.
-var ShipProviders = newSet("", "github", "forgejo", "gitea", "gitlab", "bitbucket")
+var ShipProviders = newSet("", "github", "forgejo", "gitea", "gitlab", "bitbucket", "azure-devops")
 
 // AuthSchemes is the set of [remote].auth_scheme credential selectors. Empty
 // defaults to private-token in code, so an unset scheme is valid.

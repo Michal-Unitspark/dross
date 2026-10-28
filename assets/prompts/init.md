@@ -51,7 +51,7 @@ Edit `project.toml` directly for these blocks.
 
 If `[remote]` is missing or empty (no git origin yet — fresh greenfield), ask:
 - **URL** — `https://<host>/<owner>/<repo>` of where this code will live.
-- **Provider** — github / forgejo / gitea / gitlab / bitbucket / none. If host is `github.com` → `github`; `codeberg.org` → `forgejo`; `gitlab.com` → `gitlab`; `bitbucket.org` → `bitbucket`; otherwise ask.
+- **Provider** — github / forgejo / gitea / gitlab / bitbucket / azure-devops / none. If host is `github.com` → `github`; `codeberg.org` → `forgejo`; `gitlab.com` → `gitlab`; `bitbucket.org` → `bitbucket`; `dev.azure.com` or `<org>.visualstudio.com` → `azure-devops`; otherwise ask.
 - **Public** — can a cloud-side agent (no VPN, no SSH key) `git clone` it? Default no for self-hosted forges.
 
 Then for fields the global defaults didn't seed (check `dross project get remote.auth_env` etc.):

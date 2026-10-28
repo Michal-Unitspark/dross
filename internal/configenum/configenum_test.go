@@ -165,7 +165,7 @@ func TestSetListRendersPipeJoined(t *testing.T) {
 	}{
 		{"board", BoardProviders, "forgejo | gitea | gitlab | youtrack | jira | github"},
 		{"forgeREST", ForgeRESTProviders, "forgejo | gitea | gitlab"},
-		{"ship", ShipProviders, "github | forgejo | gitea | gitlab | bitbucket"},
+		{"ship", ShipProviders, "github | forgejo | gitea | gitlab | bitbucket | azure-devops"},
 		{"auth", AuthSchemes, "private-token | bearer | basic"},
 		{"milestone", MilestoneModes, "version | agile | epic"},
 	}

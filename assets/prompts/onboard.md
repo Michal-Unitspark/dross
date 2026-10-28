@@ -59,7 +59,7 @@ Service URLs (app, db, redis, etc.) — edit `[runtime.services]` directly.
 
 For each field, present the resolved value and ask "confirm or change?":
 - **url** — should match the canonical clone URL.
-- **provider** — github / forgejo / gitea / gitlab / bitbucket / none. If empty (self-hosted unknown host), ask the user.
+- **provider** — github / forgejo / gitea / gitlab / bitbucket / azure-devops / none. If empty (self-hosted unknown host), ask the user.
 - **public** — can a cloud-side agent (no VPN, no SSH key) `git clone` it? Default no for self-hosted forges.
 - **api_base** — REST base URL. github → `https://api.github.com`. Forgejo/Gitea → `https://<host>/api/v1`.
 - **log_api** — does the instance expose CI logs via API?

@@ -8,19 +8,32 @@ import (
 // KnownHostProviders maps hostname → provider for hosts dross can identify
 // without asking. Anything not in this list is unknown — caller should ask
 // the user (likely a self-hosted instance).
+//
+// Azure DevOps's legacy <org>.visualstudio.com web hosts are one per org, so
+// they are recognised by shape (ParseAzureDevOpsRemote) rather than listed.
 var KnownHostProviders = map[string]string{
-	"github.com":    "github",
-	"codeberg.org":  "forgejo",
-	"gitlab.com":    "gitlab",
-	"bitbucket.org": "bitbucket",
+	"github.com":              "github",
+	"codeberg.org":            "forgejo",
+	"gitlab.com":              "gitlab",
+	"bitbucket.org":           "bitbucket",
+	"dev.azure.com":           "azure-devops",
+	"ssh.dev.azure.com":       "azure-devops",
+	"vs-ssh.visualstudio.com": "azure-devops",
 }
 
 // DetectRemote parses a git remote URL (https or ssh form) and returns a
 // best-effort Remote with URL, Provider, APIBase pre-filled.
 //
-// Recognised provider hosts get Public=true; unknown hosts (likely
-// self-hosted Forgejo / Gitea / GitLab) leave Provider="" and Public=false so
-// the caller knows to prompt.
+// Recognised provider hosts get Public=true, except Azure DevOps, whose repos
+// are private by default. Unknown hosts (likely self-hosted Forgejo / Gitea /
+// GitLab / Azure DevOps Server) leave Provider="" and Public=false so the
+// caller knows to prompt.
+//
+// An Azure Repos remote of any shape — ssh v3, user@, a Server's
+// ssh://host:port — is written as its one canonical https url. A Server's host
+// could be anyone's, so it gets that url and nothing else; a Services remote
+// that is not a repo (no _git) is not claimed as azure-devops, since there is
+// no org to address.
 func DetectRemote(remoteURL string) Remote {
 	r := Remote{}
 	host, path, _ := parseGitRemote(remoteURL)
@@ -30,7 +43,23 @@ func DetectRemote(remoteURL string) Remote {
 
 	r.URL = "https://" + host + "/" + strings.TrimSuffix(path, ".git")
 
-	if provider, ok := KnownHostProviders[host]; ok {
+	provider, known := KnownHostProviders[host]
+	ado, isADO := ParseAzureDevOpsRemote(remoteURL)
+	if known && provider != "azure-devops" {
+		// Another provider's host keeps its own url, however its path reads
+		// (a GitLab group may be named _git).
+		isADO = false
+	}
+	if isADO {
+		r.URL = ado.URL
+		if ado.Services {
+			provider, known = "azure-devops", true
+		}
+	} else if provider == "azure-devops" {
+		known = false
+	}
+
+	if known {
 		r.Provider = provider
 		r.Public = true
 		switch provider {
@@ -42,6 +71,9 @@ func DetectRemote(remoteURL string) Remote {
 			r.APIBase = "https://" + host + "/api/v4"
 		case "bitbucket":
 			r.APIBase = "https://api.bitbucket.org/2.0"
+		case "azure-devops":
+			r.Public = false
+			r.APIBase = ado.APIBase
 		}
 	}
 	return r
