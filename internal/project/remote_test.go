@@ -92,6 +92,14 @@ func TestDetectRemote(t *testing.T) {
 			wantAPIBase:  "https://gitlab.com/api/v4",
 		},
 		{
+			name:         "encoded segment stays single-encoded",
+			input:        "https://gitlab.com/o/My%20Repo",
+			wantURL:      "https://gitlab.com/o/My%20Repo",
+			wantProvider: "gitlab",
+			wantPublic:   true,
+			wantAPIBase:  "https://gitlab.com/api/v4",
+		},
+		{
 			name:         "bitbucket",
 			input:        "git@bitbucket.org:me/proj.git",
 			wantURL:      "https://bitbucket.org/me/proj",

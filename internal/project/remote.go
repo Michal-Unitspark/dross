@@ -23,7 +23,7 @@ var KnownHostProviders = map[string]string{
 // the caller knows to prompt.
 func DetectRemote(remoteURL string) Remote {
 	r := Remote{}
-	host, path := parseGitRemote(remoteURL)
+	host, path, _ := parseGitRemote(remoteURL)
 	if host == "" {
 		return r
 	}
@@ -53,11 +53,14 @@ func DetectRemote(remoteURL string) Remote {
 //   - git@host:owner/repo(.git)
 //   - ssh://git@host/owner/repo(.git)
 //
+// The path stays escaped as origin wrote it (My%20Repo, never a raw space), so
+// a percent-encoded name round-trips. ssh reports the scp-like and ssh://
+// forms, whose port (if any) names the ssh daemon rather than the web host.
 // Returns empty strings on parse failure.
-func parseGitRemote(raw string) (host, path string) {
+func parseGitRemote(raw string) (host, path string, ssh bool) {
 	raw = strings.TrimSpace(raw)
 	if raw == "" {
-		return "", ""
+		return "", "", false
 	}
 
 	scp := !strings.Contains(raw, "://") && strings.Contains(raw, "@") && strings.Contains(raw, ":")
@@ -68,16 +71,16 @@ func parseGitRemote(raw string) (host, path string) {
 	if scp {
 		colon := strings.Index(rest, ":")
 		if colon < 0 {
-			return "", ""
+			return "", "", false
 		}
-		return rest[:colon], rest[colon+1:]
+		return rest[:colon], rest[colon+1:], true
 	}
 
 	u, err := url.Parse(rest)
 	if err != nil || u.Host == "" {
-		return "", ""
+		return "", "", false
 	}
-	return u.Host, strings.TrimPrefix(u.Path, "/")
+	return u.Host, strings.TrimPrefix(u.EscapedPath(), "/"), u.Scheme == "ssh"
 }
 
 // withoutUserinfo cuts the user[:password]@ off a git remote before anything
