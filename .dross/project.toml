@@ -42,20 +42,12 @@
   squash_merge = true
 
 [remote]
-  url = "https://github.com/Rivil/dross"
+  url = "https://github.com/Michal-Unitspark/dross"
   provider = "github"
   public = true
   api_base = "https://api.github.com"
   log_api = true
   auth_env = "GITHUB_TOKEN"
-
-[board]
-  provider = "youtrack"
-  base_url = "https://issues.rivil.dev"
-  auth_env = "YOUTRACK_TOKEN"
-  project = "DRO"
-  enabled = true
-  milestone_mode = "epic"
 
 [paths]
 
