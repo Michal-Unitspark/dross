@@ -252,6 +252,7 @@ project.ProjectMeta.Description description
 project.ProjectMeta.Name name
 project.ProjectMeta.Version version
 project.Remote.APIBase api_base
+project.Remote.APIVersion api_version
 project.Remote.AuthEnv auth_env
 project.Remote.AuthScheme auth_scheme
 project.Remote.AuthUser auth_user

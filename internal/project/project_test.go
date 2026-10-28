@@ -594,3 +594,39 @@ func TestProjectPackageHasOneEncoder(t *testing.T) {
 		t.Error("encodeCanonical no longer routes through encodeFresh")
 	}
 }
+
+// TestRemoteAPIVersionBareFloat: a hand-edited `api_version = 6.0` is a TOML
+// float, and it must load as the version "6.0" — not "6", and not a decode
+// error that takes the whole project.toml down with it. A string stays
+// verbatim; a value of the wrong kind is a load error naming the key.
+func TestRemoteAPIVersionBareFloat(t *testing.T) {
+	load := func(t *testing.T, line string) (*Project, error) {
+		t.Helper()
+		path := filepath.Join(t.TempDir(), "project.toml")
+		body := "[remote]\n  provider = \"azure-devops\"\n  " + line + "\n"
+		if err := os.WriteFile(path, []byte(body), 0o644); err != nil {
+			t.Fatal(err)
+		}
+		return Load(path)
+	}
+	for line, want := range map[string]APIVersion{
+		"api_version = 5.0":             "5.0",
+		"api_version = 6.0":             "6.0",
+		"api_version = 7.1":             "7.1",
+		"api_version = 7":               "7.0",
+		`api_version = "6.0"`:           "6.0",
+		`api_version = "7.1-preview.1"`: "7.1-preview.1",
+	} {
+		p, err := load(t, line)
+		if err != nil {
+			t.Errorf("%s: %v", line, err)
+			continue
+		}
+		if p.Remote.APIVersion != want {
+			t.Errorf("%s: APIVersion = %q, want %q", line, p.Remote.APIVersion, want)
+		}
+	}
+	if _, err := load(t, "api_version = true"); err == nil || !strings.Contains(err.Error(), "remote.api_version") {
+		t.Errorf("api_version = true: want a load error naming remote.api_version, got %v", err)
+	}
+}

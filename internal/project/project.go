@@ -10,6 +10,7 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"strconv"
 	"strings"
 
 	"github.com/BurntSushi/toml"
@@ -233,16 +234,43 @@ type Repo struct {
 // Separated from Repo (which holds branch/layout policy) because hosting
 // + auth + reviewer config travels with the code, not the local checkout.
 type Remote struct {
-	URL        string   `toml:"url,omitempty" json:"url,omitempty"`                 // canonical https URL of the repo
-	Provider   string   `toml:"provider,omitempty" json:"provider,omitempty"`       // github | forgejo | gitea | gitlab | bitbucket, or none for no remote (configenum.ShipProviders)
-	Public     bool     `toml:"public,omitempty" json:"public,omitempty"`           // true if cloud agents can clone
-	APIBase    string   `toml:"api_base,omitempty" json:"api_base,omitempty"`       // override; default derived from provider+URL
-	LogAPI     bool     `toml:"log_api,omitempty" json:"log_api,omitempty"`         // instance exposes CI logs via API
-	AuthEnv    string   `toml:"auth_env,omitempty" json:"auth_env,omitempty"`       // env var name (NEVER the value)
-	AuthUser   string   `toml:"auth_user,omitempty" json:"auth_user,omitempty"`     // bitbucket: account user for HTTP Basic auth (user:token)
-	AuthScheme string   `toml:"auth_scheme,omitempty" json:"auth_scheme,omitempty"` // private-token (default) | bearer | basic (configenum.AuthSchemes); basic needs auth_user
-	ProjectID  string   `toml:"project_id,omitempty" json:"project_id,omitempty"`   // gitlab: numeric project-id override (else derived from URL)
-	Reviewers  []string `toml:"reviewers,omitempty" json:"reviewers,omitempty"`     // default human reviewers for /dross-ship
+	URL        string     `toml:"url,omitempty" json:"url,omitempty"`                 // canonical https URL of the repo
+	Provider   string     `toml:"provider,omitempty" json:"provider,omitempty"`       // github | forgejo | gitea | gitlab | bitbucket, or none for no remote (configenum.ShipProviders)
+	Public     bool       `toml:"public,omitempty" json:"public,omitempty"`           // true if cloud agents can clone
+	APIBase    string     `toml:"api_base,omitempty" json:"api_base,omitempty"`       // override; default derived from provider+URL
+	LogAPI     bool       `toml:"log_api,omitempty" json:"log_api,omitempty"`         // instance exposes CI logs via API
+	AuthEnv    string     `toml:"auth_env,omitempty" json:"auth_env,omitempty"`       // env var name (NEVER the value)
+	AuthUser   string     `toml:"auth_user,omitempty" json:"auth_user,omitempty"`     // bitbucket: account user for HTTP Basic auth (user:token)
+	AuthScheme string     `toml:"auth_scheme,omitempty" json:"auth_scheme,omitempty"` // private-token (default) | bearer | basic (configenum.AuthSchemes); basic needs auth_user
+	ProjectID  string     `toml:"project_id,omitempty" json:"project_id,omitempty"`   // gitlab: numeric project-id override (else derived from URL)
+	APIVersion APIVersion `toml:"api_version,omitempty" json:"api_version,omitempty"` // azure-devops: api-version on every call; empty = 7.1 (Server 2019 5.0, 2020 6.0, 2022 7.0)
+	Reviewers  []string   `toml:"reviewers,omitempty" json:"reviewers,omitempty"`     // default human reviewers for /dross-ship
+}
+
+// APIVersion is [remote].api_version. It decodes from a string or from a bare
+// TOML number: `api_version = 6.0` is what a hand-editor writes, and a float
+// would otherwise fail the whole file's load. A number always keeps its minor
+// part, so 6.0 is "6.0", never "6". It is written back as a string.
+type APIVersion string
+
+// UnmarshalTOML accepts a string verbatim, and a float or integer as its
+// major.minor spelling.
+func (v *APIVersion) UnmarshalTOML(data any) error {
+	switch x := data.(type) {
+	case string:
+		*v = APIVersion(x)
+	case float64:
+		s := strconv.FormatFloat(x, 'f', -1, 64)
+		if !strings.Contains(s, ".") {
+			s += ".0"
+		}
+		*v = APIVersion(s)
+	case int64:
+		*v = APIVersion(strconv.FormatInt(x, 10) + ".0")
+	default:
+		return fmt.Errorf("remote.api_version: want a version such as \"7.1\", got a %T", data)
+	}
+	return nil
 }
 
 // Board describes the issue-tracker destination for board sync, kept separate

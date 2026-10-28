@@ -68,6 +68,23 @@ func TestBuildCommentOptsMapsGitLabFields(t *testing.T) {
 	}
 }
 
+// TestBuildOpenOptsCarriesAPIVersion and its comment twin pin the join between
+// [remote].api_version and the Azure DevOps transport: a dropped copy sends
+// 7.1 to a Server that caps at 6.0, and every call fails.
+func TestBuildOpenOptsCarriesAPIVersion(t *testing.T) {
+	p := &project.Project{Remote: project.Remote{APIVersion: "6.0"}}
+	if got := buildOpenOpts(p, hostallow.Policy{}); got.APIVersion != "6.0" {
+		t.Errorf("api_version not copied onto OpenOpts: %q", got.APIVersion)
+	}
+}
+
+func TestBuildCommentOptsCarriesAPIVersion(t *testing.T) {
+	p := &project.Project{Remote: project.Remote{APIVersion: "6.0"}}
+	if got := buildCommentOpts(p, hostallow.Policy{}); got.APIVersion != "6.0" {
+		t.Errorf("api_version not copied onto CommentOpts: %q", got.APIVersion)
+	}
+}
+
 // bitbucketRemote is the [remote] shape whose credential is HTTP Basic
 // user:token — the only one where a dropped auth_user is fatal.
 func bitbucketRemote() *project.Project {
