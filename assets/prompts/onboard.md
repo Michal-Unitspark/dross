@@ -58,15 +58,18 @@ Service URLs (app, db, redis, etc.) — edit `[runtime.services]` directly.
 `dross onboard` already detected `[remote]` from `git remote get-url origin` and overlaid `~/.claude/dross/defaults.toml`. Run `dross project show` and look at the `[remote]` block.
 
 For each field, present the resolved value and ask "confirm or change?":
-- **url** — should match the canonical clone URL.
+- **url** — should match the canonical clone URL. Azure DevOps: `https://dev.azure.com/<org>/<project>/_git/<repo>` (or `https://<org>.visualstudio.com/<project>/_git/<repo>`); onboard writes this https form even for an ssh origin.
 - **provider** — github / forgejo / gitea / gitlab / bitbucket / azure-devops / none. If empty (self-hosted unknown host), ask the user.
-- **public** — can a cloud-side agent (no VPN, no SSH key) `git clone` it? Default no for self-hosted forges.
-- **api_base** — REST base URL. github → `https://api.github.com`. Forgejo/Gitea → `https://<host>/api/v1`.
+- **public** — can a cloud-side agent (no VPN, no SSH key) `git clone` it? Default no for self-hosted forges and for azure-devops.
+- **api_base** — REST base URL. github → `https://api.github.com`. Forgejo/Gitea → `https://<host>/api/v1`. azure-devops → the org URL, `https://dev.azure.com/<org>` (or `https://<org>.visualstudio.com`); on an Azure DevOps Server, the collection URL, `https://<host>/tfs/<Collection>`.
 - **log_api** — does the instance expose CI logs via API?
-- **auth_env** — env-var name (e.g. `FORGEJO_TOKEN`, `GITHUB_TOKEN`). **Never the token value.**
+- **auth_env** — env-var name (e.g. `FORGEJO_TOKEN`, `GITHUB_TOKEN`; for azure-devops `AZURE_DEVOPS_EXT_PAT`, the az devops CLI's variable). **Never the token value.**
+- **api_version** — azure-devops only (`remote.api_version`). Unset on dev.azure.com / visualstudio.com (7.1). On an Azure DevOps Server, the server's version: 2019 → `5.0`, 2020 → `6.0`, 2022 → `7.0`.
 - **reviewers** — csv of human reviewer usernames `/dross-ship` should auto-assign. Empty = none.
 
 Persist any changes with `dross project set remote.<field> "<value>"` (booleans = `true`/`false`; reviewers = csv).
+
+An **Azure DevOps Server** (on-premises; any host) is never autodetected — onboard derives only its url. Set `remote.provider` to `azure-devops`, `remote.api_base` to the collection URL and `remote.api_version` by hand, and keep `[remote].url` in its https form, `https://<host>/tfs/<Collection>/<project>/_git/<repo>`, even when origin is ssh (`ssh://<host>:22/...`): the host allowlist derives from that url, and the ssh form would refuse the https api_base.
 
 If `~/.claude/dross/defaults.toml` doesn't exist yet (check with `dross defaults show`), ask: *"Save these as defaults so the next project pre-fills them?"* If yes, run `dross defaults save` — extracts provider/api_base/log_api/auth_env/reviewers from project.toml and writes them globally. URL and public flag are project-specific and never copied.
 
