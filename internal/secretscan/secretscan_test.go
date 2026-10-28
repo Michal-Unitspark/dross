@@ -32,6 +32,17 @@ func highEntropy() string {
 	return strings.Repeat("Aa1!Bb2@Cc3#Dd4%Ee5^Ff6*", 1)
 }
 
+// adoPATAt is an alphanumeric run of n chars with the AZDO signature at index
+// at; adoPAT is the real shape, 84 chars with the signature at 76.
+func adoPATAt(n, at int) string {
+	fill := strings.Repeat("Ab3x", 25)
+	return fill[:at] + "AZ" + "DO" + fill[:n-at-4]
+}
+func adoPAT() string { return adoPATAt(84, 76) }
+
+// adoOldPAT is an old-format 52-char base32 PAT shape.
+func adoOldPAT() string { return strings.Repeat("abcdefghijklmnopqrstuvwxyz234567", 2)[:52] }
+
 const hex16 = "0123456789abcdef"
 
 func sha40() string { return strings.Repeat(hex16, 2) + hex16[:8] }
@@ -46,6 +57,7 @@ func hitCorpus() map[string]string {
 	return map[string]string{
 		"github-token":         ghTok(),
 		"gitlab-pat":           glTok(),
+		"azure-devops-pat":     adoPAT(),
 		"atlassian-token":      atlTok(),
 		"aws-access-key":       awsKey(),
 		"slack-token":          slackTok(),
@@ -83,6 +95,10 @@ func benignCorpus() []benignRow {
 		{"short secret (15 chars)", "secret = " + highEntropy()[:15]},
 		{"bearer concatenation in Go", `Authorization: "Bearer "+c.token`},
 		{"bearer angle placeholder", "Authorization: Bearer <token-from-auth_env>"},
+		{"ado pat placeholder", "<your-pat>"},
+		{"ado pat env reference", "$AZURE_DEVOPS_EXT_PAT"},
+		{"ado auth_env name", "auth_env = AZURE_DEVOPS_EXT_PAT"},
+		{"bare old-format ado pat", adoOldPAT()},
 	}
 }
 
@@ -138,6 +154,66 @@ func TestGitHubFineGrainedPATFires(t *testing.T) {
 	}
 	if hits := scan(t, "corpus", tok[:len(tok)-1]); len(hits) != 0 {
 		t.Fatalf("github_pat_ at 21 chars must miss the floor, got %v", hits)
+	}
+}
+
+// TestAzureDevOpsPATAnchor: the AZDO signature is pinned to positions 76-79 of
+// an exactly-84-char run. Anywhere else, any other length, or lower case, and
+// it is not the PAT shape.
+func TestAzureDevOpsPATAnchor(t *testing.T) {
+	if tok := adoPAT(); len(tok) != 84 || tok[76:80] != "AZ"+"DO" {
+		t.Fatalf("fixture drifted: %d chars, signature %q", len(tok), tok[76:80])
+	}
+	for name, line := range map[string]string{
+		"signature at 75":              adoPATAt(84, 75),
+		"signature at 77":              adoPATAt(84, 77),
+		"83-char run":                  adoPATAt(83, 76),
+		"85-char run":                  adoPATAt(85, 76),
+		"85-char run, signature at 77": adoPATAt(85, 77),
+		"lowercase azdo":               strings.ToLower(adoPAT()[:76]) + "az" + "do" + "ab3x",
+	} {
+		if hits := scan(t, "anchor", line); len(hits) != 0 {
+			t.Errorf("%s: want zero hits, got %v", name, hits)
+		}
+	}
+	for _, line := range []string{adoPAT(), "pat: " + adoPAT() + ".", `"` + adoPAT() + `"`} {
+		hits := scan(t, "anchor", line)
+		if len(hits) != 1 || hits[0].Rule != "azure-devops-pat" || hits[0].Length != 84 {
+			t.Errorf("%q: want one 84-char azure-devops-pat hit, got %v", line, hits)
+		}
+	}
+}
+
+// TestAzureDevOpsOldPATLeftToKeyContext: a bare 52-char base32 run is far too
+// generic to call a PAT, but the same value under a key name is still caught —
+// by key-context, not by the PAT rule.
+func TestAzureDevOpsOldPATLeftToKeyContext(t *testing.T) {
+	if hits := scan(t, "old", adoOldPAT()); len(hits) != 0 {
+		t.Errorf("a bare 52-char base32 run fired: %v", hits)
+	}
+	hits := scan(t, "old", "token = "+adoOldPAT())
+	if len(hits) != 1 || hits[0].Rule != "key-context" {
+		t.Errorf("token = <old PAT>: want exactly one key-context hit, got %v", hits)
+	}
+}
+
+// TestAzureDevOpsPATReachesEverySink: a PAT pasted into a PR title or body, or
+// into a persisted artifact such as project.toml, is screened like any token.
+func TestAzureDevOpsPATReachesEverySink(t *testing.T) {
+	type pr struct {
+		Title string `json:"title"`
+		Body  string `json:"body"`
+	}
+	for _, body := range []pr{{Title: adoPAT()}, {Title: "t", Body: "see\n" + adoPAT()}} {
+		eh, ok := secretscan.AsErrHit(secretscan.ScanPayload("POST /pullrequests", body))
+		if !ok || len(eh.Hits) != 1 || eh.Hits[0].Rule != "azure-devops-pat" {
+			t.Errorf("payload %+v: want one azure-devops-pat ErrHit, got %v", body, eh)
+		}
+	}
+	toml := "[remote]\n  provider = \"azure-devops\"\n  auth_env = \"" + adoPAT() + "\"\n"
+	hits := scan(t, ".dross/project.toml", toml)
+	if len(hits) != 1 || hits[0].Rule != "azure-devops-pat" || hits[0].Line != 3 {
+		t.Errorf("project.toml: want one azure-devops-pat hit on line 3, got %v", hits)
 	}
 }
 
@@ -267,6 +343,9 @@ func randomLine(rng *rand.Rand, rule string) (line, variable string) {
 	case "gitlab-pat":
 		v := pick(alnum+"_-", 20+rng.Intn(10))
 		return "glpat-" + v, v
+	case "azure-devops-pat":
+		v := pick(alnum, 76) + "AZDO" + pick(alnum, 4)
+		return v, v
 	case "atlassian-token":
 		v := pick(alnum+"_=-", 20+rng.Intn(20))
 		return "ATATT" + v, v
