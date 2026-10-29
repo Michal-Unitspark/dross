@@ -1,0 +1,129 @@
+[verify]
+  phase = "azure-devops-provider"
+  generated_at = 2026-10-29T07:32:20.494831098Z
+  verdict = "partial"
+  finalized = true
+  finalized_at = 2026-10-29T10:13:31.60653054Z
+  measured_commit = "66fe494f7d5c9a4978489e8d221a5f46a0b78b6f"
+  measured_tree = "74f1442735e748de4bed2c5eb441a766bcf750fb"
+
+[summary]
+  mutation_status = "measured"
+  measured_on = "local"
+  mutation_score = 0.9188445667125172
+  mutants_killed = 668
+  mutants_survived = 59
+  mutants_not_covered = 59
+  mutants_no_block = 57
+  mutants_test_gap = 2
+  mutants_in_scope = 727
+  unclassified_in_scope = 0
+  criteria_total = 9
+  criteria_covered = 9
+  criteria_uncovered = 0
+
+  [[summary.leg]]
+    language = "go"
+    tool = "gremlins"
+    killed = 668
+    survived = 59
+    timeout = 0
+    in_scope = 727
+    score = 0.9188445667125172
+    file_count = 43
+    measured_on = "local"
+    whole_file = ["internal/cmd/doctor.go — adapter-lacks-range-runner", "internal/cmd/doctor_test.go — adapter-lacks-range-runner", "internal/cmd/init_test.go — adapter-lacks-range-runner", "internal/cmd/options_docs_test.go — adapter-lacks-range-runner", "internal/cmd/project.go — adapter-lacks-range-runner", "internal/cmd/project_test.go — adapter-lacks-range-runner", "internal/cmd/prompt_provider_list_test.go — adapter-lacks-range-runner", "internal/cmd/ship.go — adapter-lacks-range-runner", "internal/cmd/ship_test.go — adapter-lacks-range-runner", "internal/configenum/configenum.go — adapter-lacks-range-runner", "internal/configenum/configenum_test.go — adapter-lacks-range-runner", "internal/defaults/defaults.go — adapter-lacks-range-runner", "internal/defaults/defaults_test.go — adapter-lacks-range-runner", "internal/diag/combinations.go — adapter-lacks-range-runner", "internal/diag/diag_test.go — adapter-lacks-range-runner", "internal/hostallow/hostallow.go — adapter-lacks-range-runner", "internal/hostallow/hostallow_test.go — adapter-lacks-range-runner", "internal/project/azuredevops.go — adapter-lacks-range-runner", "internal/project/azuredevops_test.go — adapter-lacks-range-runner", "internal/project/project.go — adapter-lacks-range-runner", "internal/project/project_test.go — adapter-lacks-range-runner", "internal/project/remote.go — adapter-lacks-range-runner", "internal/project/remote_test.go — adapter-lacks-range-runner", "internal/secretscan/rules.go — adapter-lacks-range-runner", "internal/secretscan/secretscan_test.go — adapter-lacks-range-runner", "internal/secretscan/sinks.go — adapter-lacks-range-runner", "internal/secretscan/sinks_test.go — adapter-lacks-range-runner", "internal/ship/azuredevops.go — adapter-lacks-range-runner", "internal/ship/azuredevops_comment.go — adapter-lacks-range-runner", "internal/ship/azuredevops_comment_test.go — adapter-lacks-range-runner", "internal/ship/azuredevops_dispatch_test.go — adapter-lacks-range-runner", "internal/ship/azuredevops_open.go — adapter-lacks-range-runner", "internal/ship/azuredevops_open_test.go — adapter-lacks-range-runner", "internal/ship/azuredevops_pr.go — adapter-lacks-range-runner", "internal/ship/azuredevops_pr_test.go — adapter-lacks-range-runner", "internal/ship/azuredevops_test.go — adapter-lacks-range-runner", "internal/ship/comment.go — adapter-lacks-range-runner", "internal/ship/headpr.go — adapter-lacks-range-runner", "internal/ship/headpr_test.go — adapter-lacks-range-runner", "internal/ship/hostguard_test.go — adapter-lacks-range-runner", "internal/ship/merged.go — adapter-lacks-range-runner", "internal/ship/open.go — adapter-lacks-range-runner", "internal/ship/redact_test.go — adapter-lacks-range-runner"]
+
+[[criterion]]
+  id = "c-1"
+  status = "covered"
+  tests = ["internal/project/azuredevops_test.go:TestParseAzureDevOpsRemote", "internal/project/azuredevops_test.go:TestParseAzureLegacyHostCarriesOrg", "internal/project/azuredevops_test.go:TestParseAzureDevOpsPercentEncoding", "internal/project/remote_test.go:TestDetectRemote (azure devops rows)", "internal/cmd/init_test.go:TestInitDetectsAzureRemote", "internal/cmd/prompt_provider_list_test.go:TestPromptProviderListsMatchShipProviders", "internal/cmd/options_docs_test.go:TestOptionsCoversTheProviderConditionalRemoteFields"]
+  notes = "every Services form (https, user@, ssh v3, legacy https + vs-ssh) asserts canonical url + org api_base; %20 round-trip pinned; init end-to-end writes azure-devops; prompt bullets pinned to ShipProviders"
+
+[[criterion]]
+  id = "c-2"
+  status = "covered"
+  tests = ["internal/project/azuredevops_test.go:TestParseAzureDevOpsServer", "internal/ship/azuredevops_open_test.go:TestOpenAzureDevOpsPRServerAddressing", "internal/ship/azuredevops_pr_test.go:TestAzureDevOpsPRStatusServerAddressing", "internal/cmd/ship_test.go:TestShipAzureDevOpsFullFlow"]
+  notes = "/tfs/DefaultCollection and host-root collection parse rows; open/status pin the /tfs/DefaultCollection/P/_apis/git/repositories/R path; cmd flow sets url/api_base/api_version via project set and asserts every call on the collection's repo endpoint. See the FLAG on the short /<collection>/_git/<repo> form."
+
+[[criterion]]
+  id = "c-3"
+  status = "covered"
+  tests = ["internal/cmd/doctor_test.go:TestSameRemoteURL (ADO rows)", "internal/cmd/doctor_test.go:TestDoctorAcceptsAzureDevOpsRemote", "internal/cmd/doctor_test.go:TestDoctorMismatchStripsUserinfo", "internal/diag/diag_test.go:TestCombinationWarnings (azure-devops rows)", "internal/diag/diag_test.go:TestRemoteCombinationAzureBaseMismatch"]
+  notes = "ssh v3/user@/.git/case equivalence true, other repo/project/host false; doctor prints matches/does-not-match end to end; private-token/basic no-effect and auth_user-ignored warnings pinned"
+
+[[criterion]]
+  id = "c-4"
+  status = "covered"
+  tests = ["internal/ship/azuredevops_test.go:TestAzureDevOpsAuthHeader", "internal/ship/azuredevops_test.go:TestAzureDevOpsRefusesBeforeTokenRead", "internal/hostallow/hostallow_test.go:TestADOBuiltinHosts", "internal/ship/hostguard_test.go:TestShipRefusesOffAllowlistAPIBase (azure-devops rows)", "internal/cmd/init_test.go:TestInitNeverPersistsOriginPAT", "internal/defaults/defaults_test.go:TestApplySkipsForeignProviderCredentials"]
+  notes = "exactly one Authorization header (Basic :PAT, Bearer on bearer, no PRIVATE-TOKEN, auth_user never in it); off-allowlist api_base refused with 0 hits whether env set or not; built-in hosts accepted, lookalikes refused; origin PAT never reaches project.toml"
+
+[[criterion]]
+  id = "c-5"
+  status = "covered"
+  tests = ["internal/ship/azuredevops_open_test.go:TestOpenAzureDevOpsPRPayload", "internal/ship/azuredevops_open_test.go:TestOpenAzureDevOpsPRResultURL", "internal/ship/azuredevops_open_test.go:TestOpenAzureDevOpsPRReviewers", "internal/ship/azuredevops_open_test.go:TestOpenAzureDevOpsPRReviewerFailureNonFatal", "internal/cmd/ship_test.go:TestShipAzureDevOpsFullFlow", "internal/cmd/ship_test.go:TestShipAzureDevOpsReviewerFailureWarns"]
+  notes = "refs/heads source/target, isDraft only when draft, browser URL /_git/<repo>/pullrequest/<id> printed; GUID passthrough + one identities lookup, isRequired=false; every reviewer failure keeps the opened PR"
+
+[[criterion]]
+  id = "c-6"
+  status = "covered"
+  tests = ["internal/ship/headpr_test.go:TestFindOpenPRByHeadAzureDevOps", "internal/cmd/ship_test.go:TestShipAzureDevOpsDedupeHit", "internal/cmd/ship_test.go:TestShipAzureDevOpsLookupFailureRefuses"]
+  notes = "sourceRefName + status=active filter asserted, hits re-checked client-side; existing PR recorded with 0 POSTs; a 500 lookup refuses with 0 POSTs and pr still 0"
+
+[[criterion]]
+  id = "c-7"
+  status = "covered"
+  tests = ["internal/ship/azuredevops_comment_test.go:TestPostAzureDevOpsThread", "internal/ship/azuredevops_comment_test.go:TestPostAzureDevOpsCommentScreened", "internal/ship/azuredevops_comment_test.go:TestPostAzureDevOpsCommentErrorRedacted", "internal/cmd/ship_test.go:TestShipAzureDevOpsCommentPostsThread"]
+  notes = "POST .../pullRequests/<n>/threads with no status key; ghp_/glpat- body refused with 0 requests; 403 mirroring the PAT and its Basic form leaks neither"
+
+[[criterion]]
+  id = "c-8"
+  status = "covered"
+  tests = ["internal/ship/azuredevops_pr_test.go:TestAzureDevOpsPRStatusMapping", "internal/ship/azuredevops_pr_test.go:TestAzureDevOpsPRStatusUnknownIsAnError", "internal/ship/azuredevops_pr_test.go:TestAzureDevOpsPRStatusBaseRef"]
+  notes = "completed (any case) merged; abandoned/active not; unknown/empty status is an error; refs/heads/ stripped exactly once"
+
+[[criterion]]
+  id = "c-9"
+  status = "covered"
+  tests = ["internal/secretscan/secretscan_test.go:TestEveryRuleHasAHitCase", "internal/secretscan/secretscan_test.go:TestAzureDevOpsPATAnchor", "internal/secretscan/secretscan_test.go:TestAzureDevOpsOldPATLeftToKeyContext", "internal/secretscan/secretscan_test.go:TestAzureDevOpsPATReachesEverySink"]
+  notes = "84-char AZDO-anchored PAT hits in title/body payloads and a project.toml line; off-by-one anchor, wrong length and lowercase azdo give 0 hits; <your-pat>/$AZURE_DEVOPS_EXT_PAT benign; bare 52-char base32 left to key-context"
+
+[[finding]]
+  severity = "NOTE"
+  text = "skipped ARCHITECTURE.md: no mutation adapter for .md"
+
+[[finding]]
+  severity = "NOTE"
+  text = "skipped README.md: no mutation adapter for .md"
+
+[[finding]]
+  severity = "NOTE"
+  text = "skipped assets/prompts/init.md: no mutation adapter for .md"
+
+[[finding]]
+  severity = "NOTE"
+  text = "skipped assets/prompts/onboard.md: no mutation adapter for .md"
+
+[[finding]]
+  severity = "NOTE"
+  text = "skipped assets/prompts/options.md: no mutation adapter for .md"
+
+[[finding]]
+  severity = "NOTE"
+  text = "skipped internal/cmd/testdata/pathfence_scan/not_paths.txt: no mutation adapter for .txt"
+
+[[finding]]
+  severity = "FLAG"
+  text = "c-2: the short Server clone form https://<host>/tfs/<Collection>/_git/<repo> (repo named like its project) parses <Collection> as the project and 'tfs' as the base, per the locked repo_identity segment rule — ship then addresses <api_base>/<Collection>/_apis/... and fails, and doctor's Server base check steers api_base to https://<host>/tfs. o.visualstudio.com/DefaultCollection/_git/r has the same shape. Fix needs a repo_identity lock amendment (special-case /tfs or DefaultCollection) plus parser rows; flagged by the t-1 reviewer, left non-blocking."
+
+[[finding]]
+  severity = "NOTE"
+  text = "Not live-verified: every criterion is mock-verified (httptest). The verify_posture lock's live smoke run against a real org (open -> dedupe -> comment -> merged-status) was not performed in this verify, and the comment_thread_status fallback (status closed) still awaits it."
+
+[[finding]]
+  severity = "NOTE"
+  text = "Deferred surfaces (ListPRComments, PRHeadOf, AuthenticatedUser, OpenPRsTargeting) fail closed for azure-devops as required, but their error reads 'unsupported provider \"azure-devops\" (expected ... | azure-devops)', which contradicts itself. Goes away when azure-devops-ship-loop wires them; flagged by the t-8 reviewer."
+
+[[finding]]
+  severity = "NOTE"
+  text = "13 in-diff NOT COVERED survivors accepted this run: 12 switch-case condition lines (internal/project/azuredevops.go:99-101, internal/ship/azuredevops.go:186,188) under gremlins-attribution-ceiling — their case bodies run (go-cover count>=1); and internal/ship/azuredevops_open.go:122 (utf16Len else-branch), unreachable because ranging a Go string never yields a rune utf16.RuneLen rejects."

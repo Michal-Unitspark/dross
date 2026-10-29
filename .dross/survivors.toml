@@ -4585,3 +4585,84 @@
   line = 171
   accepted_in = "review-comment-ingest"
   category = "gremlins-attribution-ceiling"
+
+[[accepted]]
+  key = "106de9896f658914"
+  file = "internal/project/azuredevops.go"
+  op = "CONDITIONALS_NEGATION"
+  text = "case name == adoServicesHost && len(base) != 1, // dev.azure.com/<org>, exactly"
+  line = 99
+  accepted_in = "azure-devops-provider"
+  category = "gremlins-attribution-ceiling"
+
+[[accepted]]
+  key = "fb58f2fc9926eb56"
+  file = "internal/project/azuredevops.go"
+  op = "CONDITIONALS_BOUNDARY"
+  text = "orgHost && len(base) > 1,   // <org>.visualstudio.com[/DefaultCollection]"
+  line = 100
+  accepted_in = "azure-devops-provider"
+  category = "gremlins-attribution-ceiling"
+
+[[accepted]]
+  key = "4fed0b1f569aadbe"
+  file = "internal/project/azuredevops.go"
+  op = "CONDITIONALS_NEGATION"
+  text = "orgHost && len(base) > 1,   // <org>.visualstudio.com[/DefaultCollection]"
+  line = 100
+  accepted_in = "azure-devops-provider"
+  category = "gremlins-attribution-ceiling"
+
+[[accepted]]
+  key = "a63e1b4a54e981af"
+  file = "internal/project/azuredevops.go"
+  op = "CONDITIONALS_NEGATION"
+  text = "!orgHost && len(base) == 0: // a Server always has a collection"
+  line = 101
+  accepted_in = "azure-devops-provider"
+  category = "gremlins-attribution-ceiling"
+
+[[accepted]]
+  key = "0bcea2045a1135c1"
+  file = "internal/ship/azuredevops.go"
+  op = "CONDITIONALS_NEGATION"
+  text = "case status == http.StatusNonAuthoritativeInfo, status >= 300 && status < 400:"
+  line = 186
+  accepted_in = "azure-devops-provider"
+  category = "gremlins-attribution-ceiling"
+
+[[accepted]]
+  key = "3e689b080f36aa6b"
+  file = "internal/ship/azuredevops.go"
+  op = "CONDITIONALS_BOUNDARY"
+  text = "case status == http.StatusNonAuthoritativeInfo, status >= 300 && status < 400:"
+  line = 186
+  accepted_in = "azure-devops-provider"
+  category = "gremlins-attribution-ceiling"
+
+[[accepted]]
+  key = "f882740e3df87ce4"
+  file = "internal/ship/azuredevops.go"
+  op = "CONDITIONALS_BOUNDARY"
+  text = "case status >= 300:"
+  line = 188
+  accepted_in = "azure-devops-provider"
+  category = "gremlins-attribution-ceiling"
+
+[[accepted]]
+  key = "9d0c8343b4324a1b"
+  file = "internal/ship/azuredevops.go"
+  op = "CONDITIONALS_NEGATION"
+  text = "case status >= 300:"
+  line = 188
+  accepted_in = "azure-devops-provider"
+  category = "gremlins-attribution-ceiling"
+
+[[accepted]]
+  key = "2b7346dca5addb54"
+  file = "internal/ship/azuredevops_open.go"
+  op = "INCREMENT_DECREMENT"
+  text = "n++"
+  line = 122
+  reason = "Unreachable, not untested: utf16Len ranges over a Go string, and range decoding never yields a rune utf16.RuneLen rejects — an invalid UTF-8 sequence, including a UTF-8-encoded surrogate, decodes to utf8.RuneError (U+FFFD, one UTF-16 unit), and no decoded rune exceeds unicode.MaxRune. So RuneLen(r) > 0 for every r and the else-branch's n++ never runs; its coverage block is count 0 by construction and no test can kill the mutant. The branch is a defensive guard against RuneLen's documented -1, kept so the function stays correct if it is ever fed runes from another source."
+  accepted_in = "azure-devops-provider"
