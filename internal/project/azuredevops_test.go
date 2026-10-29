@@ -88,6 +88,15 @@ func TestParseAzureLegacyHostCarriesOrg(t *testing.T) {
 		repo:     "r",
 		services: true,
 	})
+	// A lone DefaultCollection is the base, never a project: repo == project.
+	checkADO(t, "https://o.visualstudio.com/DefaultCollection/_git/r", adoWant{
+		url:      "https://o.visualstudio.com/DefaultCollection/r/_git/r",
+		apiBase:  "https://o.visualstudio.com/DefaultCollection",
+		base:     "DefaultCollection",
+		project:  "r",
+		repo:     "r",
+		services: true,
+	})
 	// Zero segments before _git: repo == project, base empty.
 	checkADO(t, "https://o.visualstudio.com/_git/r", adoWant{
 		url:      "https://o.visualstudio.com/r/_git/r",
@@ -166,6 +175,36 @@ func TestParseAzureDevOpsServer(t *testing.T) {
 		project: "R",
 		repo:    "R",
 	})
+	// Under /tfs the collection is the segment after it, never a project, so
+	// the short form is repo == project too — and its canonical url parses back
+	// to itself.
+	short := adoWant{
+		url:     "https://tfs.corp/tfs/Coll/R/_git/R",
+		apiBase: "https://tfs.corp/tfs/Coll",
+		base:    "tfs/Coll",
+		project: "R",
+		repo:    "R",
+	}
+	checkADO(t, "https://tfs.corp/tfs/Coll/_git/R", short)
+	checkADO(t, "ssh://tfs.corp:22/tfs/Coll/_git/R", short)
+	checkADO(t, short.url, short)
+	checkADO(t, "https://tfs.corp/TFS/Coll/_git/R", adoWant{
+		url:     "https://tfs.corp/TFS/Coll/R/_git/R",
+		apiBase: "https://tfs.corp/TFS/Coll",
+		base:    "TFS/Coll",
+		project: "R",
+		repo:    "R",
+	})
+	// The /tfs marker is a Server's alone: a dev.azure.com org named tfs keeps
+	// its project.
+	checkADO(t, "https://dev.azure.com/tfs/p/_git/r", adoWant{
+		url:      "https://dev.azure.com/tfs/p/_git/r",
+		apiBase:  "https://dev.azure.com/tfs",
+		base:     "tfs",
+		project:  "p",
+		repo:     "r",
+		services: true,
+	})
 }
 
 // TestParseAzureDevOpsRepoIsProject: dev.azure.com/<org>/_git/<repo> names a
@@ -200,6 +239,7 @@ func TestParseAzureRejects(t *testing.T) {
 		"https://dev.azure.com/o/_git/p/_git/r", // a second _git
 		"https://o.visualstudio.com/a/b/p/_git/r",
 		"https://tfs.corp/_git/R",              // Server without a collection
+		"https://tfs.corp/tfs/_git/R",          // /tfs without its collection
 		"git@ssh.dev.azure.com:v3/o/p",         // v3 missing the repo
 		"git@ssh.dev.azure.com:v2/o/p/r",       // not v3
 		"git@ssh.dev.azure.com:o/p/_git/r",     // ssh host, not v3

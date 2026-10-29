@@ -10,6 +10,12 @@ const (
 	adoSSHHost       = "ssh.dev.azure.com"
 	adoLegacySSHHost = "vs-ssh.visualstudio.com"
 	adoLegacySuffix  = ".visualstudio.com"
+
+	// Collection markers: as the first segment before _git — tfs on a Server,
+	// DefaultCollection on <org>.visualstudio.com — the name is base, never
+	// the project (adoBaseDepth).
+	adoServerVDir        = "tfs"
+	adoDefaultCollection = "DefaultCollection"
 )
 
 // AzureDevOpsRemote is an Azure Repos remote split into what every Azure DevOps
@@ -40,8 +46,10 @@ type AzureDevOpsRemote struct {
 // Everything before <project>/_git/<repo> is the org/collection base. A single
 // segment before _git is the base alone, with repo == project. On
 // <org>.visualstudio.com the org is the host's label, so the base is counted
-// after it. Percent-encoded names survive: segments are decoded once into
-// Project/Repo and escaped once into URL/APIBase.
+// after it. A Server's leading /tfs and a lone DefaultCollection on
+// <org>.visualstudio.com mark a collection, never a project (adoBaseDepth).
+// Percent-encoded names survive: segments are decoded once into Project/Repo
+// and escaped once into URL/APIBase.
 //
 // ok is false for anything that is not that shape — no _git, an empty or dot
 // segment, a Services remote with no org — so a caller never sees half a parse.
@@ -91,14 +99,15 @@ func ParseAzureDevOpsRemote(raw string) (AzureDevOpsRemote, bool) {
 		}
 		repo, project = segs[i+1], segs[i+1]
 		orgHost := visualStudioOrg(name) != ""
-		if len(pre) > 1 || (orgHost && len(pre) == 1) {
+		depth := adoBaseDepth(name, pre)
+		if len(pre) > depth {
 			project, pre = pre[len(pre)-1], pre[:len(pre)-1]
 		}
 		base = pre
 		switch {
 		case name == adoServicesHost && len(base) != 1, // dev.azure.com/<org>, exactly
-			orgHost && len(base) > 1,   // <org>.visualstudio.com[/DefaultCollection]
-			!orgHost && len(base) == 0: // a Server always has a collection
+			orgHost && len(base) > 1, // <org>.visualstudio.com[/DefaultCollection]
+			len(base) < depth:        // a Server always has a collection, /tfs/<coll> under /tfs
 			return AzureDevOpsRemote{}, false
 		}
 	}
@@ -122,6 +131,28 @@ func ParseAzureDevOpsRemote(raw string) (AzureDevOpsRemote, bool) {
 	}
 	r.URL = r.APIBase + "/" + url.PathEscape(project) + "/_git/" + url.PathEscape(repo)
 	return r, true
+}
+
+// adoBaseDepth is how many leading segments of pre (the path before _git) are
+// always base, never the project: none on <org>.visualstudio.com, whose org is
+// the host's label, unless the first is DefaultCollection; two on a Server
+// whose path starts at /tfs, which needs the collection after it; one — the
+// org, or a Server's collection — otherwise. host is lowercase, without a port.
+func adoBaseDepth(host string, pre []string) int {
+	first := ""
+	if len(pre) > 0 {
+		first = pre[0]
+	}
+	switch {
+	case visualStudioOrg(host) != "":
+		if strings.EqualFold(first, adoDefaultCollection) {
+			return 1
+		}
+		return 0
+	case host != adoServicesHost && strings.EqualFold(first, adoServerVDir):
+		return 2
+	}
+	return 1
 }
 
 // adoSegments splits an escaped remote path and decodes each segment once. An
