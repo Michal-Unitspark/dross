@@ -88,6 +88,22 @@
         }
       ]
     },
+    "t-14": {
+      "files": [
+        "internal/project/azuredevops.go",
+        "internal/project/azuredevops_test.go"
+      ],
+      "commit": "0193775",
+      "completed_at": "2026-10-29T10:41:18.119709748Z",
+      "landmarks": [
+        {
+          "feature": "azure devops remote identity",
+          "symbol": "adoBaseDepth",
+          "loc": "internal/project/azuredevops.go:141",
+          "what": "/tfs and DefaultCollection lead segments are collection base, never project, so short Server forms address the right repo"
+        }
+      ]
+    },
     "t-2": {
       "files": [
         "internal/secretscan/rules.go",
@@ -452,6 +468,54 @@
           "kind": "quality",
           "severity": "NOTE",
           "text": "In the foreign case, api_base and log_api are still seeded from the other provider's defaults when the remote leaves them empty. Today DetectRemote always fills api_base for a recognised provider, so this does no harm.",
+          "resolution": "non-blocking, left"
+        }
+      ]
+    },
+    "t-14": {
+      "outcome": "pass",
+      "rounds": 2,
+      "findings": [
+        {
+          "round": 1,
+          "kind": "quality",
+          "severity": "NOTE",
+          "text": "The const-block comment says a segment named tfs or DefaultCollection is 'always part of the base, never a project', but adoBaseDepth only checks the first segment, and only on a Server (tfs) or \u003corg\u003e.visualstudio.com (DefaultCollection). For example, tfs.corp/Coll/DefaultCollection/_git/R still yields project DefaultCollection. The comment overstates what the code does.",
+          "resolution": "non-blocking, left"
+        },
+        {
+          "round": 1,
+          "kind": "quality",
+          "severity": "NOTE",
+          "text": "As the repo_identity lock requires, a Server whose host-root collection is literally named tfs is now read differently: host/tfs/_git/R is refused, and host/tfs/P/_git/R becomes base tfs/P with repo == project instead of base tfs with project P. The short form is inherently ambiguous and the lock settles it this way.",
+          "resolution": "non-blocking, left"
+        },
+        {
+          "round": 1,
+          "kind": "quality",
+          "severity": "NOTE",
+          "text": "The dev.azure.com/tfs/p/_git/r row tests that the /tfs marker does not apply on dev.azure.com, and the TFS uppercase row tests the case-insensitive match. The /tfs/Coll short form also gets a round-trip check.",
+          "resolution": "non-blocking, left"
+        },
+        {
+          "round": 2,
+          "kind": "quality",
+          "severity": "NOTE",
+          "text": "By design under the repo_identity lock, a Server whose host-root collection is literally named 'tfs' (host/tfs/P/_git/R meaning collection tfs, project P) now parses as base tfs/P with repo == project, and there is no identity field to override it. The lock accepts this ambiguity, but it may be worth a line in the user docs.",
+          "resolution": "non-blocking, left"
+        },
+        {
+          "round": 2,
+          "kind": "quality",
+          "severity": "NOTE",
+          "text": "The tfs and DefaultCollection markers are matched case-insensitively. TFS is tested, but there is no row for a lowercase 'defaultcollection'. That is a minor coverage gap, not a defect.",
+          "resolution": "non-blocking, left"
+        },
+        {
+          "round": 2,
+          "kind": "quality",
+          "severity": "NOTE",
+          "text": "The round-trip row checkADO(t, short.url, short) checks that the new short-form canonical url parses back to itself, and the dev.azure.com/tfs/p row checks that the /tfs marker does not apply to Services.",
           "resolution": "non-blocking, left"
         }
       ]
