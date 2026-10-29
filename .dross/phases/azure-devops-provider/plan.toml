@@ -1,3 +1,4 @@
+task_seq = 14
 [phase]
   id = "azure-devops-provider"
 
@@ -207,3 +208,14 @@ autodetects.
     "if a userinfo token reaches project.toml, TestInitNeverPersistsOriginPAT fails: for origin https://o:PATVALUE@dev.azure.com/o/p/_git/r the file does not contain PATVALUE",
   ]
   status = "done"
+
+[[task]]
+  id = "t-14"
+  wave = 5
+  title = "Parse short Server and DefaultCollection forms"
+  files = ["internal/project/azuredevops.go", "internal/project/azuredevops_test.go"]
+  description = "Apply the amended repo_identity lock in ParseAzureDevOpsRemote: on a Server a leading /tfs segment pairs with the next as the collection base (host/tfs/Coll/_git/r -> base tfs/Coll, repo == project), and on <org>.visualstudio.com a lone DefaultCollection is the base, not a project (o.visualstudio.com/DefaultCollection/_git/r -> base DefaultCollection, repo == project). Existing long forms parse unchanged. Closes verify's c-2 FLAG."
+  covers = ["c-1", "c-2"]
+  test_contract = ["if a short /tfs/<Collection>/_git/<repo> remote (https or ssh://host:22) parses with base tfs or project <Collection>, TestParseAzureDevOpsServer fails", "if o.visualstudio.com/DefaultCollection/_git/r parses as project DefaultCollection with an empty base, TestParseAzureLegacyHostCarriesOrg fails", "if a bare /tfs with no collection parses, TestParseAzureRejects fails; if the long /tfs/DefaultCollection/P/_git/R, host-root Coll/P/_git/R or o.visualstudio.com/DefaultCollection/p/_git/r rows change, their existing rows fail"]
+  status = "in_progress"
+  depends_on = ["t-1"]
