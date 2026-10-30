@@ -1,0 +1,131 @@
+# Live Azure DevOps smoke — the record for azure-devops-ship-loop c-7.
+#
+# This file is the runbook and the record in one. The mocked httptest suite is
+# the per-criterion bar (verify_posture); this run is recorded beside it and
+# never substitutes for it, nor it for this. TestADOLiveRecordHonest and
+# TestADOLiveRecordStepEvidence (ado_live_record_test.go) validate whatever is
+# written here: mock-verified is never reported as live-verified.
+#
+# posture is one of:
+#   mock-only — nothing has run live: every step is not-run.
+#   partial   — a live run happened, and at least one step is not-run or fail.
+#   live      — every step passed live, each with its evidence.
+#
+# Prerequisites — set these up by hand before step 1:
+#   1. A scratch Azure DevOps repo, cloned, with `dross init` run in it so
+#      [remote] points at the org/collection (api_base, auth_env holding a PAT).
+#   2. A pipeline — YAML (azure-pipelines.yml) or a classic pipeline — that
+#      triggers on phase/* branches, plus an agent that can run it: a hosted
+#      parallelism grant or a self-hosted agent. A pipeline with no runnable
+#      agent never leaves queued, and the ci step cannot pass.
+#   3. A phase on phase/<id> with a /dross-verify pass, so `dross ship` will
+#      open its PR.
+#   4. A comment-resolution policy (Comment requirements) set by hand on the
+#      phase's base branch. dross never sets a branch policy; the hand-set one
+#      is what the comment-policy step probes.
+#   5. Before the listing step: an inline comment posted by hand on the PR, on
+#      a file and line of its diff, so the listing has one to show.
+#   6. Before the merge step: every reviewer thread resolved, so the
+#      comment-resolution policy does not block completion.
+#
+# Fill in after the run: run_at (RFC 3339), api_base and api_version exactly as
+# [remote] had them, and phase. Never put an httptest, localhost or 127.0.0.1
+# address anywhere here — that is mock evidence, and the validator rejects it.
+
+posture = "mock-only"
+run_at = ""
+phase = ""
+api_base = ""
+api_version = ""
+
+# Set by the comment-policy step, from the PR's Comment requirements
+# evaluation right after `dross ship comment` posted a statusless thread:
+# true when that thread kept the policy from approving. If true, adoThreadStatus
+# (azuredevops_comment.go) must become "closed" in the same commit.
+# statusless_thread_blocks = false
+
+# Steps, in order. result is not-run | pass | fail. evidence is what the step
+# printed, verbatim, naming an ADO URL or id; the typed fields under a step are
+# what the validator checks before it accepts a pass.
+
+[[step]]
+  key = "open"
+  # `dross ship <id>` opens the PR.
+  result = "not-run"
+  evidence = ""
+  pr_url = "" # the PR's browser URL: https://<host>/.../_git/<repo>/pullrequest/<n>
+
+[[step]]
+  key = "dedupe"
+  # Re-run `dross ship <id>`: it finds the open PR instead of opening another.
+  result = "not-run"
+  evidence = "" # must hold the "found open PR #<n>" line
+
+[[step]]
+  key = "comment"
+  # `dross ship comment --pr <n> --body-file <f>` posts a new thread.
+  result = "not-run"
+  evidence = "" # the thread's URL or id
+
+[[step]]
+  key = "comment-policy"
+  # Read the PR's Comment requirements evaluation with the statusless thread
+  # still active, and set statusless_thread_blocks above.
+  result = "not-run"
+  evidence = "" # the evaluation's status, verbatim, with the PR id
+
+[[step]]
+  key = "listing"
+  # `dross pr comments <n>` lists the conversation and the hand-posted inline
+  # comment.
+  result = "not-run"
+  evidence = ""
+  inline_path = "" # the inline comment's path, as listed
+  inline_line = 0  # its line, as listed (> 0)
+
+[[step]]
+  key = "head"
+  # PRHeadOf, through `dross pr comments` or `dross pr reply`.
+  result = "not-run"
+  evidence = ""
+  head_ref = ""            # must be phase/<phase>
+  # head_open = true       # must be true
+  # head_cross_repo = false # must be false
+
+[[step]]
+  key = "user"
+  # AuthenticatedUser: the credential's own identity.
+  result = "not-run"
+  evidence = ""
+  user_id = ""          # AuthenticatedUser().ID
+  thread_author_id = "" # the author id on the thread dross posted; must equal user_id
+
+[[step]]
+  key = "respond"
+  # /dross-respond rejects a comment and `dross pr reply <n> --post` replies.
+  result = "not-run"
+  evidence = ""
+  reply_body = ""       # the reply thread's first line, verbatim
+  reply_dropped = false # true once the next `dross pr comments` no longer lists it
+
+[[step]]
+  key = "ci"
+  # `dross ship ci <id>` until it reads a verdict.
+  result = "not-run"
+  evidence = ""
+  ci_verdict = "" # the `ci: ...` line, verbatim
+  build_url = ""  # the build's URL on the real ADO host
+
+[[step]]
+  key = "merge"
+  # `dross ship merge <id>`, then `git ls-remote origin phase/<id>`.
+  result = "not-run"
+  evidence = ""
+  ls_remote = "" # the ls-remote output: phase/<id> must still be on origin
+
+[[step]]
+  key = "merged-status"
+  # dross's merged-status read (GetPRStatus) after completion.
+  result = "not-run"
+  evidence = ""
+  merged_status = "" # must be merged
