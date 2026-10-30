@@ -94,33 +94,79 @@ func TestAzureDevOpsDispatchRoutes(t *testing.T) {
 	})
 }
 
-// TestAzureDeferredSurfacesFailClosed: the surfaces this phase defers to
-// azure-devops-ship-loop answer azure-devops with an error, never an empty
-// result — an empty comment list, PR head, account or dependent list would
-// each read as a real answer — and none of them sends a request.
-func TestAzureDeferredSurfacesFailClosed(t *testing.T) {
+// TestAzureDevOpsReadSurfacesRoute: the PR-thread, head, caller and
+// dependents reads each route azure-devops — padded and mixed-case — to its
+// Azure Repos call; a PR number below 1 still sends nothing, and Bitbucket's
+// dependents lookup is still an announced skip.
+func TestAzureDevOpsReadSurfacesRoute(t *testing.T) {
 	t.Setenv(adoTestEnv, adoTestTok)
-	m := newADOPRMock(t)
+	m := newADOPRMock(t,
+		adoRoute{"GET", "/pullRequests/7/threads", 200, adoThreads(adoThread(1, "", adoText(1, "hi")))},
+		adoRoute{"GET", "/pullRequests/7", 200, adoPRBody("active", "refs/heads/phase/x", "")},
+		adoRoute{"GET", "/_apis/connectionData", 200, adoConnectionData(adoGUID1, "me@corp.com")},
+		adoRoute{"GET", "/pullrequests", 200, adoList(adoListPR(3, "active", "refs/heads/phase/x", "refs/heads/milestone/v1", ""))},
+	)
 	opts := adoTestOpts(m.Server)
-	opts.Provider = "azure-devops"
+	opts.Provider = adoPaddedProvider
 
 	comments, err := ListPRComments(opts, 7)
-	if err == nil || comments != nil {
-		t.Errorf("ListPRComments = (%v, %v), want (nil, err)", comments, err)
+	if err != nil || len(comments) != 1 {
+		t.Errorf("ListPRComments = (%+v, %v), want one comment", comments, err)
 	}
+	if got := m.matching("GET", "/_apis/git/repositories/r/pullRequests/7/threads"); len(got) != 1 {
+		t.Errorf("ListPRComments: want one GET .../pullRequests/7/threads, got %+v", m.calls)
+	}
+
 	head, err := PRHeadOf(opts, 7)
-	if err == nil || head != (PRHead{}) {
-		t.Errorf("PRHeadOf = (%+v, %v), want (zero, err)", head, err)
+	if err != nil || head.Ref != "phase/x" || !head.Open {
+		t.Errorf("PRHeadOf = (%+v, %v), want phase/x open", head, err)
 	}
+	if got := m.matching("GET", "/_apis/git/repositories/r/pullRequests/7"); len(got) != 2 {
+		t.Errorf("PRHeadOf: want a GET .../pullRequests/7 beside the threads read, got %+v", m.calls)
+	}
+
 	acct, err := AuthenticatedUser(opts)
-	if err == nil || acct != (Account{}) {
-		t.Errorf("AuthenticatedUser = (%+v, %v), want (zero, err)", acct, err)
+	if err != nil || acct.ID != adoGUID1 {
+		t.Errorf("AuthenticatedUser = (%+v, %v), want %s", acct, err, adoGUID1)
 	}
-	prs, err := OpenPRsTargeting(opts, "main")
-	if err == nil || prs != nil {
-		t.Errorf("OpenPRsTargeting = (%v, %v), want (nil, err)", prs, err)
+	if got := m.matching("GET", "/o/_apis/connectionData"); len(got) != 1 {
+		t.Errorf("AuthenticatedUser: want one GET <base>/_apis/connectionData, got %+v", m.calls)
 	}
-	if len(m.calls) != 0 {
-		t.Errorf("%d request(s) went out from a surface azure-devops does not wire yet", len(m.calls))
+
+	prs, err := OpenPRsTargeting(opts, "milestone/v1")
+	if err != nil || len(prs) != 1 || prs[0].Number != 3 {
+		t.Errorf("OpenPRsTargeting = (%+v, %v), want #3", prs, err)
+	}
+	lists := m.matching("GET", "/_apis/git/repositories/r/pullrequests")
+	var targeted int
+	for _, c := range lists {
+		if c.query.Get("searchCriteria.targetRefName") == "refs/heads/milestone/v1" {
+			targeted++
+		}
+	}
+	if targeted != 1 {
+		t.Errorf("OpenPRsTargeting: want one GET .../pullrequests with searchCriteria.targetRefName, got %+v", lists)
+	}
+
+	before := len(m.calls)
+	for _, n := range []int{0, -1} {
+		if got, err := ListPRComments(opts, n); err == nil || got != nil {
+			t.Errorf("ListPRComments(%d) = (%v, %v), want (nil, err)", n, got, err)
+		}
+		if got, err := PRHeadOf(opts, n); err == nil || got != (PRHead{}) {
+			t.Errorf("PRHeadOf(%d) = (%+v, %v), want (zero, err)", n, got, err)
+		}
+	}
+	if len(m.calls) != before {
+		t.Errorf("%d request(s) went out for a PR number below 1", len(m.calls)-before)
+	}
+
+	bb := opts
+	bb.Provider = "bitbucket"
+	if got, err := OpenPRsTargeting(bb, "milestone/v1"); !errors.Is(err, ErrBasePRLookupUnsupported) || got != nil {
+		t.Errorf("bitbucket OpenPRsTargeting = (%v, %v), want ErrBasePRLookupUnsupported", got, err)
+	}
+	if len(m.calls) != before {
+		t.Errorf("bitbucket's dependents lookup sent %d request(s)", len(m.calls)-before)
 	}
 }
