@@ -13,8 +13,7 @@ import (
 )
 
 // ErrOpenPRListUnsupported is what ListOpenPRs returns for every provider but
-// GitHub, without spawning anything (forge_scope): GitLab and Forgejo/Gitea
-// authors carry no bot flag, so there is nothing to classify a PR by.
+// GitHub and Azure DevOps, without spawning or sending anything (forge_scope).
 var ErrOpenPRListUnsupported = errors.New("open-PR listing is not supported for this provider")
 
 // CheckRollup is one PR's checks reduced to a single verdict.
@@ -28,7 +27,8 @@ const (
 )
 
 // PRAuthor is a PR's author as gh reports it. IsBot is the forge's own flag —
-// gh's `is_bot` — never a guess from the login.
+// gh's `is_bot` — never a guess from the login; Azure DevOps has none, so it is
+// always false there.
 type PRAuthor struct {
 	Login string `json:"login"`
 	IsBot bool   `json:"is_bot"`
@@ -42,8 +42,9 @@ type PRCheck struct {
 	State      string `json:"state"`
 }
 
-// OpenPRRecord is one open pull request, decoded from gh's --json record.
-// Checks is not gh's: it is StatusCheckRollup reduced by checkRollup.
+// OpenPRRecord is one open pull request, decoded from gh's --json record or
+// mapped from an Azure DevOps PR. Checks is not gh's: it is StatusCheckRollup
+// reduced by checkRollup, or ship ci's verdict on Azure DevOps.
 type OpenPRRecord struct {
 	Number            int         `json:"number"`
 	Title             string      `json:"title"`
@@ -74,9 +75,9 @@ var prListTimeout = 20 * time.Second
 // otherwise hold Wait with it.
 const prListWaitDelay = time.Second
 
-// ListOpenPRs lists the repository's open PRs with their check rollups. Only
-// GitHub answers: every other provider gets ErrOpenPRListUnsupported without a
-// spawn.
+// ListOpenPRs lists the repository's open PRs with their check rollups.
+// GitHub and Azure DevOps answer; every other provider gets
+// ErrOpenPRListUnsupported without a spawn or a request.
 //
 // A failure is always (nil, err), never an empty list: an empty list says the
 // forge was reached and nothing is open. The failure is also QUIET — nothing
@@ -84,10 +85,14 @@ const prListWaitDelay = time.Second
 // read-only digest that shows nothing when the forge cannot be asked, and a gh
 // auth prompt on every tick would be noise that digest exists to spare.
 func ListOpenPRs(opts OpenOpts) ([]OpenPRRecord, error) {
-	if configenum.Normalize(opts.Provider) != "github" {
+	switch configenum.Normalize(opts.Provider) {
+	case "github":
+		return gitHubOpenPRs()
+	case "azure-devops":
+		return azureDevOpsOpenPRs(opts)
+	default:
 		return nil, fmt.Errorf("provider %q: %w", opts.Provider, ErrOpenPRListUnsupported)
 	}
-	return gitHubOpenPRs()
 }
 
 // ListOpenPRsFunc is the exported, overridable seam that cmd-package callers
