@@ -4596,33 +4596,6 @@
   category = "gremlins-attribution-ceiling"
 
 [[accepted]]
-  key = "fb58f2fc9926eb56"
-  file = "internal/project/azuredevops.go"
-  op = "CONDITIONALS_BOUNDARY"
-  text = "orgHost && len(base) > 1,   // <org>.visualstudio.com[/DefaultCollection]"
-  line = 100
-  accepted_in = "azure-devops-provider"
-  category = "gremlins-attribution-ceiling"
-
-[[accepted]]
-  key = "4fed0b1f569aadbe"
-  file = "internal/project/azuredevops.go"
-  op = "CONDITIONALS_NEGATION"
-  text = "orgHost && len(base) > 1,   // <org>.visualstudio.com[/DefaultCollection]"
-  line = 100
-  accepted_in = "azure-devops-provider"
-  category = "gremlins-attribution-ceiling"
-
-[[accepted]]
-  key = "a63e1b4a54e981af"
-  file = "internal/project/azuredevops.go"
-  op = "CONDITIONALS_NEGATION"
-  text = "!orgHost && len(base) == 0: // a Server always has a collection"
-  line = 101
-  accepted_in = "azure-devops-provider"
-  category = "gremlins-attribution-ceiling"
-
-[[accepted]]
   key = "0bcea2045a1135c1"
   file = "internal/ship/azuredevops.go"
   op = "CONDITIONALS_NEGATION"
@@ -4666,3 +4639,57 @@
   line = 122
   reason = "Unreachable, not untested: utf16Len ranges over a Go string, and range decoding never yields a rune utf16.RuneLen rejects — an invalid UTF-8 sequence, including a UTF-8-encoded surrogate, decodes to utf8.RuneError (U+FFFD, one UTF-16 unit), and no decoded rune exceeds unicode.MaxRune. So RuneLen(r) > 0 for every r and the else-branch's n++ never runs; its coverage block is count 0 by construction and no test can kill the mutant. The live branch (1- and 2-unit runes) is pinned by TestOpenAzureDevOpsPRLongDescription; the else-branch is a defensive guard against RuneLen's documented -1, kept so the function stays correct if it is ever fed runes from another source."
   accepted_in = "azure-devops-provider"
+
+[[accepted]]
+  key = "515f6423745cb441"
+  file = "internal/project/azuredevops.go"
+  op = "CONDITIONALS_BOUNDARY"
+  text = "orgHost && len(base) > 1, // <org>.visualstudio.com[/DefaultCollection]"
+  line = 109
+  accepted_in = "azure-devops-provider"
+  category = "gremlins-attribution-ceiling"
+
+[[accepted]]
+  key = "958486533dc6b939"
+  file = "internal/project/azuredevops.go"
+  op = "CONDITIONALS_NEGATION"
+  text = "orgHost && len(base) > 1, // <org>.visualstudio.com[/DefaultCollection]"
+  line = 109
+  accepted_in = "azure-devops-provider"
+  category = "gremlins-attribution-ceiling"
+
+[[accepted]]
+  key = "d58643dbb7fa5555"
+  file = "internal/project/azuredevops.go"
+  op = "CONDITIONALS_BOUNDARY"
+  text = "len(base) < depth:        // a Server always has a collection, /tfs/<coll> under /tfs"
+  line = 110
+  accepted_in = "azure-devops-provider"
+  category = "gremlins-attribution-ceiling"
+
+[[accepted]]
+  key = "d557da1b7480081d"
+  file = "internal/project/azuredevops.go"
+  op = "CONDITIONALS_NEGATION"
+  text = "len(base) < depth:        // a Server always has a collection, /tfs/<coll> under /tfs"
+  line = 110
+  accepted_in = "azure-devops-provider"
+  category = "gremlins-attribution-ceiling"
+
+[[accepted]]
+  key = "05c0e61226990aff"
+  file = "internal/project/azuredevops.go"
+  op = "CONDITIONALS_NEGATION"
+  text = "case visualStudioOrg(host) != \"\":"
+  line = 147
+  accepted_in = "azure-devops-provider"
+  category = "gremlins-attribution-ceiling"
+
+[[accepted]]
+  key = "f1475e972d8c7691"
+  file = "internal/project/azuredevops.go"
+  op = "CONDITIONALS_NEGATION"
+  text = "case host != adoServicesHost && strings.EqualFold(first, adoServerVDir):"
+  line = 152
+  accepted_in = "azure-devops-provider"
+  category = "gremlins-attribution-ceiling"
