@@ -1,11 +1,11 @@
 [verify]
   phase = "azure-devops-provider"
-  generated_at = 2026-10-29T16:34:34.907573186Z
+  generated_at = 2026-10-30T08:04:29.333193429Z
   verdict = "pass"
   finalized = true
-  finalized_at = 2026-10-30T07:10:33.269936503Z
-  measured_commit = "dbba87a148e830b4ce1fb269af3b8090b6575edf"
-  measured_tree = "871c330f11087de063875b92427fd06e6b34d69a"
+  finalized_at = 2026-10-30T10:46:35.283989334Z
+  measured_commit = "63aeb6a26ee9f204fd5d918e8ecdb93b570a730b"
+  measured_tree = "b12242451ba4af1e916851b00f97ac5f0bcbf5b9"
 
 [summary]
   mutation_status = "measured"
@@ -110,7 +110,15 @@
 
 [[finding]]
   severity = "NOTE"
+  text = "skipped go.mod: no mutation adapter for .mod"
+
+[[finding]]
+  severity = "NOTE"
   text = "skipped internal/cmd/testdata/pathfence_scan/not_paths.txt: no mutation adapter for .txt"
+
+[[finding]]
+  severity = "NOTE"
+  text = "skipped internal/mutation/testdata/ts-project/package-lock.json: no mutation adapter for .json"
 
 [[finding]]
   severity = "NOTE"
@@ -127,3 +135,7 @@
 [[finding]]
   severity = "NOTE"
   text = "Deferred surfaces (ListPRComments, PRHeadOf, AuthenticatedUser, OpenPRsTargeting) fail closed for azure-devops as required, but their error reads 'unsupported provider \"azure-devops\" (expected ... | azure-devops)', which contradicts itself. Goes away when azure-devops-ship-loop wires them; flagged by the t-8 reviewer."
+
+[[finding]]
+  severity = "NOTE"
+  text = "Re-verified at 63aeb6a after two CI fixes on the phase branch, neither touching code under test: toolchain go1.27.1 -> go1.27.3 (govulncheck: 9 stdlib advisories) and npm audit fix on the TS fixture lockfile (vite, zod highs). Mutation numbers unchanged; PR #1 CI green on 63aeb6a (test, mutation-ts, goreleaser-check, shellcheck)."
