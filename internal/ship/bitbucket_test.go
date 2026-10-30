@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"strings"
+	"sync/atomic"
 	"testing"
 
 	"github.com/Rivil/dross/internal/configenum"
@@ -387,5 +388,46 @@ func TestBitbucketHeadLookup401IsError(t *testing.T) {
 	res, err := FindOpenPRByHead(bbHeadOpts(server, "wsuser"), "phase/x")
 	if err == nil || res != nil {
 		t.Fatalf("a 401 must be (nil, err), got (%+v, %v)", res, err)
+	}
+}
+
+// TestBBRequestReturnsHeaders: a caller that passes the header out-param gets
+// the response's headers — an async merge's Location — from the one request;
+// a caller that does not is served exactly as before, and a body holding a
+// secret is still refused before any request.
+func TestBBRequestReturnsHeaders(t *testing.T) {
+	var hits atomic.Int32
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		hits.Add(1)
+		w.Header().Set("Location", "http://"+r.Host+"/2.0/repositories/a/b/pullrequests/7/merge/task-status/abc")
+		w.WriteHeader(http.StatusAccepted)
+		_, _ = w.Write([]byte(`{}`))
+	}))
+	t.Cleanup(srv.Close)
+
+	var hdr http.Header
+	body, status, err := bbRequest("POST", srv.URL+"/2.0/x", "BB_TOKEN", "u", "t", map[string]any{"a": 1}, &hdr)
+	if err != nil || status != http.StatusAccepted || string(body) != `{}` {
+		t.Fatalf("got %q, %d, %v", body, status, err)
+	}
+	if got := hdr.Get("Location"); !strings.HasSuffix(got, "/2.0/repositories/a/b/pullrequests/7/merge/task-status/abc") {
+		t.Errorf("Location = %q, want the task-status link", got)
+	}
+	if n := hits.Load(); n != 1 {
+		t.Errorf("%d requests, want exactly 1", n)
+	}
+
+	body, status, err = bbRequest("GET", srv.URL+"/2.0/x", "BB_TOKEN", "u", "t", nil)
+	if err != nil || status != http.StatusAccepted || string(body) != `{}` {
+		t.Errorf("without the out-param: got %q, %d, %v", body, status, err)
+	}
+
+	hits.Store(0)
+	_, _, err = bbRequest("POST", srv.URL+"/2.0/x", "BB_TOKEN", "u", "t", map[string]any{"description": "see ghp_" + strings.Repeat("A1b2", 9)}, &hdr)
+	if !isErrHit(err) {
+		t.Errorf("a ghp_ token in the body: got %v, want ErrHit", err)
+	}
+	if n := hits.Load(); n != 0 {
+		t.Errorf("a screened body still sent %d request(s)", n)
 	}
 }

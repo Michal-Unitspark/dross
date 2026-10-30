@@ -48,8 +48,10 @@ func bbRepoRef(repoURL string) (workspace, slug string, err error) {
 // bbRequest performs a Bitbucket REST request with Basic auth, returning the raw
 // body and status. body is JSON-encoded when non-nil. Endpoints are relative to
 // api_base, which project.DetectRemote autodetects as
-// https://api.bitbucket.org/2.0 for a bitbucket.org remote.
-func bbRequest(method, endpoint, authEnv, user, token string, body any) ([]byte, int, error) {
+// https://api.bitbucket.org/2.0 for a bitbucket.org remote. A caller that needs
+// the response headers — an async merge's Location — passes hdr, and it is
+// filled once the response arrives.
+func bbRequest(method, endpoint, authEnv, user, token string, body any, hdr ...*http.Header) ([]byte, int, error) {
 	// Screened before the encoder runs (criterion c-2 of secret-detection).
 	// A nil body — every GET here — passes untouched.
 	if err := secretscan.ScanPayload(method+" "+endpoint, body); err != nil {
@@ -79,6 +81,11 @@ func bbRequest(method, endpoint, authEnv, user, token string, body any) ([]byte,
 		return nil, 0, err
 	}
 	defer resp.Body.Close()
+	for _, h := range hdr {
+		if h != nil {
+			*h = resp.Header.Clone()
+		}
+	}
 	respBody, _ := io.ReadAll(resp.Body)
 	// Scrubbed HERE, at the one place the body enters the package, rather than at
 	// each Errorf that interpolates it. Every caller's `string(respBody)` is then
