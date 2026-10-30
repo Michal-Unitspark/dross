@@ -1,0 +1,107 @@
+[phase]
+  id = "azure-devops-ship-loop"
+  title = "azure-devops-ship-loop"
+  milestone = "v1.8"
+
+[[criteria]]
+  id = "c-1"
+  text = "ListPRComments on azure-devops returns every human comment across the PR's threads. A thread anchored to a file and line is inline with that path and line; the rest are conversation. System comments (votes, pushes, status changes) and deleted ones are skipped. Each comment carries an id unique on the PR (thread + comment), the author's id and unique name, author class unknown (ADO has no bot flag) and a browser link to its thread. A failure returns (nil, err), never a partial list."
+  deferred = ["6829c1210133eae6"]
+
+[[criteria]]
+  id = "c-2"
+  text = "PRHeadOf on azure-devops reports the head branch (sourceRefName without refs/heads/), Open only while the PR's status is active (completed and abandoned are both closed), CrossRepo when the PR comes from a fork (forkSource set), and the PR's browser URL."
+  deferred = ["6829c1210133eae6"]
+
+[[criteria]]
+  id = "c-3"
+  text = "AuthenticatedUser on azure-devops returns the credential's own identity (id + unique name) from connectionData at the org/collection base. Its id equals the author id ListPRComments reports on a thread dross posted, so /dross-respond and dross pr reply can tell dross's own replies from reviewers'."
+  deferred = ["6829c1210133eae6"]
+
+[[criteria]]
+  id = "c-4"
+  text = "OpenPRsTargeting on azure-devops lists active PRs whose targetRefName is refs/heads/<base>, each with number, title, browser URL and head ref. A failed lookup returns an error, never an empty list, so milestone branch deletion refuses rather than orphaning a dependent."
+  deferred = ["6829c1210133eae6"]
+
+[[criteria]]
+  id = "c-5"
+  text = "On azure-devops, /dross-ship §5 watches CI for the PR's head commit to a verdict. Everything succeeded -> pass. Anything failed or rejected -> fail, with a link to the failing build. Nothing applicable registered within the wait window, or a check stuck waiting or queued -> the user is asked to proceed or stop; never read as a pass. A repo without azure-pipelines.yml (classic pipelines) is still watched."
+  deferred = ["6829c1210133eae6"]
+
+[[criteria]]
+  id = "c-6"
+  text = "On azure-devops, /dross-ship §6 completes the PR as a squash with deleteSourceBranch = false and lastMergeSourceCommit pinned to the watched head SHA, never bypassing policy. It waits until the PR reports completed. A merge that comes back with conflicts, is rejected by policy or fails is surfaced and never read as merged. phase/<id> is still on origin afterwards."
+  deferred = ["6829c1210133eae6"]
+
+[[criteria]]
+  id = "c-7"
+  text = "A live smoke run against the real Azure DevOps org drives the whole ship loop: dross ship opens the PR, a re-run proves dedupe, dross ship comment posts a thread (recording whether a statusless thread blocks completion under a comment-resolution policy), then comment listing incl. an inline comment, head + authenticated-user lookup, a /dross-respond reply, a CI verdict and a squash-merge that leaves the source branch, ending with merged-status = merged. It is recorded next to the mocked suite; mock-verified is never reported as live-verified."
+
+[[criteria]]
+  id = "c-8"
+  text = "On azure-devops, /dross-watch lists the repo's active PRs. Every non-fork PR whose head is a phase branch appears as a ship PR, with its checks rolled up by the same builds + policy-evaluation verdict as dross ship ci and its count of untriaged review comments. The bot-PR line stays empty because ADO has no bot flag. A failed read, or a page too full to trust, stays quiet and shows nothing, never an empty list."
+  deferred = ["6829c1210133eae6"]
+
+[[criteria]]
+  id = "c-9"
+  text = "On azure-devops, /dross-review §1 builds the review diff locally as git diff origin/<base>...origin/phase/<id> (base = the PR's target branch) into review-diff.patch; the existing non-empty check still guards it, and the findings post through dross ship comment as a new thread."
+
+[[criteria]]
+  id = "c-10"
+  text = "On bitbucket, dross ship ci <phase-id> reads the commit statuses for the PR's head SHA. Every status SUCCESSFUL -> pass. Any FAILED or STOPPED -> fail, with that status's link. Any INPROGRESS -> pending. No statuses -> none. ship.md §5 polls it the same way as the azure-devops path."
+
+[[criteria]]
+  id = "c-11"
+  text = "On bitbucket, dross ship merge <phase-id> squash-merges the PR with close_source_branch = false. It waits out an asynchronous merge (202 plus a task-status link) until that reports success. A failed or refused merge is surfaced and never read as merged, and phase/<id> is still on origin afterwards."
+
+[[decisions]]
+  key = "ci_source"
+  choice = "azure-devops CI = builds on refs/heads/phase/<id> at the head SHA, plus the PR's build-validation and status-check policy evaluations (blocking and optional). Reviewer, comment-resolution and work-item policies are not CI. Pass: every counted item succeeded/approved. Fail: any failed/canceled/rejected. Pending: running, or queued inside the window. Ask: nothing applicable registered in the window, an expired build policy, or still queued at window end. A lone notApplicable evaluation is skipped. Only per-PR evaluation results are read, never branch-policy config."
+  why = "Phase PRs target milestone branches that may or may not carry a build-validation policy, so CI arrives as a branch-trigger build or a PR build on refs/pull/N/merge; reading both catches either. Per-PR evaluations are not branch-policy config, so the milestone non-goal holds. Every-check-must-pass mirrors the GitHub bar."
+  locked = true
+
+[[decisions]]
+  key = "ci_merge_home"
+  choice = "New dross ship ci <phase-id> (one-shot read: pass / fail / pending / none / ask, one exit code each, failing link printed) and dross ship merge <phase-id> (squash, never deletes the source branch, waits for completion). Implemented for azure-devops and bitbucket; every other provider gets 'unsupported, use the ship.md recipe'. ship.md §5 polls ship ci every ~30s and owns the ~10-minute registration window."
+  why = "ADO's verdict spans builds + evaluations and its merge needs the project GUID and lastMergeSourceCommit: too many steps for a curl recipe. Go keeps it httptest-testable and hand-built auth out of the transcript. One-shot keeps a Bash call from outliving its timeout on a long pipeline."
+  locked = true
+
+[[decisions]]
+  key = "blocked_completion"
+  choice = "A completion blocked by a non-CI policy (required reviewers, comment resolution, work-item linking) is surfaced and ship holds at awaiting-merge. dross never sets bypassPolicy and never arms auto-complete."
+  why = "dross's §6 question is the only merge gate and phase PRs never auto-merge; bypassing a policy the user configured would be silent overreach."
+  locked = true
+
+[[decisions]]
+  key = "thread_listing"
+  choice = "ListPRComments on azure-devops lists threads of every status (active, fixed, closed, wontFix, byDesign, pending)."
+  why = "Parity with GitHub/GitLab/Bitbucket, which list resolved comments too; prtriage tracks triage by comment id, not thread resolution."
+  locked = true
+
+[[decisions]]
+  key = "transport"
+  choice = "Carried from azure-devops-provider: raw REST over net/http through the existing adoRequest / bbRequest entry points, no az CLI. secretscan.ScanPayload before encoding, redact.Scrub on every response body, hostallow check before the token is read; api-version from [remote].api_version."
+  why = "Single static binary with no runtime deps (stack.locked); every new call inherits the screening the provider phase built."
+  locked = true
+
+[[decisions]]
+  key = "verify_posture"
+  choice = "Carried from azure-devops-provider: httptest-mock tests are the per-criterion bar; c-7's live run is recorded separately and never substitutes for, or is substituted by, the mocked suite."
+  why = "The provider test contract is mocked HTTP; milestone criterion 5 asks for a live run, and the user has an org + PAT."
+  locked = true
+
+[[deferred]]
+  text = "Move GitHub/Forgejo/GitLab ship.md §5/§6 onto dross ship ci / dross ship merge."
+  why = "Their gh/curl recipes work; a consistency pass, not Azure scope."
+
+[[deferred]]
+  text = "/dross-watch open-PR listing for Forgejo, GitLab and Bitbucket."
+  why = "Still unsupported there; only GitHub and azure-devops list after this phase."
+
+[[deferred]]
+  text = "OpenPRsTargeting (milestone-dependents lookup) on Bitbucket."
+  why = "Stays an announced skip that falls back to the record scan."
+
+[[deferred]]
+  text = "/dross-review §1 diff recipe for GitLab and Bitbucket."
+  why = "review.md gains only the azure-devops recipe in this phase."
