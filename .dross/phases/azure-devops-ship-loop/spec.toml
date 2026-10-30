@@ -20,7 +20,7 @@
 
 [[criteria]]
   id = "c-4"
-  text = "OpenPRsTargeting on azure-devops lists active PRs whose targetRefName is refs/heads/<base>, each with number, title, browser URL and head ref. A failed lookup returns an error, never an empty list, so milestone branch deletion refuses rather than orphaning a dependent."
+  text = "OpenPRsTargeting on azure-devops lists active PRs whose targetRefName is refs/heads/<base>, each with number, title, browser URL and head ref. A failed lookup returns an error, never an empty list, so the milestone-branch guard announces the skip and falls back to the milestone-record scan rather than reading 'no dependents'; a dependent the lookup does find still makes the delete refuse."
   deferred = ["6829c1210133eae6"]
 
 [[criteria]]
