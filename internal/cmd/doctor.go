@@ -118,11 +118,11 @@ func Doctor() *cobra.Command {
 				Printf("  ⚠ project.toml has [remote].url = %s but git has no origin — push to remote, or remove the config\n", p.Remote.URL)
 				issues++
 			case gitURL != "" && p.Remote.URL == "":
-				Printf("  ✗ git origin = %s but project.toml has no [remote] — run /dross-onboard or set manually\n", gitURL)
+				Printf("  ✗ git origin = %s but project.toml has no [remote] — run /dross-onboard or set manually\n", originForDisplay(gitURL))
 				issues++
 			default:
 				if !sameRemoteURL(gitURL, p.Remote.URL) {
-					Printf("  ⚠ git origin (%s) does not match [remote].url (%s)\n", gitURL, p.Remote.URL)
+					Printf("  ⚠ git origin (%s) does not match [remote].url (%s)\n", originForDisplay(gitURL), p.Remote.URL)
 					issues++
 				} else {
 					Printf("  ✓ git origin matches [remote].url (%s)\n", p.Remote.URL)
@@ -146,7 +146,7 @@ func Doctor() *cobra.Command {
 				issues++
 			}
 
-			warnings = append(warnings, diag.RemoteCombination(p.Remote.Provider, p.Remote.AuthScheme, p.Remote.AuthUser)...)
+			warnings = append(warnings, diag.RemoteCombination(p.Remote)...)
 
 			Print("")
 
@@ -1042,10 +1042,42 @@ func drossLinguistAttrPresent(repoDir string) (bool, error) {
 // sameRemoteURL compares two git remote forms loosely — strips trailing
 // .git and compares hostname + path. Avoids false-positives from "the
 // same remote in https vs ssh form".
+//
+// An Azure Repos remote has more spellings than that — ssh v3 drops _git, a
+// Server's ssh url carries the daemon's port, names are case-insensitive — so
+// when either side parses as one, both are compared by their canonical url,
+// host kept. A side that parses against one that does not is a mismatch: a
+// url without _git names no repo, however close it reads.
 func sameRemoteURL(a, b string) bool {
+	adoA, okA := project.ParseAzureDevOpsRemote(a)
+	adoB, okB := project.ParseAzureDevOpsRemote(b)
+	if okA || okB {
+		return okA && okB && strings.EqualFold(adoA.URL, adoB.URL)
+	}
 	hA, pA := parseGitForCompare(a)
 	hB, pB := parseGitForCompare(b)
 	return hA == hB && pA == pB
+}
+
+// originForDisplay cuts the user[:password]@ off a URL-form git origin before
+// doctor prints it: an https origin often carries a PAT there, and doctor's
+// output lands in terminals, CI logs and bug reports. The cut runs to the
+// authority's last @, so a password holding an @ goes with it. An scp-form
+// origin (git@host:path) is printed as-is — its user is an ssh login name.
+func originForDisplay(raw string) string {
+	scheme, rest, ok := strings.Cut(strings.TrimSpace(raw), "://")
+	if !ok {
+		return raw
+	}
+	authority, tail, hasTail := strings.Cut(rest, "/")
+	if at := strings.LastIndex(authority, "@"); at >= 0 {
+		authority = authority[at+1:]
+	}
+	out := scheme + "://" + authority
+	if hasTail {
+		out += "/" + tail
+	}
+	return out
 }
 
 func parseGitForCompare(raw string) (host, path string) {

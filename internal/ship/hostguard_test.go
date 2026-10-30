@@ -13,6 +13,7 @@ import (
 	"testing"
 
 	"github.com/Rivil/dross/internal/hostallow"
+	"github.com/Rivil/dross/internal/project"
 )
 
 const guardEnv = "DROSS_HOSTGUARD_TOKEN"
@@ -71,6 +72,28 @@ func TestShipRefusesOffAllowlistAPIBase(t *testing.T) {
 		{"forgejo comment", func() error { return PostComment(comment("forgejo")) }},
 		{"gitlab comment", func() error { return PostComment(comment("gitlab")) }},
 		{"bitbucket comment", func() error { return PostComment(comment("bitbucket")) }},
+		// Azure DevOps addresses everything from an _git url, so its rows
+		// carry one on the authorized host.
+		{"azure-devops open", func() error { _, err := OpenPR(adoGuard(base("azure-devops"))); return err }},
+		{"azure-devops comment", func() error {
+			c := comment("azure-devops")
+			c.URL = adoGuardURL
+			return PostComment(c)
+		}},
+		{"azure-devops status", func() error { _, err := GetPRStatus(adoGuard(base("azure-devops"))); return err }},
+		{"azure-devops head lookup", func() error {
+			_, err := FindOpenPRByHead(adoGuard(base("azure-devops")), "phase/x")
+			return err
+		}},
+		// The identities host is checked on its own, since on Services it is
+		// not api_base: a connection whose api_base the policy never saw must
+		// still not carry its credential there.
+		{"azure-devops identity lookup", func() error {
+			repo, _ := project.ParseAzureDevOpsRemote(adoGuardURL)
+			c := adoConn{repo: repo, apiBase: srv.URL + "/coll", authEnv: guardEnv, token: guardSentinel, version: adoDefaultAPIVersion}
+			_, err := adoResolveIdentity(c, policy, "alice@example.com")
+			return err
+		}},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Setenv(guardEnv, guardSentinel)
@@ -95,6 +118,15 @@ func TestShipRefusesOffAllowlistAPIBase(t *testing.T) {
 	}
 }
 
+// adoGuardURL is an Azure Repos remote on the host the guard policy authorizes.
+const adoGuardURL = "https://forge.example/coll/proj/_git/proj"
+
+// adoGuard re-points a guard row's opts at adoGuardURL.
+func adoGuard(o OpenOpts) OpenOpts {
+	o.URL = adoGuardURL
+	return o
+}
+
 // TestShipAllowsDerivedSelfHostedHost is the over-refusal gate. An honest
 // self-hosted forgejo or gitlab install — remote and API on one host — must keep
 // working with no machine-local additions at all; if it does not, the guard is
@@ -102,7 +134,7 @@ func TestShipRefusesOffAllowlistAPIBase(t *testing.T) {
 func TestShipAllowsDerivedSelfHostedHost(t *testing.T) {
 	t.Setenv(guardEnv, guardSentinel)
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		_, _ = w.Write([]byte(`{"number":1,"iid":1,"id":1,"html_url":"https://x/1","links":{"html":{"href":"https://x/1"}}}`))
+		_, _ = w.Write([]byte(`{"number":1,"iid":1,"id":1,"pullRequestId":1,"html_url":"https://x/1","links":{"html":{"href":"https://x/1"}}}`))
 	}))
 	t.Cleanup(srv.Close)
 
@@ -120,6 +152,22 @@ func TestShipAllowsDerivedSelfHostedHost(t *testing.T) {
 		}); err != nil && errors.Is(err, hostallow.ErrRefused) {
 			t.Errorf("%s: an honest self-hosted install was refused: %v", provider, err)
 		}
+	}
+
+	// An Azure DevOps Server: the collection is api_base, the remote hangs
+	// off it, and both sit on the one derived host.
+	res, err := OpenPR(OpenOpts{
+		Provider:   "azure-devops",
+		URL:        srv.URL + "/coll/P/_git/R",
+		APIBase:    srv.URL + "/coll",
+		AuthEnv:    guardEnv,
+		Hosts:      hostallow.Derive(srv.URL+"/coll/P/_git/R", nil),
+		HeadBranch: "phase/x",
+		BaseBranch: "main",
+		Title:      "t",
+	})
+	if err != nil || res == nil || res.Number != 1 {
+		t.Errorf("azure-devops Server: an honest self-hosted collection did not open its PR: %+v, %v", res, err)
 	}
 }
 

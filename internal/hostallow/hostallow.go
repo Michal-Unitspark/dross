@@ -67,6 +67,9 @@ var saasDefaults = []string{
 	"bitbucket.org",
 	"api.bitbucket.org",
 	"codeberg.org",
+	"dev.azure.com",       // azure devops services
+	"vssps.dev.azure.com", // azure devops identities
+	"*.visualstudio.com",  // legacy <org>.visualstudio.com and its vssps host
 	// issue trackers
 	"*.atlassian.net",   // jira cloud
 	"*.youtrack.cloud",  // youtrack cloud

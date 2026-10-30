@@ -50,17 +50,20 @@ Edit `project.toml` directly for these blocks.
 `dross init` already tried to detect the canonical git remote via `git remote get-url origin`. Run `dross project show` and look at the `[remote]` block.
 
 If `[remote]` is missing or empty (no git origin yet — fresh greenfield), ask:
-- **URL** — `https://<host>/<owner>/<repo>` of where this code will live.
-- **Provider** — github / forgejo / gitea / gitlab / bitbucket / none. If host is `github.com` → `github`; `codeberg.org` → `forgejo`; `gitlab.com` → `gitlab`; `bitbucket.org` → `bitbucket`; otherwise ask.
-- **Public** — can a cloud-side agent (no VPN, no SSH key) `git clone` it? Default no for self-hosted forges.
+- **URL** — `https://<host>/<owner>/<repo>` of where this code will live. Azure DevOps: `https://dev.azure.com/<org>/<project>/_git/<repo>` (or `https://<org>.visualstudio.com/<project>/_git/<repo>`).
+- **Provider** — github / forgejo / gitea / gitlab / bitbucket / azure-devops / none. If host is `github.com` → `github`; `codeberg.org` → `forgejo`; `gitlab.com` → `gitlab`; `bitbucket.org` → `bitbucket`; `dev.azure.com` or `<org>.visualstudio.com` → `azure-devops`; otherwise ask.
+- **Public** — can a cloud-side agent (no VPN, no SSH key) `git clone` it? Default no for self-hosted forges and for azure-devops.
 
 Then for fields the global defaults didn't seed (check `dross project get remote.auth_env` etc.):
-- **api_base** — REST base URL. github → `https://api.github.com`. Forgejo/Gitea → `https://<host>/api/v1`. Confirm with user.
+- **api_base** — REST base URL. github → `https://api.github.com`. Forgejo/Gitea → `https://<host>/api/v1`. azure-devops → the org URL, `https://dev.azure.com/<org>` (or `https://<org>.visualstudio.com`); on an Azure DevOps Server, the collection URL, `https://<host>/tfs/<Collection>`. Confirm with user.
 - **log_api** — does this instance expose CI logs via API? (User's Forgejo customisation: yes.)
-- **auth_env** — env-var name holding the API token. **Never the token value.** For github use `GITHUB_TOKEN`; for the user's Forgejo: `FORGEJO_TOKEN`.
+- **auth_env** — env-var name holding the API token. **Never the token value.** For github use `GITHUB_TOKEN`; for the user's Forgejo: `FORGEJO_TOKEN`; for azure-devops: `AZURE_DEVOPS_EXT_PAT` (the az devops CLI's variable, so an existing setup needs nothing new).
+- **api_version** — azure-devops only (`remote.api_version`). Leave it unset on dev.azure.com / visualstudio.com (7.1). On an Azure DevOps Server set the server's version: 2019 → `5.0`, 2020 → `6.0`, 2022 → `7.0`.
 - **reviewers** — comma-separated list of human reviewer usernames `/dross-ship` should auto-assign. Skip if the user doesn't want this.
 
 Persist with `dross project set remote.<field> "<value>"`. For booleans use `true` / `false`; reviewers is csv.
+
+An **Azure DevOps Server** (on-premises; any host) is never autodetected — `dross init` derives only its url. Set `remote.provider` to `azure-devops`, `remote.api_base` to the collection URL and `remote.api_version` by hand, and keep `[remote].url` in its https form, `https://<host>/tfs/<Collection>/<project>/_git/<repo>`, even when origin is ssh (`ssh://<host>:22/...`): the host allowlist derives from that url, and the ssh form would refuse the https api_base.
 
 If `~/.claude/dross/defaults.toml` doesn't exist yet (check with `dross defaults show`), ask: *"Save these as defaults so the next project pre-fills them?"* If yes, run `dross defaults save` — extracts provider/api_base/log_api/auth_env/reviewers from project.toml and writes them globally. URL and public flag are project-specific and never copied.
 

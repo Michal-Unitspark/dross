@@ -7,15 +7,17 @@ import (
 	"strings"
 
 	"github.com/Rivil/dross/internal/configenum"
+	"github.com/Rivil/dross/internal/project"
 )
 
 // RemoteCombination reports [remote] pairings that are individually valid but
 // fail once ship runs. Empty and "none" providers stay silent: they mean "this
 // repo has no remote", not a misconfigured one.
-func RemoteCombination(provider, authScheme, authUser string) []string {
+func RemoteCombination(r project.Remote) []string {
 	var out []string
+	provider, authUser := r.Provider, r.AuthUser
 	prov := configenum.Normalize(provider)
-	scheme := configenum.Normalize(authScheme)
+	scheme := configenum.Normalize(r.AuthScheme)
 	if prov == "" || prov == "none" {
 		return nil
 	}
@@ -24,6 +26,13 @@ func RemoteCombination(provider, authScheme, authUser string) []string {
 	// step is the first thing to say so, at the end of a phase.
 	if !configenum.ShipProviders.Has(prov) {
 		out = append(out, fmt.Sprintf("[remote].provider = %q — ship cannot open a PR for it (expected %s); /dross-ship will fail at the PR step", provider, configenum.ShipProviders.List()))
+	}
+
+	// Azure DevOps sends Basic with an empty user and the PAT, or Bearer: it
+	// has its own credential shape, so the Basic user:token warnings below
+	// would misdirect, and its own warnings replace them.
+	if prov == "azure-devops" {
+		return append(out, azureDevOpsCombination(r, scheme)...)
 	}
 
 	// Basic auth is user:token on the wire, so a missing user sends
@@ -38,6 +47,32 @@ func RemoteCombination(provider, authScheme, authUser string) []string {
 	// silent no-op that reads as configured.
 	if scheme == "basic" && prov != "bitbucket" {
 		out = append(out, fmt.Sprintf("[remote].auth_scheme = basic but the %s backend sends no Basic credential — the setting has no effect", prov))
+	}
+	return out
+}
+
+// azureDevOpsCombination is RemoteCombination's azure-devops arm.
+//
+// Only bearer changes what is sent: private-token and basic both fall to the
+// default Basic :PAT, so either reads as configured while doing nothing.
+// auth_user is never sent. And a Server's api_base must be the collection its
+// url names — an api_base one level short addresses no project at all.
+func azureDevOpsCombination(r project.Remote, scheme string) []string {
+	var out []string
+	if scheme == "private-token" || scheme == "basic" {
+		out = append(out, fmt.Sprintf("[remote].auth_scheme = %s has no effect on azure-devops — it always sends HTTP Basic with an empty user and the PAT unless auth_scheme = bearer", scheme))
+	}
+	if user := strings.TrimSpace(r.AuthUser); user != "" {
+		out = append(out, fmt.Sprintf("[remote].auth_user = %q is ignored by azure-devops — the PAT goes in Basic with an empty user", user))
+	}
+	// The scheme is not compared: a non-https api_base is refused by the host
+	// allowlist with its own reason, and blaming the collection would misdirect.
+	if ado, ok := project.ParseAzureDevOpsRemote(r.URL); ok && !ado.Services && r.APIBase != "" {
+		_, want, _ := strings.Cut(ado.APIBase, "://")
+		_, got, _ := strings.Cut(strings.TrimRight(strings.TrimSpace(r.APIBase), "/"), "://")
+		if !strings.EqualFold(got, want) {
+			out = append(out, fmt.Sprintf("[remote].api_base = %s is not the collection [remote].url names (%s) — every ship call will miss the project", r.APIBase, ado.APIBase))
+		}
 	}
 	return out
 }

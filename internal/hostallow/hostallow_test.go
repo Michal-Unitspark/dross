@@ -82,6 +82,36 @@ func TestSuffixWildcardIsNotSubstring(t *testing.T) {
 	}
 }
 
+// TestADOBuiltinHosts: Azure DevOps Services, its identities host and every
+// legacy <org>.visualstudio.com are known by name under a remote that derives
+// none of them. The wildcard keeps its dot boundary and its https-on-443 pin,
+// and dev.azure.com is an exact host, not a wildcard.
+func TestADOBuiltinHosts(t *testing.T) {
+	p := Derive(remote, nil)
+	for _, u := range []string{
+		"https://dev.azure.com/o",
+		"https://vssps.dev.azure.com/o",
+		"https://o.visualstudio.com",
+		"https://o.vssps.visualstudio.com",
+	} {
+		if err := p.Check("[remote].api_base", u); err != nil {
+			t.Errorf("%s refused: %v", u, err)
+		}
+	}
+	for _, u := range []string{
+		"https://evil-visualstudio.com",
+		"https://visualstudio.com.attacker.example",
+		"https://visualstudio.com",
+		"https://x.dev.azure.com",
+		"https://o.visualstudio.com:8443",
+		"http://dev.azure.com",
+	} {
+		if err := p.Check("[remote].api_base", u); !errors.Is(err, ErrRefused) {
+			t.Errorf("%s: want ErrRefused, got %v", u, err)
+		}
+	}
+}
+
 // TestCheckAllowsRemoteHost is the over-refusal gate: a self-hosted install
 // where the remote and the API share a host must keep working with no Extra at
 // all, or the derivation costs honest repos something and gets turned off.

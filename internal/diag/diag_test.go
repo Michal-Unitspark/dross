@@ -5,6 +5,8 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+
+	"github.com/Rivil/dross/internal/project"
 )
 
 // silent runs fn with os.Stdout swapped for a pipe and fails the test if a
@@ -108,10 +110,20 @@ func TestCombinationWarnings(t *testing.T) {
 		{"bitbucket", "basic", "me", ""},
 		{"github", "basic", "u", "no effect"},
 		{"sourcehut", "", "", "cannot open a PR"},
+		// azure-devops: Basic :PAT by default, Bearer on bearer; nothing else
+		// changes what is sent, and the bitbucket Basic warnings never apply.
+		{"azure-devops", "", "", ""},
+		{"azure-devops", "bearer", "", ""},
+		{"azure-devops", "private-token", "", "no effect"},
+		{"azure-devops", "basic", "", "no effect"},
+		{" Azure-DevOps ", "basic", "", "no effect"},
+		{"azure-devops", "", "me", "auth_user"},
 	}
 	for _, c := range cases {
 		var got []string
-		silent(t, func() { got = RemoteCombination(c.provider, c.scheme, c.user) })
+		silent(t, func() {
+			got = RemoteCombination(project.Remote{Provider: c.provider, AuthScheme: c.scheme, AuthUser: c.user})
+		})
 		if c.want == "" {
 			if len(got) != 0 {
 				t.Errorf("RemoteCombination(%q,%q,%q) = %v, want none", c.provider, c.scheme, c.user, got)
@@ -120,6 +132,13 @@ func TestCombinationWarnings(t *testing.T) {
 		}
 		if len(got) != 1 || !contains(got[0], c.want) {
 			t.Errorf("RemoteCombination(%q,%q,%q) = %v, want one warning mentioning %q", c.provider, c.scheme, c.user, got, c.want)
+		}
+	}
+	// basic on azure-devops is a no-op, not a missing user: neither bitbucket
+	// warning may ride along with the no-effect one.
+	for _, w := range RemoteCombination(project.Remote{Provider: "azure-devops", AuthScheme: "basic"}) {
+		if contains(w, "auth_user is not set") || contains(w, "sends no Basic credential") {
+			t.Errorf("azure-devops basic carries a Basic user:token warning: %q", w)
 		}
 	}
 	if w := BoardCombination("jira", "", ""); len(w) != 1 || !contains(w[0], "auth_user") {
@@ -165,4 +184,38 @@ func indexOf(s, sub string) int {
 		}
 	}
 	return -1
+}
+
+// TestRemoteCombinationAzureBaseMismatch: a Server's api_base must be the
+// collection its url names. One level short is flagged, naming the right
+// base; spelling differences the server ignores are not.
+func TestRemoteCombinationAzureBaseMismatch(t *testing.T) {
+	ado := func(apiBase string) []string {
+		var got []string
+		silent(t, func() {
+			got = RemoteCombination(project.Remote{
+				Provider: "azure-devops", URL: "https://tfs/tfs/C/P/_git/R", APIBase: apiBase,
+			})
+		})
+		return got
+	}
+	if got := ado("https://tfs/tfs"); len(got) != 1 || !contains(got[0], "https://tfs/tfs/C") {
+		t.Errorf("api_base one level short of the collection: %v, want one warning naming https://tfs/tfs/C", got)
+	}
+	// http is the host allowlist's refusal to make, not a collection mismatch.
+	for _, same := range []string{"https://tfs/tfs/C", "https://tfs/tfs/C/", "https://TFS/tfs/c", "http://tfs/tfs/C", ""} {
+		if got := ado(same); len(got) != 0 {
+			t.Errorf("api_base %q: %v, want none", same, got)
+		}
+	}
+	// Services derives its own org base; only a Server's is checked here.
+	var got []string
+	silent(t, func() {
+		got = RemoteCombination(project.Remote{
+			Provider: "azure-devops", URL: "https://o.visualstudio.com/p/_git/r", APIBase: "https://dev.azure.com/o",
+		})
+	})
+	if len(got) != 0 {
+		t.Errorf("a Services url with the dev.azure.com org base: %v, want none", got)
+	}
 }

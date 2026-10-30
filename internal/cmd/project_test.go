@@ -204,6 +204,7 @@ func TestExpandedDottedPathsRoundTrip(t *testing.T) {
 		"remote.log_api":     "false",
 		"remote.auth_scheme": "bearer",
 		"remote.project_id":  "42",
+		"remote.api_version": "6.0",
 		// paths
 		"paths.source":     "src",
 		"paths.tests":      "src",
@@ -234,6 +235,57 @@ func TestExpandedDottedPathsRoundTrip(t *testing.T) {
 		if got != value {
 			t.Errorf("round-trip %q: got %q want %q", path, got, value)
 		}
+	}
+}
+
+// TestProjectSetAPIVersionIsLossless: setting remote.api_version through the
+// CLI writes exactly one line, `api_version = "6.0"`, and leaves every other
+// line of the file byte-identical; a project that never set it carries no
+// api_version line at all.
+func TestProjectSetAPIVersionIsLossless(t *testing.T) {
+	dir := t.TempDir()
+	chdir(t, dir)
+	if err := runCmd(t, Init()); err != nil {
+		t.Fatalf("init: %v", err)
+	}
+	path := filepath.Join(dir, ".dross", "project.toml")
+	if err := runCmd(t, Project(), "set", "remote.url", "https://tfs.corp/tfs/Coll/P/_git/R"); err != nil {
+		t.Fatalf("set url: %v", err)
+	}
+	before := mustRead(t, path)
+	if strings.Contains(before, "api_version") {
+		t.Fatalf("an unset api_version already has a line:\n%s", before)
+	}
+
+	if err := runCmd(t, Project(), "set", "remote.api_version", "6.0"); err != nil {
+		t.Fatalf("set api_version: %v", err)
+	}
+	after := mustRead(t, path)
+	beforeLines, afterLines := strings.Split(before, "\n"), strings.Split(after, "\n")
+	if len(afterLines) != len(beforeLines)+1 {
+		t.Fatalf("want exactly one added line, got %d -> %d:\n%s", len(beforeLines), len(afterLines), after)
+	}
+	added := ""
+	for i, j := 0, 0; j < len(afterLines); j++ {
+		if i < len(beforeLines) && afterLines[j] == beforeLines[i] {
+			i++
+			continue
+		}
+		if added != "" {
+			t.Fatalf("more than one line differs:\n%s", after)
+		}
+		added = afterLines[j]
+	}
+	if strings.TrimSpace(added) != `api_version = "6.0"` {
+		t.Errorf("added line = %q, want api_version = \"6.0\"", added)
+	}
+
+	p, err := project.Load(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got, ok := readDotted(p, "remote.api_version"); !ok || got != "6.0" {
+		t.Errorf("get remote.api_version = %q (%v), want 6.0", got, ok)
 	}
 }
 

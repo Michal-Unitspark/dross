@@ -247,6 +247,8 @@ func readDotted(p *project.Project, path string) (string, bool) {
 		return p.Remote.AuthScheme, true
 	case "remote.project_id":
 		return p.Remote.ProjectID, true
+	case "remote.api_version":
+		return string(p.Remote.APIVersion), true
 	case "remote.reviewers":
 		return strings.Join(p.Remote.Reviewers, ","), true
 	// board
@@ -511,6 +513,8 @@ func writeDotted(p *project.Project, path, value string) error {
 		p.Remote.AuthScheme = value
 	case "remote.project_id":
 		p.Remote.ProjectID = value
+	case "remote.api_version":
+		p.Remote.APIVersion = project.APIVersion(value)
 	case "remote.reviewers":
 		p.Remote.Reviewers = splitCSV(value)
 	// board

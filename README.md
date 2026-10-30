@@ -443,7 +443,7 @@ Legend: ✅ working · 🚧 stub / partial · ⏳ not started
 - [x] Review-comment ingest — `/dross-respond <pr>` triages a phase PR's review comments across all four providers: `dross pr comments` lists them fenced as untrusted data, `dross pr resolve` records one evidenced verdict each (accept → task, reject → reason, route → deferred) in a tracked `pr-triage.toml` that never stores a comment body, `dross pr reply` posts the rejections once on a recorded human approval, `dross ship` refuses while an accepted comment's task is undone, and `/dross-watch` shows each ship PR's untriaged count
 - [x] Debug sessions — `/dross-debug` keeps a systematic investigation in a gitignored `.dross/debug/<slug>.md` (one hypothesis per probe, evidence before the next, hard stop after three failed fixes, two independent signals to close), `dross debug {new,list,close}` gates it, and `dross status` plus the SessionStart line name any open session
 
-### Milestone v1.8 — Azure DevOps provider: ship and board sync reach a fifth forge (planning)
+### Milestone v1.8 — Azure DevOps provider: ship and board sync reach a fifth forge (active)
 
 - [ ] Azure DevOps works as a ship/PR provider alongside GitHub, GitLab, Forgejo/Gitea and Bitbucket
 
