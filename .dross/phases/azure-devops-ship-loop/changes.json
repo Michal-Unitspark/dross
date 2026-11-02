@@ -166,6 +166,21 @@
         }
       ]
     },
+    "t-18": {
+      "files": [
+        "internal/ship/testdata/ado_live_smoke.toml"
+      ],
+      "commit": "2cdaab8",
+      "completed_at": "2026-11-02T09:48:00.261064497Z",
+      "landmarks": [
+        {
+          "feature": "Azure DevOps ship provider",
+          "symbol": "ado_live_smoke.toml",
+          "loc": "internal/ship/testdata/ado_live_smoke.toml:47",
+          "what": "live-verified record of the 11-step ADO ship loop on a real org (posture live), held honest by TestADOLiveRecordHonest"
+        }
+      ]
+    },
     "t-2": {
       "files": [
         "internal/ship/azuredevops_prread.go",
