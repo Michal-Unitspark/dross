@@ -606,6 +606,7 @@ func Ship() *cobra.Command {
 		"emit a single JSON object {url, number, result} on stdout and suppress human narration; composable with --auto for scripts and loops")
 	c.AddCommand(shipComment())
 	c.AddCommand(shipRecover())
+	c.AddCommand(shipCI(), shipMerge())
 	return c
 }
 
