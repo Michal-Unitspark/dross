@@ -96,6 +96,76 @@
         }
       ]
     },
+    "t-14": {
+      "files": [
+        "internal/cmd/pr_azuredevops_test.go",
+        "internal/cmd/milestone_dependents_test.go"
+      ],
+      "commit": "7d48422",
+      "completed_at": "2026-11-02T07:03:19.811229836Z",
+      "landmarks": [
+        {
+          "feature": "azure devops ship provider",
+          "symbol": "TestPRCommentsAzureDevOps",
+          "loc": "internal/cmd/pr_azuredevops_test.go:154",
+          "what": "cmd-level proof of ADO pr comments/resolve/reply and the milestone dependents guard against a stateful httptest collection"
+        }
+      ]
+    },
+    "t-15": {
+      "files": [
+        "internal/cmd/ship_cimerge.go",
+        "internal/cmd/ship_cimerge_test.go",
+        "internal/cmd/ship.go",
+        "cmd/dross/testdata/cli_tree.txt"
+      ],
+      "commit": "38521e0",
+      "completed_at": "2026-11-02T07:28:10.879434191Z",
+      "landmarks": [
+        {
+          "feature": "ship ci and merge",
+          "symbol": "shipCI",
+          "loc": "internal/cmd/ship_cimerge.go:146",
+          "what": "dross ship ci/merge \u003cphase-id\u003e read CI once and squash-merge the recorded PR at origin's phase/\u003cid\u003e head, verdicts as exit codes 0/2/3/4/5 and merge 0/2/1"
+        }
+      ]
+    },
+    "t-16": {
+      "files": [
+        "internal/cmd/watch.go",
+        "internal/cmd/watch_test.go",
+        "assets/prompts/watch.md",
+        "internal/cmd/watch_prompt_test.go"
+      ],
+      "commit": "d65af1a",
+      "completed_at": "2026-11-02T07:46:44.859111844Z",
+      "landmarks": [
+        {
+          "feature": "watch PR digest",
+          "symbol": "openPRDigest",
+          "loc": "internal/cmd/watch.go:152",
+          "what": "dross watch hands the PR lister full [remote] opts (host policy, api_base, auth env, api_version) so azure-devops ship PRs list with rolled-up checks and untriaged counts; any failure stays absent"
+        }
+      ]
+    },
+    "t-17": {
+      "files": [
+        "assets/prompts/ship.md",
+        "internal/cmd/ship_prompt_test.go",
+        "README.md",
+        "docs/dross.1"
+      ],
+      "commit": "6596632",
+      "completed_at": "2026-11-02T08:08:17.234630137Z",
+      "landmarks": [
+        {
+          "feature": "ship CI and merge gate",
+          "symbol": "ship.md §5 Azure DevOps / Bitbucket arm",
+          "loc": "assets/prompts/ship.md:132",
+          "what": "/dross-ship polls dross ship ci on azure-devops and bitbucket (verdicts by exit code, ~10-minute ask window) and merges via dross ship merge only on a fresh pass or a same-head proceed, policy blocks to awaiting-merge"
+        }
+      ]
+    },
     "t-2": {
       "files": [
         "internal/ship/azuredevops_prread.go",
@@ -413,6 +483,261 @@
           "kind": "quality",
           "severity": "NOTE",
           "text": "CIStatusFunc and MergePRFunc have no test pinning their default to CIStatus/MergePR, unlike AutoMergePRFunc in automerge_test.go; not required by the test_contract",
+          "resolution": "non-blocking, left"
+        }
+      ]
+    },
+    "t-14": {
+      "outcome": "pass",
+      "rounds": 2,
+      "findings": [
+        {
+          "round": 1,
+          "kind": "spec",
+          "severity": "BLOCKING",
+          "criterion": "c-2",
+          "text": "test_contract says a completed PR makes `dross pr comments` refuse with 0 threads requests, but no test drives `pr comments` on a completed PR; TestPRCommentsAzureDevOpsNotAPhasePR instead asserts `pr resolve` refuses a completed/abandoned PR, and loadPRThread (internal/cmd/pr.go) never checks head.Open, so `pr comments` on a completed PR reads and lists threads. Either amend the contract or make listing refuse closed PRs before the threads read.",
+          "resolution": "fixed in the fix round"
+        },
+        {
+          "round": 1,
+          "kind": "quality",
+          "severity": "NOTE",
+          "text": "pr_azuredevops_test.go builds its own stateful adoPRForge instead of the newADOShipMock the description names; justified, since newADOShipMock serves static routes and the reply test needs the POSTed thread read back",
+          "resolution": "non-blocking, left"
+        },
+        {
+          "round": 1,
+          "kind": "quality",
+          "severity": "NOTE",
+          "text": "TestPRReplyAzureDevOps's check for the absent substring \"it is bounded by maxPages\\n\" is weak because it depends on line layout; the c600001 absence and the '1 of 2' count carry the real assertion",
+          "resolution": "non-blocking, left"
+        },
+        {
+          "round": 2,
+          "kind": "quality",
+          "severity": "NOTE",
+          "criterion": "c-3",
+          "text": "The description names newADOShipMock (cmd/ship_test.go) as the harness, but pr_azuredevops_test.go builds its own adoPRForge. That is justified: the reply test needs a POST that appends a thread so the next listing reads it back, which a fixed route mock cannot do.",
+          "resolution": "non-blocking, left"
+        },
+        {
+          "round": 2,
+          "kind": "quality",
+          "severity": "NOTE",
+          "criterion": "c-1",
+          "text": "TestPRCommentsAzureDevOps checks ' · src/a.go:12 · ' separately from the i200001 line rather than on it. That is equivalent here only because the fixture has a single inline thread.",
+          "resolution": "non-blocking, left"
+        },
+        {
+          "round": 2,
+          "kind": "quality",
+          "severity": "NOTE",
+          "criterion": "c-2",
+          "text": "The contract says listing a closed PR stays read-only, but nothing asserts that `dross pr comments` succeeds on a completed or abandoned PR. Only the refused verdict is tested. The record treats this as background, not a claimed sub-surface.",
+          "resolution": "non-blocking, left"
+        }
+      ]
+    },
+    "t-15": {
+      "outcome": "pass",
+      "rounds": 1,
+      "findings": [
+        {
+          "round": 1,
+          "kind": "quality",
+          "severity": "FLAG",
+          "criterion": "c-6",
+          "text": "Nothing fails if watchedHead stops calling checkWatchedSHA: TestCheckWatchedSHA only unit-tests the validator, and TestNoSpawnOutputEscapes cannot catch it because gitrun.Trim already clears taint where its output is produced (gitrun.go:132). The contract's claim that TestNoSpawnOutputEscapes guards the rev-parse output is therefore vacuous for this path.",
+          "resolution": "non-blocking, left"
+        },
+        {
+          "round": 1,
+          "kind": "quality",
+          "severity": "FLAG",
+          "criterion": "c-6",
+          "text": "TestShipMergeAzureDevOpsPinsHead sleeps a real 3s: adoCompletePR calls adoMergeSleep(adoMergeInterval) before its first poll, and those vars are unexported in package ship, so the cmd test cannot shorten the wait.",
+          "resolution": "non-blocking, left"
+        },
+        {
+          "round": 1,
+          "kind": "quality",
+          "severity": "FLAG",
+          "criterion": "c-5",
+          "text": "TestShipCIAzureDevOpsFlow uses a new adoCIMergeForge mock instead of the newADOShipMock the test_contract names. The reason is fair (newADOShipMock records only EscapedPath, so it cannot see the branchName query), but the test does not use the fixture the contract names.",
+          "resolution": "non-blocking, left"
+        },
+        {
+          "round": 1,
+          "kind": "quality",
+          "severity": "NOTE",
+          "text": "loadShipTarget runs before the provider dispatch, so on github a phase with no recorded PR or no origin/phase ref reports that error instead of 'use the ship.md recipe'.",
+          "resolution": "non-blocking, left"
+        },
+        {
+          "round": 1,
+          "kind": "quality",
+          "severity": "NOTE",
+          "text": "A pending with a Reason omits (queued)/(running). This matches the sources: both ADO and Bitbucket set Reason on a pending only when the PR head is not the watched commit, so no CI state applies.",
+          "resolution": "non-blocking, left"
+        }
+      ]
+    },
+    "t-16": {
+      "outcome": "pass",
+      "rounds": 2,
+      "findings": [
+        {
+          "round": 1,
+          "kind": "quality",
+          "severity": "FLAG",
+          "criterion": "c-8",
+          "text": "TestWatchPromptAzureDevOps only checks that the ship_prs bullet contains the token 'azure-devops'. Wording such as 'not listed on azure-devops' would also pass, so the test does not really prove the contract's 'says azure-devops lists ship PRs'. Asserting on 'listed on github and on azure-devops' (or similar) would tie it to the claim.",
+          "resolution": "non-blocking, left"
+        },
+        {
+          "round": 1,
+          "kind": "quality",
+          "severity": "NOTE",
+          "text": "openPRDigest now calls remotePolicy before listing for every provider, GitHub included. On a GitHub repo with a tracked .dross/local.toml, both PR fields are now hidden; before, only the untriaged counts were dropped. The task description asks for this ('any failure still gives (nil, nil)'), so it is recorded only.",
+          "resolution": "non-blocking, left"
+        },
+        {
+          "round": 1,
+          "kind": "quality",
+          "severity": "NOTE",
+          "text": "The 'make install (r-01)' step in the description is a process step and leaves no trace in the diff, so this review cannot confirm it.",
+          "resolution": "non-blocking, left"
+        },
+        {
+          "round": 2,
+          "kind": "quality",
+          "severity": "NOTE",
+          "criterion": "c-8",
+          "text": "On GitHub, the PR digest now also depends on the allowed-hosts check (remotePolicy). A tracked .dross/local.toml used to leave gh-listed PRs showing; now it hides bot_prs and ship_prs too. This matches the task's 'any failure still gives (nil, nil)', but no GitHub test covers it.",
+          "resolution": "non-blocking, left"
+        },
+        {
+          "round": 2,
+          "kind": "quality",
+          "severity": "NOTE",
+          "criterion": "c-8",
+          "text": "TestWatchPromptAzureDevOps only rejects the exact phrases 'a provider other than github —' and 'a provider other than github,'. A small rewording such as 'any provider other than GitHub —' would get past it, although the positive checks on 'azure-devops' and 'always []' still hold.",
+          "resolution": "non-blocking, left"
+        },
+        {
+          "round": 2,
+          "kind": "quality",
+          "severity": "NOTE",
+          "text": "openPRDigest finds the project root twice: once inside loadProject and again directly. It was already like this in countUntriaged and is harmless.",
+          "resolution": "non-blocking, left"
+        }
+      ]
+    },
+    "t-17": {
+      "outcome": "pass",
+      "rounds": 3,
+      "findings": [
+        {
+          "round": 1,
+          "kind": "quality",
+          "severity": "FLAG",
+          "criterion": "c-5",
+          "text": "TestShipPromptAzureDevOpsCI only checks that the pending line says 'keep polling'. TestShipPromptStaleHeadAsks pins the window-end ask only for a pending that carries a reason. Deleting 'A `pending (queued)`, or' from the §5 pending line would leave every test green, so the 'pending (queued) at window end -\u003e ask' branch of the description is not pinned.",
+          "resolution": "non-blocking, left"
+        },
+        {
+          "round": 1,
+          "kind": "quality",
+          "severity": "FLAG",
+          "criterion": "c-6",
+          "text": "TestShipPromptMergeGate looks for 'merge only if the user chose proceed in §5 for this same head', 'a head that moved since §5' and 'no merge' anywhere in the arm, not on the exit 4/5 line. If none/ask were dropped from that line, or the proceed rule moved to another verdict, the test would still pass. The 'exit 2 fail ... no merge' check also accepts a 'no merge' anywhere after the match.",
+          "resolution": "non-blocking, left"
+        },
+        {
+          "round": 1,
+          "kind": "quality",
+          "severity": "NOTE",
+          "text": "§6 line 181 lists 'a head that moved since §5' as a no-merge trigger next to a fresh pass, but §5 only records the head when the user proceeds. On the pass path there is no recorded head to compare. The conservative reading (no merge) is safe, and ship merge pins the watched head anyway.",
+          "resolution": "non-blocking, left"
+        },
+        {
+          "round": 1,
+          "kind": "quality",
+          "severity": "NOTE",
+          "text": "§6's AskUserQuestion still says 'All checks passed on PR #N', which is inaccurate when the user chose proceed without CI in §5 on azure-devops/bitbucket. The heading anchor is pinned by TestShipPromptDecisionTurnsSeparate, so changing the wording needs care.",
+          "resolution": "non-blocking, left"
+        },
+        {
+          "round": 1,
+          "kind": "quality",
+          "severity": "NOTE",
+          "text": "The description requires 'make install' (r-01). That is a process step the diff can't show, so it was not verified here.",
+          "resolution": "non-blocking, left"
+        },
+        {
+          "round": 2,
+          "kind": "quality",
+          "severity": "FLAG",
+          "criterion": "c-6",
+          "text": "§6's 'exit 4 none, exit 5 ask or exit 3 pending' line ends 'otherwise ask again — proceed merges', which on its face also covers a head that moved since §5, while the next line says a moved head never merges. The two rules overlap for a moved head plus none/ask/pending. Also, on §5's pass path no head is recorded, so 'a head that moved since §5' has nothing to compare against. Consider having §5 record the watched head on every exit to §6 and making the moved-head check come first.",
+          "resolution": "non-blocking, left"
+        },
+        {
+          "round": 2,
+          "kind": "quality",
+          "severity": "FLAG",
+          "criterion": "c-6",
+          "text": "§6 puts pending in the same bucket as none and ask, but the task description only carries a §5 proceed over to none and ask. As written, a same-head proceed given in §5 for 'none' (nothing registered) would merge, without asking again, over a build that has since started and reads pending (running). This is safe only when a blocking build-validation policy stops the merge.",
+          "resolution": "non-blocking, left"
+        },
+        {
+          "round": 2,
+          "kind": "quality",
+          "severity": "NOTE",
+          "text": "This was already there: §6's AskUserQuestion 'All checks passed on PR #N. Merge now?' fires before the new Azure DevOps / Bitbucket CI re-read, and it reads false when the user chose proceed-without-CI in §5.",
+          "resolution": "non-blocking, left"
+        },
+        {
+          "round": 2,
+          "kind": "quality",
+          "severity": "NOTE",
+          "text": "TestShipPromptMergeGate looks for 'never run dross phase complete' anywhere in the Azure DevOps / Bitbucket arm, not on the non-zero-merge line. The 'exit 3 pending' and 'exit 1' references in §6 are not tied to the binary's constants (§5's codes and §6's blocked exit are), which is all the contract requires.",
+          "resolution": "non-blocking, left"
+        },
+        {
+          "round": 2,
+          "kind": "quality",
+          "severity": "NOTE",
+          "text": "The description's 'make install (r-01)' step can't be checked from the diff.",
+          "resolution": "non-blocking, left"
+        },
+        {
+          "round": 3,
+          "kind": "quality",
+          "severity": "NOTE",
+          "text": "§6's shared AskUserQuestion still reads 'All checks passed on PR #N. Merge now?', which is untrue when an Azure DevOps or Bitbucket ship reaches §6 on a §5 proceed for none or ask. The wording predates this task and other providers' no-checks path has the same gap, but it is now reachable on these two providers as well.",
+          "resolution": "non-blocking, left"
+        },
+        {
+          "round": 3,
+          "kind": "quality",
+          "severity": "NOTE",
+          "text": "TestShipPromptMergeGate checks 'never run dross phase complete' anywhere in the Azure DevOps / Bitbucket arm, not on the line about a non-zero merge, so the rule could move away from the merge-failure handling and the test would still pass.",
+          "resolution": "non-blocking, left"
+        },
+        {
+          "round": 3,
+          "kind": "quality",
+          "severity": "NOTE",
+          "text": "TestShipPromptCIExitCodesMatch accepts any exit claim in §6 that matches either ship ci or ship merge, so a merge line mislabelled 'exit 2 = fail' would still pass. The blocked-exit check the test_contract requires does hold.",
+          "resolution": "non-blocking, left"
+        },
+        {
+          "round": 3,
+          "kind": "quality",
+          "severity": "NOTE",
+          "text": "The description's 'make install (r-01)' step is a process step that the diff cannot show was done.",
           "resolution": "non-blocking, left"
         }
       ]
