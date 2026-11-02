@@ -181,6 +181,22 @@
         }
       ]
     },
+    "t-19": {
+      "files": [
+        "internal/ship/azuredevops_threads_test.go",
+        "internal/cmd/pr_azuredevops_test.go"
+      ],
+      "commit": "dd975ca",
+      "completed_at": "2026-11-02T16:08:19.748816462Z",
+      "landmarks": [
+        {
+          "feature": "PR comment listing",
+          "symbol": "TestADOThreadReplies",
+          "loc": "internal/ship/azuredevops_threads_test.go:89",
+          "what": "pins every reply in a multi-comment ADO thread to its own id, the thread anchor and link, and its author"
+        }
+      ]
+    },
     "t-2": {
       "files": [
         "internal/ship/azuredevops_prread.go",
@@ -194,6 +210,21 @@
           "symbol": "azureDevOpsOpenPRsTargeting",
           "loc": "internal/ship/azuredevops_prread.go:70",
           "what": "reads an ADO PR's source branch/fork/open state and lists active PRs into a base, failing closed on errors and truncated pages"
+        }
+      ]
+    },
+    "t-20": {
+      "files": [
+        "internal/ship/azuredevops_merge_test.go"
+      ],
+      "commit": "e7341c9",
+      "completed_at": "2026-11-02T17:33:04.778190834Z",
+      "landmarks": [
+        {
+          "feature": "ship merge",
+          "symbol": "TestADOCompleteAbandonedWhileCompleting",
+          "loc": "internal/ship/azuredevops_merge_test.go:293",
+          "what": "pins that an ADO PR abandoned after its completion PATCH stops the wait with an error, never a merge or a policy block"
         }
       ]
     },

@@ -277,5 +277,5 @@ becomes a /dross-quick fix plus a re-run, never a mock-only pass. comment.go/_te
   description = "Verify remediation (c-6 NOTE): the poll loop's abandoned branch (internal/ship/azuredevops_merge.go:199-200) had 0 coverage hits. Test-only: TestADOCompleteAbandonedWhileCompleting serves an active pre-read, an accepted PATCH, then an abandoned poll, and pins that adoCompletePR stops there with an error naming abandoned, never a MergeResult, without polling to the bound or reading policy evaluations."
   covers = ["c-6"]
   test_contract = ["if an abandoned poll reads as merged or as a policy block, TestADOCompleteAbandonedWhileCompleting fails: active pre-read, accepted PATCH, then status abandoned gives a zero MergeResult and an error naming abandoned that is not ErrMergeBlocked", "if the abandoned case falls through to the bound, TestADOCompleteAbandonedWhileCompleting fails: with a 10-poll bound the PR is read exactly twice (pre-read + one poll), exactly one PATCH goes out and no policy evaluations are read"]
-  status = "pending"
+  status = "done"
   depends_on = ["t-4"]
