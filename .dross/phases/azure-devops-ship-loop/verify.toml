@@ -1,11 +1,11 @@
 [verify]
   phase = "azure-devops-ship-loop"
-  generated_at = 2026-11-02T12:56:13.815248437Z
-  verdict = "partial"
+  generated_at = 2026-11-02T20:02:36.719434555Z
+  verdict = "pass"
   finalized = true
-  finalized_at = 2026-11-02T15:59:38.961445209Z
-  measured_commit = "f50b2b3c02a91d65ca778359fe55cd9d9f9a0c1c"
-  measured_tree = "d7dd237be3d7832f6f3a3bfc0eac874d7689ec85"
+  finalized_at = 2026-11-02T22:39:23.9684962Z
+  measured_commit = "fa0c7366b6656b2d3ce042693ee7d6145e542b1d"
+  measured_tree = "ea1989d538540d64dd35d93a6329e2237d51b34b"
 
 [summary]
   mutation_status = "measured"
@@ -19,8 +19,8 @@
   mutants_in_scope = 477
   unclassified_in_scope = 0
   criteria_total = 11
-  criteria_covered = 10
-  criteria_uncovered = 1
+  criteria_covered = 11
+  criteria_uncovered = 0
 
   [[summary.leg]]
     language = "go"
@@ -36,9 +36,9 @@
 
 [[criterion]]
   id = "c-1"
-  status = "weak"
-  tests = ["internal/ship/azuredevops_threads_test.go:TestADOThreadsSkipNoise", "internal/ship/azuredevops_threads_test.go:TestADOThreadCommentIDs", "internal/ship/azuredevops_threads_test.go:TestADOThreadInlineAnchor", "internal/ship/azuredevops_threads_test.go:TestADOThreadsNeverPartial", "internal/ship/azuredevops_threads_test.go:TestADOThreadAuthorNotGuessedBot", "internal/ship/azuredevops_threads_test.go:TestADOThreadAuthorUniqueName", "internal/cmd/pr_azuredevops_test.go:TestPRCommentsAzureDevOps"]
-  notes = "Every ADO thread fixture (ship and cmd) carries exactly one comment, so 'every human comment across the threads' and thread+comment id uniqueness within one thread are never exercised: a loop reading only Comments[0] passes the suite. Noise skipping, anchoring, author id/uniqueName, Bot unknown, browser URL, all-status listing and never-partial are asserted."
+  status = "covered"
+  tests = ["internal/ship/azuredevops_threads_test.go:TestADOThreadReplies", "internal/ship/azuredevops_threads_test.go:TestADOThreadsSkipNoise", "internal/ship/azuredevops_threads_test.go:TestADOThreadCommentIDs", "internal/ship/azuredevops_threads_test.go:TestADOThreadInlineAnchor", "internal/ship/azuredevops_threads_test.go:TestADOThreadsNeverPartial", "internal/ship/azuredevops_threads_test.go:TestADOThreadAuthorNotGuessedBot", "internal/ship/azuredevops_threads_test.go:TestADOThreadAuthorUniqueName", "internal/cmd/pr_azuredevops_test.go:TestPRCommentsAzureDevOps", "internal/cmd/pr_azuredevops_test.go:TestPRCommentsAzureDevOpsThreadReplies"]
+  notes = "t-19 closed the prior weak: TestADOThreadReplies walks two multi-comment threads (system + deleted comment mid-thread) and pins all 5 human replies by count, distinct digits-only <thread><comment> id, inherited anchor, own author and thread link, so a first-comment-only loop or noise that breaks the walk fails; the cmd test lists a reviewer reply below dross's own reply in one inline thread. Noise skipping, anchoring, author id/uniqueName, Bot unknown, all-status listing and never-partial still asserted."
 
 [[criterion]]
   id = "c-2"
@@ -67,8 +67,8 @@
 [[criterion]]
   id = "c-6"
   status = "covered"
-  tests = ["internal/ship/azuredevops_merge_test.go:TestADOCompletePayload", "internal/ship/azuredevops_merge_test.go:TestADOCompletePinsHead", "internal/ship/azuredevops_merge_test.go:TestADOCompleteWaitsForCompleted", "internal/ship/azuredevops_merge_test.go:TestADOCompletionBlockedByPolicy", "internal/ship/azuredevops_merge_test.go:TestADOCompletionRefusedNotBlocked", "internal/cmd/ship_cimerge_test.go:TestShipMergeAzureDevOpsPinsHead", "internal/cmd/ship_cimerge_test.go:TestShipMergeExitCodes", "internal/cmd/ship_prompt_test.go:TestShipPromptMergeGate"]
-  notes = "One PATCH with squash, deleteSourceBranch present and false, commitId == watched SHA, no bypass/auto-complete key at any depth, no DELETE or /refs request; merged only at completed; conflicts/failure/rejectedByPolicy/refused PATCH each error, never merged."
+  tests = ["internal/ship/azuredevops_merge_test.go:TestADOCompletePayload", "internal/ship/azuredevops_merge_test.go:TestADOCompletePinsHead", "internal/ship/azuredevops_merge_test.go:TestADOCompleteWaitsForCompleted", "internal/ship/azuredevops_merge_test.go:TestADOCompleteAbandonedWhileCompleting", "internal/ship/azuredevops_merge_test.go:TestADOCompletionBlockedByPolicy", "internal/ship/azuredevops_merge_test.go:TestADOCompletionRefusedNotBlocked", "internal/cmd/ship_cimerge_test.go:TestShipMergeAzureDevOpsPinsHead", "internal/cmd/ship_cimerge_test.go:TestShipMergeExitCodes", "internal/cmd/ship_prompt_test.go:TestShipPromptMergeGate"]
+  notes = "One PATCH with squash, deleteSourceBranch present and false, commitId == watched SHA, no bypass/auto-complete key at any depth, no DELETE or /refs request; merged only at completed; conflicts/failure/rejectedByPolicy/refused PATCH each error, never merged. t-20 closed the prior 0-hit gap: TestADOCompleteAbandonedWhileCompleting pins a PR abandoned mid-completion to an error naming abandoned (not ErrMergeBlocked), no MergeResult, stopping at that poll with 0 evaluation reads."
 
 [[criterion]]
   id = "c-7"
@@ -129,8 +129,8 @@
   text = "skipped internal/ship/testdata/ado_live_smoke.toml: no mutation adapter for .toml"
 
 [[finding]]
-  severity = "FLAG"
-  text = "c-1 weak: no ADO thread fixture (internal/ship/azuredevops_threads_test.go, internal/cmd/pr_azuredevops_test.go) carries more than one comment, so a listing that read only each thread's first comment, or an id scheme that collided within a thread, would pass. Add a thread with a reviewer comment plus replies (incl. a deleted/system one mid-thread) and assert every human comment is listed with distinct <thread><comment> ids."
+  severity = "NOTE"
+  text = "Resolved since the prior partial verdict: c-1 weak (single-comment thread fixtures) closed by t-19 (TestADOThreadReplies, TestPRCommentsAzureDevOpsThreadReplies); c-6 0-hit abandoned-while-completing branch (azuredevops_merge.go) closed by t-20 (TestADOCompleteAbandonedWhileCompleting)."
 
 [[finding]]
   severity = "NOTE"
@@ -138,12 +138,8 @@
 
 [[finding]]
   severity = "NOTE"
-  text = "c-6: internal/ship/azuredevops_merge.go:200 (PR abandoned while completing) has 0 coverage hits and no mutant (no operator on the line); falling through still ends in 'completion not confirmed', never merged."
-
-[[finding]]
-  severity = "NOTE"
   text = "c-10/c-11: Bitbucket ship ci/merge non-pass verdicts reach the cmd layer only through the stubbed seam (TestShipCIExitCodes/TestShipMergeExitCodes); provider->dispatch wiring is asserted at package level (TestCIMergeDispatchRoutes)."
 
 [[finding]]
   severity = "NOTE"
-  text = "22 in-hunk survivors accepted this run: 18 switch-case conditions under gremlins-attribution-ceiling (case bodies confirmed executed by a go test -coverprofile run) and 4 package-level merge pacing defaults under const-initializer-arithmetic. Efficacy over the 434 reachable in-scope mutants = 1.00."
+  text = "All 43 in-scope survivors are NOT COVERED by construction and already accepted (22 in-hunk, 21 inherited): switch-case conditions/closure bodies under the gremlins attribution ceiling and package-level merge pacing defaults under const-initializer-arithmetic. Efficacy over the 434 reachable in-scope mutants = 1.00; 174 out-of-scope survivors filtered, all accepted; 0 unclassified anywhere."
