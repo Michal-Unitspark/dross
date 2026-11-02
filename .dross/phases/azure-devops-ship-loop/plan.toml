@@ -1,4 +1,4 @@
-task_seq = 18
+task_seq = 19
 [phase]
   id = "azure-devops-ship-loop"
 
@@ -257,3 +257,14 @@ becomes a /dross-quick fix plus a re-run, never a mock-only pass. comment.go/_te
   covers = ["c-7"]
   test_contract = ["if mock is reported as live, TestADOLiveRecordHonest (t-7) passes with posture 'live' only when all 11 steps carry pass plus real-host evidence; any failed step leaves posture 'partial'", "if the probe's answer is ignored, statusless_thread_blocks = true with adoThreadStatus '' fails TestADOLiveRecordHonest; once flipped, TestPostAzureDevOpsThread asserts status closed", "if a leg is hollow, TestADOLiveRecordStepEvidence (t-7) rejects it unless its evidence shows: the dedupe re-run prints 'found open PR #N'; the listing holds an inline comment with non-empty path and line > 0; PRHeadOf gives phase/<id>, Open, !CrossRepo; AuthenticatedUser().ID equals the author id on dross's thread; the /dross-respond reply lands a ReplyMarker thread the next listing drops as own; the ship ci verdict is recorded verbatim with a build URL on the real host", "if the merge step's evidence is hollow, the squash-merge step must record a non-empty `git ls-remote origin phase/<id>` after completion and merged-status = merged from GetPRStatus, or the validator rejects the step"]
   status = "done"
+
+[[task]]
+  id = "t-19"
+  wave = 4
+  title = "Prove multi-comment ADO threads list every reply"
+  files = ["internal/ship/azuredevops_threads_test.go", "internal/cmd/pr_azuredevops_test.go"]
+  description = "Verify remediation (c-1 weak): no ADO thread fixture carried more than one comment, so a listing that read only Comments[0], or an id scheme that collided within a thread, passed. Test-only: azureDevOpsPRComments already walks every comment. Ship: TestADOThreadReplies lists a conversation thread 9 (reviewer 1, reply 2 by another author, system 3, deleted 4, reply 5) and an inline thread 2 on /src/a.go line 12 (comment 1 + reply 2). Cmd: a stateful-forge thread where a reviewer replies under dross's own marker reply inside the same inline thread still lists the reviewer reply at its path and line."
+  covers = ["c-1"]
+  test_contract = ["if only a thread's first comment is read, TestADOThreadReplies fails: thread 9 (comments 1, 2, system 3, deleted 4, 5) and inline thread 2 (comments 1, 2) list exactly 900001, 900002, 900005, 200001, 200002 in that order, with distinct digits-only ids", "if a reply loses its thread's anchor or link, TestADOThreadReplies fails: 200001 and 200002 are both inline at src/a.go line 12; 900001/900002/900005 are conversation; every reply's URL is its thread's ...?discussionId=<thread> and its author is that comment's own (id lowercased, uniqueName login)", "if mid-thread noise leaks or stops the walk, TestADOThreadReplies fails: system comment 3 and deleted comment 4 contribute nothing and comment 5 after them is still listed", "if dross pr comments drops a reply sharing a thread with dross's own reply, TestPRCommentsAzureDevOpsThreadReplies fails: inline thread 2 holding reviewer 1, dross's marker reply 2 and reviewer reply 3 lists i200001 and i200003 at src/a.go:12 and never i200002"]
+  status = "pending"
+  depends_on = ["t-1", "t-14"]
