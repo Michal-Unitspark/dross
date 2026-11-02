@@ -201,6 +201,40 @@ func TestPRCommentsAzureDevOps(t *testing.T) {
 	}
 }
 
+// TestPRCommentsAzureDevOpsThreadReplies: replies share a thread with the
+// comment they answer. A reviewer replying under dross's own reply in the same
+// inline thread is listed at the thread's path and line; dross's reply between
+// the two is not.
+func TestPRCommentsAzureDevOpsThreadReplies(t *testing.T) {
+	inline := map[string]any{"filePath": "/src/a.go", "rightFileStart": map[string]any{"line": 12, "offset": 1}}
+	f := newADOPRForge(t, adoPRJSON("active", ""),
+		adoThreadJSON(2, inline,
+			adoReviewer(1, "rename this"),
+			adoCommentJSON(2, "text", strings.ToLower(adoSelfID), adoSelfLogin, prtriage.ReplyMarker+"\n\nNot acted on, with the reason for each:\n", false),
+			adoReviewer(3, "the old name still leaks in the docs"),
+		),
+	)
+	adoPRRepo(t, f)
+	out, err := runPR(t, "comments", "7")
+	if err != nil {
+		t.Fatalf("pr comments: %v\n%s", err, out)
+	}
+	for _, want := range []string{
+		"i200001 · inline · @" + adoRevLogin + " · unknown · src/a.go:12 · ",
+		"i200003 · inline · @" + adoRevLogin + " · unknown · src/a.go:12 · ",
+		"PR #7 (phase/x): 2 of 2 comments need a verdict",
+	} {
+		if !strings.Contains(out, want) {
+			t.Errorf("output lacks %q:\n%s", want, out)
+		}
+	}
+	for _, gone := range []string{"i200002", prtriage.ReplyMarker} {
+		if strings.Contains(out, gone) {
+			t.Errorf("output lists %q:\n%s", gone, out)
+		}
+	}
+}
+
 // TestPRResolveAzureDevOpsID: an ADO id as listed is a triage id — resolving
 // it is accepted and the saved record validates.
 func TestPRResolveAzureDevOpsID(t *testing.T) {

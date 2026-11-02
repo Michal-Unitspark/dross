@@ -82,6 +82,69 @@ func TestADOThreadCommentIDs(t *testing.T) {
 	}
 }
 
+// TestADOThreadReplies: a thread is a conversation, not one comment — every
+// human reply in it is listed under its own id, carrying the thread's anchor
+// and link and its own author, and noise mid-thread neither leaks nor stops
+// the walk.
+func TestADOThreadReplies(t *testing.T) {
+	other := `{"id":"AB12CD34-0000-4000-8000-000000000002","uniqueName":"other@corp.com","displayName":"Other Person"}`
+	reviewer := `{"id":"` + adoGUID1 + `","uniqueName":"rev@corp.com"}`
+	got, _, err := listADOThreads(t, adoThreads(
+		adoThread(9, `"status":"active"`,
+			adoText(1, "why is this unbounded?"),
+			adoTextBy(2, other, "it is bounded by maxPages"),
+			`{"id":3,"author":`+reviewer+`,"content":"Rev resolved the thread","commentType":"system"}`,
+			`{"id":4,"author":`+reviewer+`,"content":"","commentType":"text","isDeleted":true}`,
+			adoText(5, "then document it"),
+		),
+		adoThread(2, `"threadContext":{"filePath":"/src/a.go","rightFileStart":{"line":12,"offset":1}}`,
+			adoText(1, "rename this"),
+			adoTextBy(2, other, "renamed"),
+		),
+	))
+	if err != nil {
+		t.Fatal(err)
+	}
+	type row struct {
+		id, body, login, authorID, path string
+		kind                            CommentKind
+		line                            int
+		thread                          string
+	}
+	otherID := "ab12cd34-0000-4000-8000-000000000002"
+	want := []row{
+		{"900001", "why is this unbounded?", "rev@corp.com", adoGUID1, "", CommentConversation, 0, "9"},
+		{"900002", "it is bounded by maxPages", "other@corp.com", otherID, "", CommentConversation, 0, "9"},
+		{"900005", "then document it", "rev@corp.com", adoGUID1, "", CommentConversation, 0, "9"},
+		{"200001", "rename this", "rev@corp.com", adoGUID1, "src/a.go", CommentInline, 12, "2"},
+		{"200002", "renamed", "other@corp.com", otherID, "src/a.go", CommentInline, 12, "2"},
+	}
+	if len(got) != len(want) {
+		t.Fatalf("got %d comments, want %d: %+v", len(got), len(want), got)
+	}
+	digits := regexp.MustCompile(`^[0-9]+$`)
+	seen := map[string]bool{}
+	for i, w := range want {
+		c := got[i]
+		if c.ID != w.id || c.Body != w.body {
+			t.Errorf("comment %d: id %q body %q, want %q %q", i, c.ID, c.Body, w.id, w.body)
+		}
+		if !digits.MatchString(c.ID) || seen[c.ID] {
+			t.Errorf("comment %d: id %q is not a distinct digits-only id", i, c.ID)
+		}
+		seen[c.ID] = true
+		if c.Kind != w.kind || c.Path != w.path || c.Line != w.line {
+			t.Errorf("%s: kind %s path %q line %d, want %s %q %d", w.id, c.Kind, c.Path, c.Line, w.kind, w.path, w.line)
+		}
+		if c.Author.ID != w.authorID || c.Author.Login != w.login || c.Author.Bot != AuthorUnknown {
+			t.Errorf("%s: author %+v, want id %s login %s bot unknown", w.id, c.Author, w.authorID, w.login)
+		}
+		if url := "https://dev.azure.com/o/p/_git/r/pullrequest/7?discussionId=" + w.thread; c.URL != url {
+			t.Errorf("%s: URL %q, want %q", w.id, c.URL, url)
+		}
+	}
+}
+
 // TestADOThreadsSkipNoise: votes, pushes, status changes and deleted threads
 // or comments are not comments anyone wrote; every thread status is listed,
 // and the request asks for none in particular.
