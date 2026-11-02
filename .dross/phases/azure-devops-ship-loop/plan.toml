@@ -10,7 +10,7 @@ task_seq = 18
   description = "azureDevOpsPRComments GETs .../pullRequests/<n>/threads with no status filter; keeps non-deleted text and codeChange\ncomments, skips system (string or numeric commentType) and deleted comments/threads. threadContext.filePath (leading /\nstripped) + rightFileStart.line (else leftFileStart.line) => inline, else conversation. ID = <threadId><commentId %05d>\n(digits only, prtriage grammar untouched); URL = <repo browser url>/pullrequest/<n>?discussionId=<thread>; author id\nlowercased, Login = uniqueName, Bot unknown. azureDevOpsAuthenticatedUser GETs <api_base>/_apis/connectionData via\nadoConn.withPreview (defined here, reused by t-4 and t-9); Login = properties.Account.$value, absent => error.\nDecode structs function-local. Not dispatched yet (t-8).\n"
   covers = ["c-1", "c-3"]
   test_contract = ["if ids collide, TestADOThreadCommentIDs fails: thread 1/comment 12 and thread 11/comment 2 give distinct ids (100012 vs 1100002); thread 7/comment 1 and thread 8/comment 1 give 700001 and 800001; every id matches ^[0-9]+$; a comment id of 0 or > 99999 returns (nil, err)", "if noise leaks, TestADOThreadsSkipNoise fails: a commentType 'system' (and numeric 3) vote, a RefUpdate push, a status change, an isDeleted thread and an isDeleted comment contribute 0 comments; 'text', 1 and 'codeChange' are kept; threads of status fixed, closed, wontFix, byDesign and pending are all listed and the threads request carries no status filter", "if anchoring breaks, TestADOThreadInlineAnchor fails: /src/a.go + rightFileStart.line 12 gives inline Path src/a.go Line 12; leftFileStart-only gives its line; a file-level context gives Path with Line 0; no threadContext gives conversation with empty Path", "if a partial list escapes, a thread with id 0, a non-JSON body, a body without a value array, a 500 and a 203 sign-in page each return (nil, err), never the threads decoded before the fault", "if the bot class is guessed, a 'Project Collection Build Service' author or an isContainer author still gives Bot unknown; URL is https://dev.azure.com/o/p/_git/r/pullrequest/7?discussionId=42 (browser form, single-encoded)", "if identity hits the wrong base, TestADOAuthenticatedUserEndpoint fails: api_base https://dev.azure.com/o requests /o/_apis/connectionData (no project segment), Server /tfs/Coll requests /tfs/Coll/_apis/connectionData; configured 7.1 sends 7.1-preview.1, 6.0 sends 6.0-preview.1, 7.1-preview.1 is not double-suffixed", "if an anonymous answer reads as dross, an authenticatedUser with id aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa or no id returns an error, never Account{}", "if id case diverges, TestADOIdentityMatchesThreadAuthor fails: connectionData id 'AB12...' and thread author id 'ab12...' give equal Account.ID and CommentAuthor.ID", "if the unique name is lost, TestADOThreadAuthorUniqueName fails: a comment by author {id, uniqueName 'rev@corp.com', displayName 'Rev Iewer'} gives CommentAuthor.Login 'rev@corp.com', never the display name; connectionData with properties.Account.$value 'me@corp.com' gives Account.Login 'me@corp.com', and one without properties.Account returns an error, never a providerDisplayName login"]
-  status = "pending"
+  status = "done"
 
 [[task]]
   id = "t-2"
@@ -33,7 +33,7 @@ azuredevops_pr.go untouched. Not dispatched yet (t-8).
     "if a failed lookup reads as 'no dependents', a 500, a 203 sign-in page, a non-JSON body, a body without a value array and a pullRequestId 0 each return (nil, err); a genuine empty value list returns (empty, nil)",
     "if truncation hides a dependent, a full 100-PR page with no client-side match returns an error, and a full page containing a match returns that match",
   ]
-  status = "pending"
+  status = "done"
 
 [[task]]
   id = "t-3"
@@ -43,7 +43,7 @@ azuredevops_pr.go untouched. Not dispatched yet (t-8).
   description = "ci.go: CIVerdict (pass|fail|pending|none|ask), CIResult{Verdict, Link, Reason, Queued}, ErrCIUnsupported; no window\nlogic in Go. merge.go: MergeResult{URL}, ErrMergeBlocked, ErrMergeUnsupported. azuredevops_ci.go: policy type-id\nclassification (CI = Build 0609b952-..., Status cbdc66da-...; blocking-non-CI = reviewers, comments, work items)\nshared with t-4, and pure adoCIRollup(builds, evals) counting builds plus CI evaluations (blocking and optional);\nnotApplicable skipped. Precedence fail > running > ask (expired build policy, broken, unknown) > queued > none >\npass; partiallySucceeded = fail. No I/O.\n"
   covers = ["c-5"]
   test_contract = ["if a failure is masked, TestADORollupFail fails: a failed, canceled or partiallySucceeded build, or a rejected Build/Status evaluation, gives fail even alongside succeeded, running and queued items, with Link set to that item's link; a rejected optional (isBlocking=false) Build evaluation still fails", "if a non-CI policy counts, a rejected Required reviewers (fd2167ab-...), Minimum reviewers (fa4e907d-...), Comment requirements (c6a1889d-...) or Work item linking (40e92b44-...) evaluation alone gives none and next to a succeeded build gives pass; a displayName 'Build' on a reviewer type id is not counted and a Build type id with displayName 'Compilacion' is counted", "if notApplicable counts, a lone notApplicable evaluation gives none and notApplicable plus a succeeded build gives pass", "if an unfinished state reads green: running build + approved evaluation gives pending (Queued false); queued + inProgress gives pending (Queued false); notStarted/postponed builds or queued evaluations alone give pending (Queued true); an expired build evaluation (context.isExpired) gives ask even while queued; a broken evaluation or unknown build result gives ask; zero counted items gives none; none of these is ever pass", "if precedence depends on order, every TestADORollup* row gives the same verdict under every permutation of its items", "if the policy classifier drifts, TestADOPolicyClass fails: Build and Status type ids classify as CI; Required reviewers, Minimum reviewers, Comment requirements and Work item linking classify as blocking-non-CI with their display names; an unknown type id is neither", "if the classifier matches by prefix, TestADOPolicyClass fails: Minimum reviewers fa4e907d-c16b-4a4c-9dfa-4906e5d171dd is blocking-non-CI while Require a merge strategy fa4e907d-c16b-4a4c-9dfa-4916e5d171ab is neither; every type id is matched in full, case-insensitively"]
-  status = "pending"
+  status = "done"
 
 [[task]]
   id = "t-4"
@@ -53,7 +53,7 @@ azuredevops_pr.go untouched. Not dispatched yet (t-8).
   description = "adoCompletePR(opts, sha) GETs the PR first: completed => merged with 0 writes; abandoned, isDraft or\nlastMergeSourceCommit != sha => refuse with 0 writes. Else one PATCH {status completed, lastMergeSourceCommit.commitId\nsha, completionOptions {mergeStrategy squash, squashMerge true, deleteSourceBranch false, transitionWorkItems false}},\nthen polls to status completed on a test-lowerable interval bounded at ~90s. On a refused PATCH (400/409) or a PR\nstill active at the bound, reads the PR's policy evaluations (withPreview, t-3 classifier): an unapproved blocking\nnon-CI policy => ErrMergeBlocked naming it; mergeStatus rejectedByPolicy => ErrMergeBlocked; else a plain error.\n"
   covers = ["c-6"]
   test_contract = ["if the body drifts, TestADOCompletePayload fails: exactly one PATCH to .../pullrequests/7 with status completed, lastMergeSourceCommit.commitId == sha, mergeStrategy squash, squashMerge true, deleteSourceBranch present and false, transitionWorkItems false; a recursive JSON walk finds no bypassPolicy, bypassReason or autoCompleteSetBy key at any depth", "if provider-side teardown sneaks in, any DELETE or any request under .../refs fails the test", "if the pin is skipped, lastMergeSourceCommit bbb with sha aaa (error names both), an abandoned PR and an isDraft PR each error with 0 PATCHes; an already-completed PR returns merged with 0 PATCHes (idempotent re-run)", "if a merge preview reads as merged, GETs answering active+queued, active+succeeded, then completed report merged only at completed after 3 polls; mergeStatus conflicts errors naming conflicts, failure errors, rejectedByPolicy gives errors.Is(err, ErrMergeBlocked); none of these returns a MergeResult", "if a policy block is read as a plain failure, TestADOCompletionBlockedByPolicy fails: a PATCH 400 (TF401027-style 'You need at least 1 approving reviewer') with an unapproved blocking Required reviewers evaluation, and an accepted PATCH whose PR is still active at the bound with an unapproved Comment requirements evaluation, each give errors.Is(err, ErrMergeBlocked) with the policy's display name in the message; the evaluations request carries the preview api-version", "if every refusal is called a block, a PATCH 400/409 or still-active-at-bound with no unapproved blocking non-CI evaluation (only Build/Status, or all approved) gives a plain error carrying ADO's scrubbed message or 'completion not confirmed - re-run dross ship merge', never ErrMergeBlocked; a failed evaluations read also gives a plain error", "if t-4's evaluations read targets the wrong PR, TestADOCompletionBlockedByPolicy's mock asserts artifactId == vstfs:///CodeReview/CodeReviewId/<repository.project.id>/7 escaped once (a project-name or double-escaped artifactId gets no evaluations and the row fails)"]
-  status = "pending"
+  status = "done"
   depends_on = ["t-1", "t-3"]
 
 [[task]]
@@ -72,7 +72,7 @@ The non-empty check and §5's `dross ship comment` stay. make install (r-01).
     "if the bullet hand-builds auth, the test fails when the bullet contains curl, `az `, Authorization or $<auth_env>",
     "if the guard or the post path drops, the test fails without 'exists and is non-empty' in §1 and `dross ship comment --pr <n> --body-file` in §5",
   ]
-  status = "pending"
+  status = "done"
 
 [[task]]
   id = "t-7"
@@ -82,7 +82,7 @@ The non-empty check and §5's `dross ship comment` stay. make install (r-01).
   description = "Record template whose TOML comments are the runbook. Prerequisites: a scratch ADO repo with dross init; a pipeline\n(YAML or classic) plus an agent that can run it (hosted grant or self-hosted); a phase on phase/<id> with a verify\npass; a hand-set comment-resolution policy on its base; an inline comment posted by hand before the listing step;\nreviewer threads resolved before the merge step. Then the 11 c-7 steps, each not-run, posture 'mock-only'. Posture is\nmock-only | partial | live. The validator owns every per-step evidence rule t-18 relies on; record struct\ntest-local; ReplyMarker matched as a literal (internal/ship cannot import prtriage). Backs c-7 only.\n"
   covers = ["c-7"]
   test_contract = ["if mock can be filed as live, TestADOLiveRecordHonest fails when posture = 'live' while any step is not-run or fail, or lacks evidence (an ADO URL or id), run_at or api_version", "if httptest evidence is passed off as live, a step whose evidence names 127.0.0.1, localhost or an httptest port is rejected", "if a step is dropped, the test fails unless all 11 step keys appear exactly once", "if the thread fallback is ignored, statusless_thread_blocks = true while adoThreadStatus is still '' fails the test", "if the validator is vacuous, its in-test fixtures live-with-gap, mock-only and complete-live give reject, accept-as-mock and accept-as-live respectively", "if a hollow leg can pass, TestADOLiveRecordStepEvidence fails unless each step's pass requires its evidence: dedupe = a 'found open PR #N' line; listing = an inline comment with non-empty path and line > 0; head = phase/<id>, open, not cross-repo; user = an id equal to dross's thread author id; respond = a reply thread whose body starts with the ReplyMarker literal and is dropped from the next listing; ci = the verdict verbatim plus a build URL on the real ADO host; merge = non-empty ls-remote output for phase/<id>; merged-status = merged", "if a failed run reads as live, a record with any step fail gives posture 'partial' accepted only as partial, never live; 'partial' with every step pass is rejected", "if the runbook loses its prerequisites, the test fails unless the template's comments name dross init on a scratch ADO repo, a pipeline plus a runnable agent, a verify pass on phase/<id>, the hand-set comment-resolution policy, a hand-posted inline comment, and resolving reviewer threads before the merge step"]
-  status = "pending"
+  status = "done"
 
 [[task]]
   id = "t-8"
@@ -101,7 +101,7 @@ ADO rows.
     "if any of the four reads the token before the host check, its new TestShipRefusesOffAllowlistAPIBase row (azure-devops comments/head/user/dependents) sees fake-host hits or errors.Is(err, hostallow.ErrRefused) is false",
     "if the other providers are disturbed, bitbucket OpenPRsTargeting still returns ErrBasePRLookupUnsupported with 0 requests, and n <= 0 on azure-devops still errors with 0 requests",
   ]
-  status = "pending"
+  status = "done"
 
 [[task]]
   id = "t-9"
@@ -118,7 +118,7 @@ refs/heads/<source>, queueTimeDescending, $top) and policy/evaluations?artifactI
 """
   covers = ["c-5"]
   test_contract = ["if a stale build counts, TestADOCIBuildsAtHeadOnly fails: a succeeded build at an older sourceVersion and a failed one with another repository.id are ignored (-> none); a failed build at sha (hex compared case-insensitively) gives fail with its _links.web.href", "if the query is loose, the builds mock asserts branchName == refs/heads/phase/x, repositoryId == the PR's repository.id, repositoryType TfsGit, and no definition or YAML/process filter (classic pipelines count); a full $top page errors, never a verdict over a truncated list; no request path contains /_apis/policy/configurations", "if the artifact id uses the project name, TestADOEvaluationArtifactID fails: artifactId is vstfs:///CodeReview/CodeReviewId/<repository.project.id>/7, escaped once, at api-version 7.1-preview.1; a PR body without repository.project.id or repository.id errors with 0 build/evaluation requests", "if a stale head reads green, a PR whose lastMergeSourceCommit.commitId != sha, or is absent, gives pending with a Reason naming both SHAs and 0 build/evaluation requests; never pass, never none", "if a failed read becomes a verdict, a 500, a 203 sign-in page or a non-JSON body from the PR, builds or evaluations read returns (CIResult{}, err); a rejected build-validation evaluation links <api_base>/<project>/_build/results?buildId=<context.buildId>", "if a status-check failure has no link, TestADOStatusPolicyFailLink fails: a rejected Status-policy (cbdc66da) evaluation with no buildId gives fail with Link = the PR browser URL https://dev.azure.com/o/p/_git/r/pullrequest/7, never an empty Link"]
-  status = "pending"
+  status = "done"
 
 [[task]]
   id = "t-10"
@@ -138,7 +138,7 @@ pending; none -> none; unknown state -> ask.
     "if pagination truncates, a FAILED status on page 2 gives fail and still more after prThreadMaxPages errors; the mock records 0 requests to the body's next URL",
     "if the head moved, a source.commit.hash that does not prefix sha gives pending with 0 status requests; a 500 or non-JSON PR or statuses page errors, never none; a missing auth_user errors with 0 hits",
   ]
-  status = "pending"
+  status = "done"
 
 [[task]]
   id = "t-11"
@@ -149,7 +149,7 @@ pending; none -> none; unknown state -> ask.
   description = "bbRequest gains a variadic out-param (hdr ...*http.Header) filled when passed; its 6 callers and the screen/scrub\naudits are unchanged. bitbucketMergePR(opts, sha) pre-reads the PR: MERGED -> done with 0 POSTs; DECLINED,\nSUPERSEDED or a head not prefixing sha -> refuse. Else POSTs .../merge {type pullrequest, merge_strategy squash,\nclose_source_branch false}. A 200 must say MERGED; a 202 is polled through bbRequest at its Location only when on\napi_base's scheme+host and under .../pullrequests/<n>/merge/task-status/; bounded ~90s via a test-lowerable sleep\nseam. A merge-check 400 (unmet approvals/checks) => ErrMergeBlocked; a 409 conflict stays a plain error.\n"
   covers = ["c-11"]
   test_contract = ["if the Location is lost or followed, TestBBRequestReturnsHeaders fails: a 202 with Location <srv>/2.0/.../merge/task-status/abc fills the passed *http.Header after exactly 1 request; a call without the out-param behaves as before", "if the transport audits are disturbed, TestEveryOutboundSeamIsRegistered, TestScreenPrecedesRequestInEveryScreenedTransport, TestShipHelpersScrubAtSource and TestEveryShipBodyInterpolationRedacts stay green with no new sinks.go or scrubbingHelpers row, and a bbRequest body holding a ghp_ token still returns ErrHit with 0 requests", "if the body drifts, exactly one POST to .../pullrequests/7/merge carries merge_strategy squash and close_source_branch present and false; any DELETE or request under .../refs/branches fails the test", "if async is misread: a 200 with state MERGED -> merged with 0 task-status polls; a 202 whose Location is on the api_base host polls PENDING, PENDING, then SUCCESS with merge_result.state MERGED -> merged; SUCCESS without MERGED errors; still PENDING past the bound errors 'merge not confirmed'", "if the poll link can carry the token off-host, a Location on a second httptest server, another scheme, another PR's path, or outside .../merge/task-status/ errors and that server records 0 hits", "if a policy block reads as a plain failure, TestBitbucketMergeBlocked fails: a 400 whose error names unmet merge checks or required approvals gives errors.Is(err, ErrMergeBlocked) with the message scrubbed; a 409 conflict gives a plain error, never ErrMergeBlocked", "if a refusal reads as merged, 409 (conflict), 555, a 202 without Location, and a task-status with an error or unrecognised state each error and never return a MergeResult; already MERGED -> merged with 0 POSTs; DECLINED or a head not prefixing sha -> error with 0 POSTs"]
-  status = "pending"
+  status = "done"
 
 [[task]]
   id = "t-12"
@@ -166,7 +166,7 @@ none->none.
 """
   covers = ["c-8"]
   test_contract = ["if the head keeps its ref prefix, TestADOOpenPRsHeads fails: refs/heads/phase/x gives HeadRefName 'phase/x' exactly (watch.SplitPRs classification is proven in t-16's cmd test; internal/ship cannot import internal/watch)", "if the rollup diverges from ship ci, TestADOWatchChecksMatchShipCI fails: for every t-3 rollup fixture, pass/fail/pending/none give passing/failing/pending/none and ask gives pending, never passing", "if one PR's checks fail to read, the whole call returns (nil, err): a 500 on PR 2's evaluations while PR 1 is fine gives nil, never a list where PR 2 reads none", "if a full page is trusted, exactly 100 PRs errors; a missing value array, pullRequestId 0, an empty creationDate or a 203 sign-in page each error", "if bots or fan-out costs are guessed, every record has IsBot false even for a 'Build Service' creator; a forkSource phase/y PR and a feature/z PR get ChecksNone with 0 builds/evaluations requests", "if the dispatcher widens, forgejo/gitlab/bitbucket still return ErrOpenPRListUnsupported with 0 requests, and an off-allowlist ADO api_base returns ErrRefused with 0 hits"]
-  status = "pending"
+  status = "done"
 
 [[task]]
   id = "t-13"
@@ -182,7 +182,7 @@ registered in enumScanSites.
 """
   covers = ["c-5", "c-6", "c-10", "c-11"]
   test_contract = ["if an arm is missing, TestCIMergeDispatchRoutes fails: ' Azure-DevOps ' reaches .../_apis/build/builds and PATCHes .../pullrequests/7; ' Bitbucket ' reaches .../commit/<sha>/statuses and .../merge", "if an unwired provider guesses, github/gitlab/forgejo/gitea return errors.Is ErrCIUnsupported/ErrMergeUnsupported with text naming the ship.md recipe, 0 requests and no gh spawn; an unknown provider gets an error that is neither sentinel", "if a new entry point skips the host check, off-allowlist rows for ADO ci, ADO merge, Bitbucket ci and Bitbucket merge each return ErrRefused with 0 hits and the env unread", "if provider coverage drifts, TestCIMergeDispatchSet fails: iterating every ShipProviders entry, exactly azure-devops and bitbucket reach an HTTP handler from CIStatus and MergePR, and every other entry returns the Unsupported sentinel (asserted by behaviour, not by the switch walker); the new enumScanSites rows feed TestDispatchUsesConfigenumNormalize and TestGuardsSeeNonEmptySets so dropping Normalize goes red"]
-  status = "pending"
+  status = "done"
 
 [[task]]
   id = "t-14"

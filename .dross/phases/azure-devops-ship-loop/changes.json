@@ -2,5 +2,743 @@
   "phase": "azure-devops-ship-loop",
   "base": "milestone/v1.8",
   "base_commit": "0426b18aa67674dfc841507832b6fecf95b77529",
-  "tasks": {}
+  "tasks": {
+    "t-1": {
+      "files": [
+        "internal/ship/azuredevops_threads.go",
+        "internal/ship/azuredevops_threads_test.go",
+        "internal/ship/azuredevops_identity.go",
+        "internal/ship/azuredevops_identity_test.go"
+      ],
+      "commit": "4e70eb6",
+      "completed_at": "2026-10-30T16:09:51.023491704Z",
+      "landmarks": [
+        {
+          "feature": "azure devops PR comment reading",
+          "symbol": "azureDevOpsPRComments",
+          "loc": "internal/ship/azuredevops_threads.go:32",
+          "what": "lists human comments across every ADO PR thread with thread+comment digit ids, inline anchoring and connectionData caller identity"
+        }
+      ]
+    },
+    "t-10": {
+      "files": [
+        "internal/ship/bitbucket_ci.go",
+        "internal/ship/bitbucket_ci_test.go"
+      ],
+      "commit": "f268b2b",
+      "completed_at": "2026-10-30T17:25:13.766203766Z",
+      "landmarks": [
+        {
+          "feature": "ship CI verdict",
+          "symbol": "bitbucketCIStatus",
+          "loc": "internal/ship/bitbucket_ci.go:27",
+          "what": "reads Bitbucket commit statuses at the PR head by page number (never following next) into pass/fail/pending/none/ask"
+        }
+      ]
+    },
+    "t-11": {
+      "files": [
+        "internal/ship/bitbucket.go",
+        "internal/ship/bitbucket_test.go",
+        "internal/ship/bitbucket_merge.go",
+        "internal/ship/bitbucket_merge_test.go"
+      ],
+      "commit": "664994b",
+      "completed_at": "2026-10-30T17:41:06.195138403Z",
+      "landmarks": [
+        {
+          "feature": "ship merge",
+          "symbol": "bitbucketMergePR",
+          "loc": "internal/ship/bitbucket_merge.go:35",
+          "what": "squash-merges a Bitbucket PR keeping the source branch, polls a vetted same-host task-status Location on 202, and maps merge-check 400s to ErrMergeBlocked"
+        }
+      ]
+    },
+    "t-12": {
+      "files": [
+        "internal/ship/azuredevops_openprs.go",
+        "internal/ship/azuredevops_openprs_test.go",
+        "internal/ship/openprs.go"
+      ],
+      "commit": "264387b",
+      "completed_at": "2026-10-30T17:49:18.622555694Z",
+      "landmarks": [
+        {
+          "feature": "watch open-PR digest",
+          "symbol": "azureDevOpsOpenPRs",
+          "loc": "internal/ship/azuredevops_openprs.go:24",
+          "what": "lists active ADO PRs and reads checks via adoCIForPR only for this repo's phase/ and milestone/ heads, mapping ship ci verdicts onto watch rollups"
+        }
+      ]
+    },
+    "t-13": {
+      "files": [
+        "internal/ship/ci.go",
+        "internal/ship/merge.go",
+        "internal/ship/cimerge_dispatch_test.go",
+        "internal/cmd/enum_divergence_test.go"
+      ],
+      "commit": "185f210",
+      "completed_at": "2026-10-30T17:56:18.645643849Z",
+      "landmarks": [
+        {
+          "feature": "ship ci/merge dispatch",
+          "symbol": "CIStatus",
+          "loc": "internal/ship/ci.go:41",
+          "what": "routes ship ci through configenum.Normalize to the ADO and Bitbucket readers, sentinel for github/gitlab/forgejo/gitea"
+        },
+        {
+          "feature": "ship ci/merge dispatch",
+          "symbol": "MergePR",
+          "loc": "internal/ship/merge.go:28",
+          "what": "routes ship merge to adoCompletePR and bitbucketMergePR, sentinel for the recipe providers"
+        }
+      ]
+    },
+    "t-2": {
+      "files": [
+        "internal/ship/azuredevops_prread.go",
+        "internal/ship/azuredevops_prread_test.go"
+      ],
+      "commit": "6cf9495",
+      "completed_at": "2026-10-30T16:16:18.15930057Z",
+      "landmarks": [
+        {
+          "feature": "azure devops PR head and dependents lookup",
+          "symbol": "azureDevOpsOpenPRsTargeting",
+          "loc": "internal/ship/azuredevops_prread.go:70",
+          "what": "reads an ADO PR's source branch/fork/open state and lists active PRs into a base, failing closed on errors and truncated pages"
+        }
+      ]
+    },
+    "t-3": {
+      "files": [
+        "internal/ship/ci.go",
+        "internal/ship/merge.go",
+        "internal/ship/azuredevops_ci.go",
+        "internal/ship/azuredevops_ci_test.go"
+      ],
+      "commit": "423a8d0",
+      "completed_at": "2026-10-30T16:27:50.957972221Z",
+      "landmarks": [
+        {
+          "feature": "ship CI verdict",
+          "symbol": "adoCIRollup",
+          "loc": "internal/ship/azuredevops_ci.go:145",
+          "what": "CIVerdict/CIResult and merge sentinels plus a pure ADO builds+CI-policy-evaluation rollup with order-independent fail\u003erunning\u003eask\u003equeued\u003enone\u003epass precedence"
+        }
+      ]
+    },
+    "t-4": {
+      "files": [
+        "internal/ship/azuredevops_merge.go",
+        "internal/ship/azuredevops_merge_test.go"
+      ],
+      "commit": "e0a0627",
+      "completed_at": "2026-10-30T17:02:37.510598552Z",
+      "landmarks": [
+        {
+          "feature": "ship merge",
+          "symbol": "adoCompletePR",
+          "loc": "internal/ship/azuredevops_merge.go:136",
+          "what": "completes an ADO PR as a squash pinned to the watched head keeping the source branch, polls to completed and names a blocking non-CI policy as ErrMergeBlocked"
+        }
+      ]
+    },
+    "t-6": {
+      "files": [
+        "assets/prompts/review.md",
+        "internal/cmd/review_prompt_test.go"
+      ],
+      "commit": "f1cc897",
+      "completed_at": "2026-10-30T16:32:22.636889611Z",
+      "landmarks": [
+        {
+          "feature": "/dross-review PR diff",
+          "symbol": "review.md §1",
+          "loc": "assets/prompts/review.md:28",
+          "what": "Azure DevOps review diff built locally as a three-dot git diff of origin/\u003cbase\u003e...origin/phase/\u003cid\u003e after fetching both refs"
+        }
+      ]
+    },
+    "t-7": {
+      "files": [
+        "internal/ship/testdata/ado_live_smoke.toml",
+        "internal/ship/ado_live_record_test.go"
+      ],
+      "commit": "4028e32",
+      "completed_at": "2026-10-30T16:44:56.172637796Z",
+      "landmarks": [
+        {
+          "feature": "azure devops live smoke record",
+          "symbol": "validateLiveRecord",
+          "loc": "internal/ship/ado_live_record_test.go:178",
+          "what": "runbook-commented 11-step live ADO smoke record with a validator that accepts mock-only/partial/live only on real-host per-step evidence"
+        }
+      ]
+    },
+    "t-8": {
+      "files": [
+        "internal/ship/prcomments.go",
+        "internal/ship/basepr.go",
+        "internal/ship/azuredevops_dispatch_test.go",
+        "internal/ship/hostguard_test.go"
+      ],
+      "commit": "d0a8030",
+      "completed_at": "2026-10-30T17:08:20.897445604Z",
+      "landmarks": [
+        {
+          "feature": "azure devops PR comment reading",
+          "symbol": "ListPRComments",
+          "loc": "internal/ship/prcomments.go:70",
+          "what": "ListPRComments, PRHeadOf, AuthenticatedUser and OpenPRsTargeting dispatch azure-devops to the ADO readers behind the host check"
+        }
+      ]
+    },
+    "t-9": {
+      "files": [
+        "internal/ship/azuredevops_ci_fetch.go",
+        "internal/ship/azuredevops_ci_fetch_test.go"
+      ],
+      "commit": "553557f",
+      "completed_at": "2026-10-30T17:19:57.733614902Z",
+      "landmarks": [
+        {
+          "feature": "ship CI verdict",
+          "symbol": "adoCIStatus",
+          "loc": "internal/ship/azuredevops_ci_fetch.go:20",
+          "what": "reads ADO builds on the phase branch at the watched head (latest run per pipeline) plus per-PR policy evaluations by project GUID into a CI verdict; a PR not at the head is pending with a reason"
+        }
+      ]
+    }
+  },
+  "reviews": {
+    "t-1": {
+      "outcome": "pass",
+      "rounds": 1,
+      "findings": [
+        {
+          "round": 1,
+          "kind": "quality",
+          "severity": "FLAG",
+          "criterion": "c-1",
+          "text": "TestADOThreadAuthorNotGuessedBot checks the browser URL only for org/project/repo names that need no escaping (o/p/r), so the 'single-encoded' property is never exercised; a project name with a space would catch double-encoding of c.repo.URL",
+          "resolution": "non-blocking, left"
+        },
+        {
+          "round": 1,
+          "kind": "quality",
+          "severity": "NOTE",
+          "criterion": "c-1",
+          "text": "The comment-id range check (0 or \u003e99999) runs before the deleted/system skip, so an out-of-range id on a system or deleted comment fails the whole listing; consistent with the never-partial contract",
+          "resolution": "non-blocking, left"
+        },
+        {
+          "round": 1,
+          "kind": "quality",
+          "severity": "NOTE",
+          "criterion": "c-1",
+          "text": "adoHumanComment treats an absent or null commentType as not human, so such a comment is silently skipped; Azure DevOps normally always sends commentType",
+          "resolution": "non-blocking, left"
+        }
+      ]
+    },
+    "t-10": {
+      "outcome": "pass",
+      "rounds": 1,
+      "findings": [
+        {
+          "round": 1,
+          "kind": "quality",
+          "severity": "FLAG",
+          "criterion": "c-10",
+          "text": "bbCommitShape accepts a 7-char sha, but the head check strings.HasPrefix(sha, hash) only matches when sha is at least as long as Bitbucket's 12-char abbreviated source.commit.hash; an abbreviated watched sha would read as a moved head (pending) forever. Depends on the dispatch caller passing the full commit id.",
+          "resolution": "non-blocking, left"
+        },
+        {
+          "round": 1,
+          "kind": "quality",
+          "severity": "NOTE",
+          "text": "Status states are matched case-sensitively (unlike the ADO rollup's strings.ToLower); an unexpected casing falls to ask, which is safe, never pass.",
+          "resolution": "non-blocking, left"
+        },
+        {
+          "round": 1,
+          "kind": "quality",
+          "severity": "NOTE",
+          "text": "An empty source.commit.hash is treated as pending with a Reason rather than an error; consistent with adoCIStatus, but no test covers it.",
+          "resolution": "non-blocking, left"
+        }
+      ]
+    },
+    "t-11": {
+      "outcome": "pass",
+      "rounds": 2,
+      "findings": [
+        {
+          "round": 1,
+          "kind": "spec",
+          "severity": "BLOCKING",
+          "criterion": "c-11",
+          "text": "test_contract says a Location on another PR's path or outside .../merge/task-status/ errors and that server records 0 hits, but TestBitbucketMergeLocationVetted only counts taskHits (GETs under PR 7's task-status prefix). The mock 404s every other path without counting it, and that 404 supplies the error. Deleting the strings.HasPrefix(loc.Path, prefix) guard in bbTaskStatusURL leaves the suite green, so nothing tests the path scoping of the credential except the bare-task-status length check. Assert that no request other than the pre-read GET and the merge POST appears in b.calls.",
+          "resolution": "fixed in the fix round"
+        },
+        {
+          "round": 1,
+          "kind": "quality",
+          "severity": "FLAG",
+          "criterion": "c-11",
+          "text": "The 'another scheme' vetting case cannot fail: an https:// Location to the plain-HTTP httptest server fails the TLS handshake before the handler runs, so the error and taskHits==0 hold even without the scheme check. It also tests the http-to-https upgrade rather than the risky https-to-http downgrade. Assert the refusal message, or count connections via srv.Config.ConnState.",
+          "resolution": "non-blocking, left"
+        },
+        {
+          "round": 1,
+          "kind": "quality",
+          "severity": "FLAG",
+          "text": "The raw Location response header is put into error text unscrubbed (bbTaskStatusURL's '%q is not on ...' and '%q does not parse' messages). bbRequest scrubs the body but hands back headers raw, so a server echoing the credential into Location would put it in the error. Run redact.Scrub on the location before formatting it.",
+          "resolution": "non-blocking, left"
+        },
+        {
+          "round": 1,
+          "kind": "quality",
+          "severity": "FLAG",
+          "text": "The Location path check compares case-sensitively against a prefix built from the remote URL's workspace/slug. If Bitbucket canonicalises their casing differently from the configured remote, a genuine 202 is refused after the merge has already started server-side. Re-running recovers it, but the first run reports a false failure.",
+          "resolution": "non-blocking, left"
+        },
+        {
+          "round": 1,
+          "kind": "quality",
+          "severity": "NOTE",
+          "text": "The head guard puts no minimum length on Bitbucket's abbreviated hash (any non-empty prefix of sha passes). Bitbucket returns 12 characters in practice.",
+          "resolution": "non-blocking, left"
+        },
+        {
+          "round": 1,
+          "kind": "quality",
+          "severity": "NOTE",
+          "text": "bbAwaitMerge bounds the number of sleeps, not wall-clock time. Each poll can take up to bbRequest's 30s timeout, so the real worst case is well over the nominal 90s.",
+          "resolution": "non-blocking, left"
+        },
+        {
+          "round": 1,
+          "kind": "quality",
+          "severity": "NOTE",
+          "text": "Nothing calls bitbucketMergePR yet. Wiring it into dispatch is presumably a sibling task's job.",
+          "resolution": "non-blocking, left"
+        },
+        {
+          "round": 2,
+          "kind": "quality",
+          "severity": "NOTE",
+          "criterion": "c-11",
+          "text": "bbAwaitMerge bounds the wait by summing sleep intervals, not wall-clock time; each poll can take up to the 30s client timeout, so the real worst case is well past ~90s. It is still bounded (30 polls).",
+          "resolution": "non-blocking, left"
+        },
+        {
+          "round": 2,
+          "kind": "quality",
+          "severity": "NOTE",
+          "criterion": "c-11",
+          "text": "bbMergeCheckRefusal matches any 400 body containing 'approv' or 'merge check'. That is broad, but a wrong match only fails safe (the merge is held, never read as merged).",
+          "resolution": "non-blocking, left"
+        },
+        {
+          "round": 2,
+          "kind": "quality",
+          "severity": "NOTE",
+          "criterion": "c-11",
+          "text": "The head check accepts any non-empty abbreviated hash that prefixes sha, even a single character. Bitbucket sends 12 characters, but a minimum length of 7 would harden it.",
+          "resolution": "non-blocking, left"
+        },
+        {
+          "round": 2,
+          "kind": "quality",
+          "severity": "NOTE",
+          "criterion": "c-11",
+          "text": "In bbTaskStatusURL, ResolveReference already removes literal dot segments from an absolute Location; the path.Clean check is what catches percent-encoded traversal (%2e%2e). Both together are correct.",
+          "resolution": "non-blocking, left"
+        },
+        {
+          "round": 2,
+          "kind": "quality",
+          "severity": "NOTE",
+          "criterion": "c-11",
+          "text": "Nothing calls bitbucketMergePR yet; this task's record does not claim the CLI or dispatch wiring.",
+          "resolution": "non-blocking, left"
+        }
+      ]
+    },
+    "t-12": {
+      "outcome": "pass",
+      "rounds": 1,
+      "findings": [
+        {
+          "round": 1,
+          "kind": "quality",
+          "severity": "FLAG",
+          "criterion": "c-8",
+          "text": "test_contract says TestADOWatchChecksMatchShipCI covers every t-3 rollup fixture; it runs 9 representative HTTP-level fixtures (one or more per verdict, ask via unknown result and expired build policy) rather than the full t-3 table in azuredevops_ci_test.go. Divergence in any verdict class is still caught, but the coverage is narrower than the contract's wording.",
+          "resolution": "non-blocking, left"
+        },
+        {
+          "round": 1,
+          "kind": "quality",
+          "severity": "NOTE",
+          "text": "A PR whose sourceRefName is not refs/heads/... makes the whole listing (nil, err), so one odd PR blanks the digest. This is consistent with azureDevOpsPRHead's strictness, but the description does not specify it.",
+          "resolution": "non-blocking, left"
+        },
+        {
+          "round": 1,
+          "kind": "quality",
+          "severity": "NOTE",
+          "text": "internal/cmd/watch.go:155 calls ListOpenPRsFunc with only Provider and URL, so in production the new azure-devops branch fails adoOpenConn on the missing api_base/auth_env and the digest stays quiet. Passing the rest of [remote] is a sibling task's job, outside t-12's files.",
+          "resolution": "non-blocking, left"
+        },
+        {
+          "round": 1,
+          "kind": "quality",
+          "severity": "NOTE",
+          "text": "The dispatch test checks the three unsupported providers send nothing by counting a single total request after the padded ' Azure-DevOps ' call, and confirms the off-allowlist case reaches the server zero times.",
+          "resolution": "non-blocking, left"
+        }
+      ]
+    },
+    "t-13": {
+      "outcome": "pass",
+      "rounds": 1,
+      "findings": [
+        {
+          "round": 1,
+          "kind": "quality",
+          "severity": "NOTE",
+          "text": "CIStatusFunc and MergePRFunc have no test pinning their default to CIStatus/MergePR, unlike AutoMergePRFunc in automerge_test.go; not required by the test_contract",
+          "resolution": "non-blocking, left"
+        }
+      ]
+    },
+    "t-2": {
+      "outcome": "pass",
+      "rounds": 1,
+      "findings": [
+        {
+          "round": 1,
+          "kind": "quality",
+          "severity": "NOTE",
+          "criterion": "c-2",
+          "text": "No test asserts the request path (pullRequests/7 or .../pullrequests); the recorder captures rec.path but the new tests never check it, so a wrong endpoint would only show up against a real server. Not part of the test_contract.",
+          "resolution": "non-blocking, left"
+        },
+        {
+          "round": 1,
+          "kind": "quality",
+          "severity": "NOTE",
+          "criterion": "c-4",
+          "text": "A full page with at least one match returns only the matches on that page with no hint that the list may be truncated. This is fine for refusing the delete, as the contract says, but a caller that lists dependents could show a partial list as complete.",
+          "resolution": "non-blocking, left"
+        }
+      ]
+    },
+    "t-3": {
+      "outcome": "pass",
+      "rounds": 2,
+      "findings": [
+        {
+          "round": 1,
+          "kind": "quality",
+          "severity": "FLAG",
+          "criterion": "c-5",
+          "text": "adoEvalItem checks for rejected before expired, so a rejected evaluation flagged isExpired reads as fail (the 'rejected and expired' test row asserts this). That rejection belongs to an earlier commit, not the watched head. With a manually triggered build policy, a fix pushed to a green head would still report fail, linking the stale build, instead of asking to queue the build again. It matches the stated fail \u003e ask ranking, but deserves a deliberate decision.",
+          "resolution": "non-blocking, left"
+        },
+        {
+          "round": 1,
+          "kind": "quality",
+          "severity": "NOTE",
+          "text": "When several items share the top state, adoCIRollup keeps the first one's link or reason. So with two failures, or two asks, the Link or Reason depends on input order, though the verdict does not. The test rows only ever have one top item, so this is never exercised.",
+          "resolution": "non-blocking, left"
+        },
+        {
+          "round": 1,
+          "kind": "quality",
+          "severity": "NOTE",
+          "text": "The header comment in azuredevops_ci.go points to azuredevops_ci_fetch.go, which does not exist yet. Presumably a sibling task adds it.",
+          "resolution": "non-blocking, left"
+        },
+        {
+          "round": 2,
+          "kind": "quality",
+          "severity": "FLAG",
+          "criterion": "c-5",
+          "text": "test_contract 'queued + inProgress gives pending (Queued false)': no row pairs a queued evaluation with an inProgress build. 'queued and in progress' uses two builds (notStarted + inProgress) and 'queued build and running evaluation' covers the opposite pairing. A rollup that let a queued evaluation outrank a running build would still pass.",
+          "resolution": "non-blocking, left"
+        },
+        {
+          "round": 2,
+          "kind": "quality",
+          "severity": "NOTE",
+          "text": "adoCIRollup keeps the first item at the top state (strict \u003e), so with two failures or two asks the Link/Reason depends on input order (builds before evaluations, then slice order). The verdict cannot, which is all the permutation contract requires.",
+          "resolution": "non-blocking, left"
+        },
+        {
+          "round": 2,
+          "kind": "quality",
+          "severity": "NOTE",
+          "criterion": "c-5",
+          "text": "adoEvalItem checks Expired before rejected, so an expired rejection is an ask rather than a fail. This is a deliberate reading of 'Ask: an expired build policy' and 'for the PR's head commit' over 'any rejected -\u003e fail', and 'expired rejection is not this head's fail' tests it explicitly.",
+          "resolution": "non-blocking, left"
+        }
+      ]
+    },
+    "t-4": {
+      "outcome": "pass",
+      "rounds": 2,
+      "findings": [
+        {
+          "round": 1,
+          "kind": "quality",
+          "severity": "FLAG",
+          "criterion": "c-6",
+          "text": "adoCompletionRefused drops cause on the ErrMergeBlocked path (`%w — %s not approved` without cause). A PATCH 400/409 refused for another reason (for example the source commit moving between the pre-read and the PATCH, or a conflict) while any reviewer or comment policy is still pending is reported only as a policy block, and Azure DevOps' own message is lost. Consider keeping cause in the blocked error.",
+          "resolution": "non-blocking, left"
+        },
+        {
+          "round": 1,
+          "kind": "quality",
+          "severity": "NOTE",
+          "text": "The rejectedByPolicy merge status during polling returns ErrMergeBlocked straight away without reading the evaluations, so that block never names a policy. The refused-PATCH path also never looks at the pre-read pr.MergeStatus.",
+          "resolution": "non-blocking, left"
+        },
+        {
+          "round": 1,
+          "kind": "quality",
+          "severity": "NOTE",
+          "text": "Blocked names come from the classifier, not the evaluation's displayName. Two Required reviewers evaluations show as 'Required reviewers, Required reviewers'. The test fixtures pass the same string as displayName, so they cannot tell the two sources apart.",
+          "resolution": "non-blocking, left"
+        },
+        {
+          "round": 1,
+          "kind": "quality",
+          "severity": "NOTE",
+          "text": "The conflicts error says 'resolve them on phase/', a truncated branch name, although pr.SourceRefName is available. The failure error does not include Azure DevOps' mergeFailureMessage.",
+          "resolution": "non-blocking, left"
+        },
+        {
+          "round": 2,
+          "kind": "quality",
+          "severity": "NOTE",
+          "criterion": "c-6",
+          "text": "adoCompletePR's already-completed short-circuit returns merged without checking that the PR completed at sha; this matches the spec (completed =\u003e merged, idempotent re-run), but a PR completed by someone else at a different head would also read as merged",
+          "resolution": "non-blocking, left"
+        },
+        {
+          "round": 2,
+          "kind": "quality",
+          "severity": "NOTE",
+          "text": "adoCompletionRefused names a held policy by the classifier's well-known type name rather than the evaluation's configured displayName (read into adoEvalObs.Name but unused); the test fixtures use identical strings for both, so the test cannot distinguish them",
+          "resolution": "non-blocking, left"
+        },
+        {
+          "round": 2,
+          "kind": "quality",
+          "severity": "NOTE",
+          "text": "the pre-PATCH refusal when the PR read carries no repository.project.id is conservative (no write) but has no test",
+          "resolution": "non-blocking, left"
+        }
+      ]
+    },
+    "t-6": {
+      "outcome": "pass",
+      "rounds": 1,
+      "findings": [
+        {
+          "round": 1,
+          "kind": "quality",
+          "severity": "NOTE",
+          "criterion": "c-9",
+          "text": "changes.json's base field is omitempty and can be empty; the ADO recipe gives no fallback if `base` is absent from `dross changes show`, which would produce `origin/...origin/phase/\u003cid\u003e`. Ship records base before a PR exists, so this is an edge case only.",
+          "resolution": "non-blocking, left"
+        },
+        {
+          "round": 1,
+          "kind": "quality",
+          "severity": "NOTE",
+          "text": "The description's 'make install (r-01)' step is operational and cannot be confirmed from the diff.",
+          "resolution": "non-blocking, left"
+        }
+      ]
+    },
+    "t-7": {
+      "outcome": "pass",
+      "rounds": 2,
+      "findings": [
+        {
+          "round": 1,
+          "kind": "quality",
+          "severity": "FLAG",
+          "criterion": "c-7",
+          "text": "The 'every step exactly once' subtest drops or duplicates steps only in completeLiveRecord (posture live), where the passed != 11 check rejects them anyway. Deleting the seen[k] != 1 check would leave every test green. Only the unknown-key case on a mock-only record pins its branch. A mock-only or partial fixture with one step dropped (and one duplicated) would pin the check the contract relies on.",
+          "resolution": "non-blocking, left"
+        },
+        {
+          "round": 1,
+          "kind": "quality",
+          "severity": "FLAG",
+          "criterion": "c-7",
+          "text": "liveADORef (https://\\S+|[0-9]+) counts any digit or any https URL as 'an ADO URL or id'. Evidence like 'PR 12 merged' or 'https://example.com' passes the generic evidence check. Only the blank case is rejected. Tying URLs to api_base's host, or requiring an id pattern, would make the rule mean what it says.",
+          "resolution": "non-blocking, left"
+        },
+        {
+          "round": 1,
+          "kind": "quality",
+          "severity": "FLAG",
+          "criterion": "c-7",
+          "text": "liveCIOutput requires a line matching ^ci: (pass|fail|pending|none|ask). No dross ship ci command exists yet: internal/cmd has none, and ship/ci.go only defines CIVerdict. If the sibling task prints the verdict in another shape, a genuine live ci step cannot pass without editing this validator.",
+          "resolution": "non-blocking, left"
+        },
+        {
+          "round": 1,
+          "kind": "quality",
+          "severity": "NOTE",
+          "text": "The merge proof uses strings.Contains(ls_remote, \"refs/heads/phase/\"+phase), so ls-remote output for phase/smoke-2 satisfies phase/smoke. Matching the ref as a whole field would be exact.",
+          "resolution": "non-blocking, left"
+        },
+        {
+          "round": 1,
+          "kind": "quality",
+          "severity": "NOTE",
+          "text": "liveReplyMarker is a copy of prtriage.ReplyMarker (they match today) and nothing guards against drift. That is accepted by design, because the import cycle rules out a shared reference.",
+          "resolution": "non-blocking, left"
+        },
+        {
+          "round": 2,
+          "kind": "quality",
+          "severity": "FLAG",
+          "criterion": "c-7",
+          "text": "liveCIOutput pins the ci step's verbatim verdict to `^ci: (pass|fail|pending|none|ask)`, but no `dross ship ci` command exists in the tree yet and the ci_merge_home decision fixes no print format; if the sibling CLI task prints the verdict differently, a real run cannot be recorded verbatim without changing this validator",
+          "resolution": "non-blocking, left"
+        },
+        {
+          "round": 2,
+          "kind": "quality",
+          "severity": "FLAG",
+          "text": "toml.DecodeFile's MetaData.Undecoded() is not checked, so a misspelled key in the filled-in record (e.g. a typo'd evidence or build_url) is silently dropped; pass steps then fail their proof, but the cause is reported as hollow evidence instead of an unknown key",
+          "resolution": "non-blocking, left"
+        },
+        {
+          "round": 2,
+          "kind": "quality",
+          "severity": "NOTE",
+          "text": "liveADOID accepts any '#N', 'PR N', 'build N' or 'thread N', so the generic 'names an ADO URL or id' rule only requires a number to be cited; the typed per-step proofs do the real work, and the comment step has no typed proof beyond that generic rule",
+          "resolution": "non-blocking, left"
+        },
+        {
+          "round": 2,
+          "kind": "quality",
+          "severity": "NOTE",
+          "text": "the 'every step exactly once' comment says only the exactly-once rule can reject, but in the partial fixture, duplicating a pass step brings passed to 11, which the partial rule also rejects; the mock-only fixture covers the rule on its own, so coverage holds",
+          "resolution": "non-blocking, left"
+        },
+        {
+          "round": 2,
+          "kind": "quality",
+          "severity": "NOTE",
+          "text": "the loopback screen catches localhost, 127.x.x.x and [::1] but not an unbracketed ::1 or 0.0.0.0; httptest binds 127.0.0.1 by default, so the contract's cases are covered",
+          "resolution": "non-blocking, left"
+        }
+      ]
+    },
+    "t-8": {
+      "outcome": "pass",
+      "rounds": 1,
+      "findings": [
+        {
+          "round": 1,
+          "kind": "quality",
+          "severity": "NOTE",
+          "text": "PRHeadOf's request check expects len(matching(\".../pullRequests/7\")) == 2, which counts on the earlier threads GET also matching the substring; it is deterministic but tied to the order of the assertions, and checking for one call whose path ends in /pullRequests/7 would stand on its own",
+          "resolution": "non-blocking, left"
+        },
+        {
+          "round": 1,
+          "kind": "quality",
+          "severity": "NOTE",
+          "text": "the n \u003c= 0 checks are satisfied by the dispatcher's guard before the switch, so they never reach the azure-devops arm; that is what the contract asks, and the arms carry their own guards with their own tests",
+          "resolution": "non-blocking, left"
+        }
+      ]
+    },
+    "t-9": {
+      "outcome": "pass",
+      "rounds": 2,
+      "findings": [
+        {
+          "round": 1,
+          "kind": "spec",
+          "severity": "BLOCKING",
+          "criterion": "c-5",
+          "text": "test_contract says a PR body without repository.project.id errors with 0 build/evaluation requests, but TestADOEvaluationArtifactID's 'project id' fixture removes the object and leaves a trailing comma (`\"repository\":{\"id\":\"\u003crepo\u003e\",}`, keys being sorted by json.Marshal), so adoReadPR fails on invalid JSON and the ProjectID guard in adoCIStatus/adoCIForPR is never reached; removing that guard would not fail any test. Strip the leading comma too (`,\"project\":{...}`).",
+          "resolution": "fixed in the fix round"
+        },
+        {
+          "round": 1,
+          "kind": "quality",
+          "severity": "FLAG",
+          "text": "Builds are not reduced to the latest run per definition, so a failed or canceled run at the head that the user has re-queued (Run new) keeps the verdict at fail even after the new run succeeds.",
+          "resolution": "non-blocking, left"
+        },
+        {
+          "round": 1,
+          "kind": "quality",
+          "severity": "FLAG",
+          "text": "A full page of 100 builds is refused with no continuation token or time bound, so a long-lived phase branch with many pipelines times many pushes makes `dross ship ci` error permanently.",
+          "resolution": "non-blocking, left"
+        },
+        {
+          "round": 1,
+          "kind": "quality",
+          "severity": "FLAG",
+          "text": "adoCIForPR re-checks the repo and project ids but does not refuse an empty pr.Head. Reused by t-12 on a PR with no lastMergeSourceCommit, it would count no builds and could roll up to pass from evaluations alone.",
+          "resolution": "non-blocking, left"
+        },
+        {
+          "round": 1,
+          "kind": "quality",
+          "severity": "NOTE",
+          "text": "The stale-head Reason works out the `dross ship \u003cid\u003e` hint by trimming refs/heads/ and phase/ from sourceRefName, so a non-phase/ branch or an empty sourceRefName gives a wrong or empty id. An empty sourceRefName also sends an empty branchName filter; the client-side commit and repository re-check limits the damage.",
+          "resolution": "non-blocking, left"
+        },
+        {
+          "round": 2,
+          "kind": "quality",
+          "severity": "FLAG",
+          "criterion": "c-5",
+          "text": "adoCIForPR keeps only the latest run per definition.id at the head (TestADOCIRerunSupersedes), so an earlier failed build at the head SHA no longer fails the verdict. The task record doesn't describe this, and the ci_source lock says any failed counted item is a fail. The lock is being read as 'latest run per pipeline is the counted item'; confirm that is intended.",
+          "resolution": "non-blocking, left"
+        },
+        {
+          "round": 2,
+          "kind": "quality",
+          "severity": "FLAG",
+          "criterion": "c-5",
+          "text": "The builds read is a single page of $top=100 and errors on a full page, with no continuationToken paging. A phase branch that builds up 100 or more builds across pushes and pipelines makes every ship ci poll error permanently, and the message gives no remedy.",
+          "resolution": "non-blocking, left"
+        },
+        {
+          "round": 2,
+          "kind": "quality",
+          "severity": "NOTE",
+          "text": "The client re-checks sourceVersion and repository.id but not the branch. branchName is pr.SourceRefName as returned, and the `dross ship \u003cid\u003e` hint is derived by trimming phase/ from it. An empty sourceRefName would loosen the query and leave the hint without an id. Azure DevOps always returns this field, so the risk is minimal.",
+          "resolution": "non-blocking, left"
+        },
+        {
+          "round": 2,
+          "kind": "quality",
+          "severity": "NOTE",
+          "text": "The fixtures are well guarded. The stripped-PR rows assert the body changed and is still valid JSON before checking the id guard, and the query test allow-lists every key, so any added definition or process filter fails it.",
+          "resolution": "non-blocking, left"
+        }
+      ]
+    }
+  }
 }
