@@ -126,9 +126,18 @@ The CLI:
 
 ## 5. CI gate
 
-After the PR opens, watch CI to completion. Skip this section ONLY if the repo has no `.github/workflows/`, `.forgejo/workflows/`, `.gitea/workflows/`, `.gitlab-ci.yml`, AND the provider reports no checks for the head SHA.
+After the PR opens, watch CI to completion. On `azure-devops` and `bitbucket` never skip this section — `dross ship ci` reads their CI whatever the repo holds: an `azure-devops` repo with no `azure-pipelines.yml` still runs classic pipelines and branch-policy builds, so it is still watched. On every other provider, skip this section ONLY if the repo has no `.github/workflows/`, `.forgejo/workflows/`, `.gitea/workflows/`, `.gitlab-ci.yml`, AND the provider reports no checks for the head SHA.
 
 **Watch checks:**
+- Azure DevOps / Bitbucket: poll `dross ship ci <phase-id>` every ~30s. Each run reads CI once for the PR `changes.json` records, at the watched head — the commit `origin/phase/<id>` names — prints one `ci:` line, and exits with the verdict:
+  - exit `0` = pass → go to §6.
+  - exit `2` = fail → **On failure**; the `ci: fail` line carries the failing check's link.
+  - exit `3` = pending → keep polling while it reads `pending (running)`. A `pending (queued)`, or a pending that carries a reason (`ci: pending - <reason>` — the PR does not carry the watched head yet), still there at the end of a ~10-minute window → ask the user to proceed or stop, with that reason shown.
+  - exit `4` = none — nothing has registered yet: keep polling through the ~10-minute window; still none at its end → ask the user to proceed without CI or stop.
+  - exit `5` = ask → ask the user to proceed or stop at once, with the line's reason shown.
+  - exit `1` = error — the read itself failed, so there is no verdict: surface the error and ask whether to retry or stop.
+
+  The window starts at the first poll after each push. None and ask are never a pass — only exit `0` is. On every way out to §6, note the watched head (`git rev-parse origin/phase/<id>` at the last poll). When the user chooses proceed, remember it together with that head and the reading it was given on: §6 honours that proceed for the same head only.
 - GitHub: never gate on `gh pr checks --watch`. It exits 0 as soon as the checks registered **so far** pass, and a fast third-party check (GitGuardian, say) can be the only one registered while the Actions run is still queued — it reads green with CI unrun. Watch the runs themselves, in this order. SHA = head of `phase/<id>` (`git rev-parse origin/phase/<id>`).
   1. Wait for the runs to register: poll `gh run list --commit <sha> --json databaseId,workflowName,status` every ~15s until it lists at least one run, for up to ~10 minutes. A repo with workflows whose run never registers in that window joins the no-checks path below — surface it, never read it as a pass.
   2. Watch each run to completion: `gh run watch <run-id> --exit-status` — non-zero on failure.
@@ -143,6 +152,7 @@ If the provider reports no checks were registered — GitHub/Forgejo report none
    - GitHub: `gh run view --log-failed` for the run linked from the PR.
    - Forgejo: log URL is in the commit status payload (`target_url`); `WebFetch` it.
    - GitLab: the failed job's `web_url` is in the pipeline's jobs (`GET <api_base>/projects/<id>/pipelines/<pipeline-id>/jobs`); `WebFetch` the trace or surface the job URL.
+   - Azure DevOps / Bitbucket: the `ci: fail <link>` line names the failing build or status; surface that link (`WebFetch` it when it is reachable without the forge's sign-in).
 2. Diagnose. Edit + commit the fix on `phase/<id>`, one commit per logical fix following `repo.commit_convention`.
 3. `git push origin phase/<id>` — appends to the open PR, so CI re-runs on the fix.
 4. Then re-run **`dross ship <phase-id>`** — required after every fix, not optional: it recognises the open PR, pushes anything still pending on `phase/<id>`, reports the existing PR by number (the URL is the one from the first run or the provider page; `changes.json` stores no url), and re-checks the verdict's freshness. A fix to any file outside `.dross/` and `ARCHITECTURE.md` makes the pass stale and ship refuses, naming the changed files: run `/dross-verify <phase-id>`, commit its record, re-run `dross ship <phase-id>`, then continue. If ship refuses a diverged branch, `dross ship --force` is the path (it force-with-leases); if it refuses a behind-only one, `git pull --rebase origin phase/<id>` first. If you rebase or amend by hand, use `git push --force-with-lease`.
@@ -164,6 +174,17 @@ If `merge`:
    - GitHub: `gh pr merge <pr-url> --squash`
    - Forgejo / Gitea: `POST <api_base>/repos/<owner>/<repo>/pulls/<n>/merge` body `{"Do":"squash"}`
    - GitLab: `PUT <api_base>/projects/<id>/merge_requests/<iid>/merge` body `{"squash":true}` (auth header as in §5) — the squash collapses per-task commits.
+   - Azure DevOps / Bitbucket: a fresh CI read, then `dross ship merge`.
+     1. Run `dross ship ci <phase-id>` immediately before the merge, and compare `git rev-parse origin/phase/<id>` with the head §5 noted.
+        - A head that moved since §5 → no merge, whatever the verdict: back to §5's Watch checks for the new head.
+        - exit `0` = pass → merge.
+        - exit `4` none or exit `5` ask → merge only if the user chose proceed in §5 for this same head; otherwise ask again — proceed merges, hold skips to §7 with status `awaiting-merge`.
+        - exit `3` pending → merge only if §5's proceed for this same head was given on a stuck pending (queued, or carrying a reason); a `pending (running)` never merges — back to §5's Watch checks.
+        - exit `2` fail or exit `1` → no merge: back to §5 (**On failure** for a fail, Watch checks otherwise).
+     2. Run `dross ship merge <phase-id>` with an explicit Bash `timeout: 300000` (5 minutes — above the 2-minute default, since it waits until the forge reports the PR merged). It squash-merges at the watched head, keeps `phase/<id>` on origin, and never bypasses a branch policy.
+        - exit `0` = merged — it prints the PR URL; continue with step 2 below.
+        - exit `2` = blocked by a branch policy (required reviewers, comment resolution, linked work items) → not merged: skip to §7 with status `awaiting-merge`, naming the policy.
+        - any other non-zero → surface the error and stop. A merge that did not land is never read as merged: after a non-zero `dross ship merge`, never run `dross phase complete`.
 
    **`dross phase complete` performs the local AND remote `phase/<id>` deletion, on every provider.** Never ask the provider to delete the branch as part of the merge — the merge call above is the whole step; no delete flag, no remove-source-branch field, no branch-removal API call. GitHub's delete-on-merge flag does its own raw checkout of the base branch, a branch switch outside dross's guard, and that is what destroyed a live `state.json` on a previous ship. Forgejo and GitLab merge over REST and never switch branches, so dropping provider-side teardown everywhere gives dross one teardown owner instead of a per-provider split.
 2. **Mark the board issue shipped** (it exits 0 and does nothing when `[board].enabled` is false; a non-zero exit is a board failure — surface it, never read it as the disabled no-op): `dross issue phase sync <phase-id> --status shipped`. The PR is merged but the phase isn't finalized yet, so `shipped` is the honest state here — and it's the moment the board should stop showing the phase as in-progress.
