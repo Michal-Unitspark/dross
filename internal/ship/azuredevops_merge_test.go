@@ -287,6 +287,31 @@ func TestADOCompleteWaitsForCompleted(t *testing.T) {
 	}
 }
 
+// TestADOCompleteAbandonedWhileCompleting: a PR abandoned after its completion
+// PATCH was accepted is an error naming it, never a merge or a policy block —
+// and the wait stops at that poll instead of running to the bound.
+func TestADOCompleteAbandonedWhileCompleting(t *testing.T) {
+	t.Setenv(adoTestEnv, adoTestTok)
+	fastADOMerge(t, 10)
+	m := newADOMergeMock(t, adoMergePR("active", "notSet", adoHeadSHA, false), adoMergePR("abandoned", "", adoHeadSHA, false))
+	got, err := adoCompletePR(adoMergeOpts(m), adoHeadSHA)
+	if err == nil || got != (MergeResult{}) {
+		t.Fatalf("got %+v, %v; want an error and no MergeResult", got, err)
+	}
+	if !strings.Contains(err.Error(), "abandoned") || errors.Is(err, ErrMergeBlocked) {
+		t.Errorf("error = %v; want one naming abandoned, not ErrMergeBlocked", err)
+	}
+	if m.reads != 2 {
+		t.Errorf("%d PR reads, want 1 before the PATCH and 1 poll", m.reads)
+	}
+	if n := m.count("PATCH", ""); n != 1 {
+		t.Errorf("%d PATCH(es), want 1", n)
+	}
+	if n := m.count("GET", "/policy/evaluations"); n != 0 {
+		t.Errorf("%d policy evaluations read(s); an abandoned PR is not a refusal to explain", n)
+	}
+}
+
 // TestADOCompletionBlockedByPolicy: a refused PATCH, or a PR still active at
 // the bound, held by a blocking non-CI policy is ErrMergeBlocked naming it.
 // The evaluations are read for this PR, by project GUID, escaped once, at the
