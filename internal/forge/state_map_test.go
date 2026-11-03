@@ -55,6 +55,9 @@ func TestStateMapsKeepTheLifecycleStatesDistinct(t *testing.T) {
 	}{
 		{"jira", "defaultJiraStateMap", defaultJiraStateMap},
 		{"youtrack", "defaultYouTrackStateMap", defaultYouTrackStateMap},
+		// Azure Boards maps to state CATEGORIES (locked state_resolution), so
+		// distinctness is asserted between categories.
+		{"azure-devops", "defaultADOStateCategory", defaultADOStateCategory},
 	} {
 		t.Run(m.provider, func(t *testing.T) {
 			for _, p := range distinctPairs {
@@ -182,6 +185,19 @@ func TestSetStateRawBypassesTheStateMap(t *testing.T) {
 		}
 	})
 
+	t.Run("azure-devops", func(t *testing.T) {
+		// "In Review" is no category and no default state: only a verbatim
+		// write produces it.
+		s := newADOStateServer(t, map[string]*adoStateItem{"7": {"User Story", "Active"}},
+			map[string][]ADOState{"User Story": agileStory})
+		if err := newTestAzureBoards(t, s.Server, nil).SetStateRaw("7", rawStateProbe); err != nil {
+			t.Fatalf("SetStateRaw: %v", err)
+		}
+		if len(s.written) != 1 || s.written[0] != rawStateProbe {
+			t.Errorf("wrote State %v, want the literal %q", s.written, rawStateProbe)
+		}
+	})
+
 	t.Run("forge", func(t *testing.T) {
 		// Forge and GitLab boards have no column model, so verbatim means
 		// verbatim: whatever the ledger recorded is what goes back.
@@ -226,6 +242,21 @@ func TestSetStateRawVerifiesReadBack(t *testing.T) {
 		}
 		if !strings.Contains(err.Error(), "PROJ-7") {
 			t.Errorf("error %q does not name the issue key", err)
+		}
+	})
+
+	t.Run("azure-devops", func(t *testing.T) {
+		s := newADOStateServer(t, map[string]*adoStateItem{"7": {"User Story", "Closed"}},
+			map[string][]ADOState{"User Story": agileStory})
+		s.stick = true // the process accepted the PATCH and kept the item where it was
+		err := newTestAzureBoards(t, s.Server, nil).SetStateRaw("7", rawStateProbe)
+		if err == nil {
+			t.Fatal("SetStateRaw reported success over a write the tracker did not take")
+		}
+		for _, want := range []string{"7", rawStateProbe, "Closed"} {
+			if !strings.Contains(err.Error(), want) {
+				t.Errorf("error %q does not name %q", err, want)
+			}
 		}
 	})
 

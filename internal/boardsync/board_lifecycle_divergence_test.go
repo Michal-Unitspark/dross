@@ -407,6 +407,7 @@ func TestStateMapsKeyExactlyTheEmittedStatuses(t *testing.T) {
 	}{
 		{"jira", filepath.Join(root, "internal", "forge", "jira.go"), "defaultJiraStateMap"},
 		{"youtrack", filepath.Join(root, "internal", "forge", "youtrack.go"), "defaultYouTrackStateMap"},
+		{"azure-devops", filepath.Join(root, "internal", "forge", "azureboards_state.go"), "defaultADOStateCategory"},
 	} {
 		t.Run(m.provider, func(t *testing.T) {
 			keys := stateMapKeys(t, m.path, m.varName)
@@ -662,6 +663,10 @@ var laneDistinctnessExemptions = []laneDistinctnessExemption{
 		lane: "Phases", provider: "jira", terminal: "complete", other: "shipped",
 		why: "Jira's default scheme has one done-category status, so a merged-but-unfinalized phase and a finished one share \"Done\". Pre-existing flattening; a project that cares splits it via [board].state_map.",
 	},
+	{
+		lane: "Phases", provider: "azure-devops", terminal: "complete", other: "shipped",
+		why: "Azure Boards defaults map to state categories, and a merged-but-unfinalized phase is delivered work: shipped lands in Completed, as on Jira, so it shares the Completed category with complete. A project that wants them apart names a state for shipped via [board].state_map.",
+	},
 }
 
 // boardNamespaceFields enumerates board.Board's map-typed fields — the same
@@ -742,6 +747,7 @@ func TestLaneTerminalStatesAreDistinctWithinTheirLane(t *testing.T) {
 	for _, m := range []struct{ provider, path, varName string }{
 		{"jira", filepath.Join(root, "internal", "forge", "jira.go"), "defaultJiraStateMap"},
 		{"youtrack", filepath.Join(root, "internal", "forge", "youtrack.go"), "defaultYouTrackStateMap"},
+		{"azure-devops", filepath.Join(root, "internal", "forge", "azureboards_state.go"), "defaultADOStateCategory"},
 	} {
 		maps[m.provider] = stateMapPairs(t, m.path, m.varName)
 	}
@@ -955,8 +961,9 @@ func TestReapTerminalMatchesTheForwardTerminal(t *testing.T) {
 func TestEveryReapTerminalIsMapped(t *testing.T) {
 	root := repoRootFromTest(t)
 	maps := map[string]map[string]string{
-		"jira":     stateMapPairs(t, filepath.Join(root, "internal", "forge", "jira.go"), "defaultJiraStateMap"),
-		"youtrack": stateMapPairs(t, filepath.Join(root, "internal", "forge", "youtrack.go"), "defaultYouTrackStateMap"),
+		"jira":         stateMapPairs(t, filepath.Join(root, "internal", "forge", "jira.go"), "defaultJiraStateMap"),
+		"youtrack":     stateMapPairs(t, filepath.Join(root, "internal", "forge", "youtrack.go"), "defaultYouTrackStateMap"),
+		"azure-devops": stateMapPairs(t, filepath.Join(root, "internal", "forge", "azureboards_state.go"), "defaultADOStateCategory"),
 	}
 	for provider, states := range maps {
 		if len(states) == 0 {
