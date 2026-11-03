@@ -219,7 +219,7 @@ func Doctor() *cobra.Command {
 					}
 				}
 
-				warnings = append(warnings, diag.BoardCombination(b.Provider, b.MilestoneMode, b.AuthUser)...)
+				warnings = append(warnings, diag.BoardCombination(b.Provider, b.MilestoneMode, b.AuthUser, b.AuthScheme)...)
 
 				if boardIssues == 0 {
 					if b.BaseURL == "" {

@@ -89,10 +89,12 @@ func SortedStateMapKeys(m map[string]string) []string {
 }
 
 // BoardCombination reports [board] pairings that pass every per-field check
-// and still error at the first board op.
-func BoardCombination(provider, milestoneMode, authUser string) []string {
+// and still error at the first board op — or that set a key the backend
+// never reads, which looks configured and does nothing.
+func BoardCombination(provider, milestoneMode, authUser, authScheme string) []string {
 	var out []string
 	prov := configenum.Normalize(provider)
+	scheme := configenum.Normalize(authScheme)
 
 	// A mode outside the provider's own accept-set. Skipped when the mode is
 	// globally invalid (already a hard failure above) or when the provider maps
@@ -107,6 +109,30 @@ func BoardCombination(provider, milestoneMode, authUser string) []string {
 	// nothing.
 	if prov == "jira" && strings.TrimSpace(authUser) == "" {
 		out = append(out, "[board].auth_user is not set but Jira authenticates as Basic email:token — board ops will 401")
+	}
+
+	if prov == "azure-devops" {
+		return append(out, azureBoardsCombination(milestoneMode, authUser, scheme)...)
+	}
+	// [board].auth_scheme is read by the azure-devops board alone.
+	if scheme != "" {
+		out = append(out, fmt.Sprintf("[board].auth_scheme = %s has no effect on a %s board — only azure-devops reads it", scheme, prov))
+	}
+	return out
+}
+
+// azureBoardsCombination is azureDevOpsCombination for [board]: keys an
+// azure-devops board never reads.
+func azureBoardsCombination(milestoneMode, authUser, scheme string) []string {
+	var out []string
+	if scheme == "private-token" || scheme == "basic" {
+		out = append(out, fmt.Sprintf("[board].auth_scheme = %s has no effect on azure-devops — it always sends HTTP Basic with an empty user and the PAT unless auth_scheme = bearer", scheme))
+	}
+	if user := strings.TrimSpace(authUser); user != "" {
+		out = append(out, fmt.Sprintf("[board].auth_user = %q is ignored by azure-devops — the PAT goes in Basic with an empty user", user))
+	}
+	if mode := strings.TrimSpace(milestoneMode); mode != "" {
+		out = append(out, fmt.Sprintf("[board].milestone_mode = %q is ignored by azure-devops — milestones are always Epics", mode))
 	}
 	return out
 }

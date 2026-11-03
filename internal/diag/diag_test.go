@@ -141,10 +141,10 @@ func TestCombinationWarnings(t *testing.T) {
 			t.Errorf("azure-devops basic carries a Basic user:token warning: %q", w)
 		}
 	}
-	if w := BoardCombination("jira", "", ""); len(w) != 1 || !contains(w[0], "auth_user") {
+	if w := BoardCombination("jira", "", "", ""); len(w) != 1 || !contains(w[0], "auth_user") {
 		t.Errorf("jira without auth_user: %v", w)
 	}
-	if w := BoardCombination("youtrack", "epic", "u"); len(w) != 0 {
+	if w := BoardCombination("youtrack", "epic", "u", ""); len(w) != 0 {
 		t.Errorf("youtrack epic mode warned: %v", w)
 	}
 	if got := SortedStateMapKeys(map[string]string{"b": "2", "a": "1", "c": "3"}); len(got) != 3 || got[0] != "a" || got[2] != "c" {
@@ -217,5 +217,48 @@ func TestRemoteCombinationAzureBaseMismatch(t *testing.T) {
 	})
 	if len(got) != 0 {
 		t.Errorf("a Services url with the dev.azure.com org base: %v, want none", got)
+	}
+}
+
+// TestBoardCombinationADO: an azure-devops board warns, once per key, about
+// every key it never reads; [board].auth_scheme warns on any board that is
+// not azure-devops; nothing else changes for the other backends.
+func TestBoardCombinationADO(t *testing.T) {
+	for _, c := range []struct {
+		name                     string
+		mode, user, scheme, want string
+	}{
+		{"private-token scheme", "", "", "private-token", "[board].auth_scheme = private-token"},
+		{"basic scheme", "", "", "basic", "[board].auth_scheme = basic"},
+		{"auth_user set", "", "me@corp.com", "", "[board].auth_user"},
+		{"milestone_mode agile", "agile", "", "", "[board].milestone_mode"},
+	} {
+		got := BoardCombination("azure-devops", c.mode, c.user, c.scheme)
+		if len(got) != 1 || !contains(got[0], c.want) || !contains(got[0], "azure-devops") {
+			t.Errorf("%s: BoardCombination = %v, want one azure-devops warning naming %q", c.name, got, c.want)
+		}
+	}
+	for _, scheme := range []string{"bearer", ""} {
+		if got := BoardCombination("azure-devops", "", "", scheme); len(got) != 0 {
+			t.Errorf("azure-devops with auth_scheme %q warned: %v", scheme, got)
+		}
+	}
+	if got := BoardCombination("Azure-DevOps", "epic", "u", "basic"); len(got) != 3 {
+		t.Errorf("every ineffective key at once = %v, want three warnings", got)
+	}
+
+	// auth_scheme is read by the azure-devops board alone.
+	for _, prov := range []string{"jira", "youtrack", "github"} {
+		user := ""
+		if prov == "jira" {
+			user = "me@corp.com" // keep Jira's own auth_user warning out of the count
+		}
+		got := BoardCombination(prov, "", user, "bearer")
+		if len(got) != 1 || !contains(got[0], "[board].auth_scheme") || !contains(got[0], "no effect") {
+			t.Errorf("%s with auth_scheme bearer = %v, want one no-effect warning", prov, got)
+		}
+		if got := BoardCombination(prov, "", user, ""); len(got) != 0 {
+			t.Errorf("%s without auth_scheme warned: %v", prov, got)
+		}
 	}
 }
