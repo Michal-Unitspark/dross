@@ -260,8 +260,16 @@ func readDotted(p *project.Project, path string) (string, bool) {
 		return p.Board.AuthEnv, true
 	case "board.auth_user":
 		return p.Board.AuthUser, true
+	case "board.auth_scheme":
+		return p.Board.AuthScheme, true
+	case "board.api_version":
+		return string(p.Board.APIVersion), true
 	case "board.project":
 		return p.Board.Project, true
+	case "board.area_path":
+		return p.Board.AreaPath, true
+	case "board.iteration_path":
+		return p.Board.IterationPath, true
 	case "board.enabled":
 		return fmt.Sprintf("%t", p.Board.Enabled), true
 	case "board.milestone_mode":
@@ -330,6 +338,7 @@ var enumKeys = map[string]configenum.Set{
 	"repo.commit_convention": configenum.CommitConventions,
 	"remote.provider":        configenum.ShipProviders,
 	"board.milestone_mode":   configenum.MilestoneModes,
+	"board.auth_scheme":      configenum.AuthSchemes,
 }
 
 // checkEnumValue reports an out-of-set value for an enum-valued key.
@@ -526,8 +535,16 @@ func writeDotted(p *project.Project, path, value string) error {
 		p.Board.AuthEnv = value
 	case "board.auth_user":
 		p.Board.AuthUser = value
+	case "board.auth_scheme":
+		p.Board.AuthScheme = value
+	case "board.api_version":
+		p.Board.APIVersion = project.APIVersion(value)
 	case "board.project":
 		p.Board.Project = value
+	case "board.area_path":
+		p.Board.AreaPath = value
+	case "board.iteration_path":
+		p.Board.IterationPath = value
 	case "board.enabled":
 		return setBool(&p.Board.Enabled)
 	case "board.milestone_mode":

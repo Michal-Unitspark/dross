@@ -247,14 +247,19 @@ type Remote struct {
 	Reviewers  []string   `toml:"reviewers,omitempty" json:"reviewers,omitempty"`     // default human reviewers for /dross-ship
 }
 
-// APIVersion is [remote].api_version. It decodes from a string or from a bare
-// TOML number: `api_version = 6.0` is what a hand-editor writes, and a float
-// would otherwise fail the whole file's load. A number always keeps its minor
-// part, so 6.0 is "6.0", never "6". It is written back as a string.
+// APIVersion is the azure-devops api_version of [remote] and of [board]. It
+// decodes from a string or from a bare TOML number: `api_version = 6.0` is what
+// a hand-editor writes, and a float would otherwise fail the whole file's load.
+// A number always keeps its minor part, so 6.0 is "6.0", never "6". It is
+// written back as a string.
 type APIVersion string
 
 // UnmarshalTOML accepts a string verbatim, and a float or integer as its
 // major.minor spelling.
+//
+// The refusal names no section: the type serves both [remote] and [board], and
+// the decoder's own error already carries the full dotted key ("last key
+// \"board.api_version\""), so a [board] typo is never blamed on [remote].
 func (v *APIVersion) UnmarshalTOML(data any) error {
 	switch x := data.(type) {
 	case string:
@@ -268,7 +273,7 @@ func (v *APIVersion) UnmarshalTOML(data any) error {
 	case int64:
 		*v = APIVersion(strconv.FormatInt(x, 10) + ".0")
 	default:
-		return fmt.Errorf("remote.api_version: want a version such as \"7.1\", got a %T", data)
+		return fmt.Errorf("api_version: want a version such as \"7.1\", got a %T", data)
 	}
 	return nil
 }
@@ -283,7 +288,11 @@ type Board struct {
 	BaseURL       string            `toml:"base_url,omitempty" json:"base_url,omitempty"`             // instance base URL of the tracker
 	AuthEnv       string            `toml:"auth_env,omitempty" json:"auth_env,omitempty"`             // env var name holding the token (NEVER the value)
 	AuthUser      string            `toml:"auth_user,omitempty" json:"auth_user,omitempty"`           // jira: account email for HTTP Basic auth (email:token)
+	AuthScheme    string            `toml:"auth_scheme,omitempty" json:"auth_scheme,omitempty"`       // azure-devops: empty = PAT via Basic with an empty user; bearer = Entra ID token (configenum.AuthSchemes). Never read from [remote]
+	APIVersion    APIVersion        `toml:"api_version,omitempty" json:"api_version,omitempty"`       // azure-devops: api-version on every Boards call; empty = 7.1. Never read from [remote]
 	Project       string            `toml:"project,omitempty" json:"project,omitempty"`               // project short-name / key on the tracker; github: "owner/repo"
+	AreaPath      string            `toml:"area_path,omitempty" json:"area_path,omitempty"`           // azure-devops: System.AreaPath every created work item gets (e.g. Fabrikam\Web); empty = project default
+	IterationPath string            `toml:"iteration_path,omitempty" json:"iteration_path,omitempty"` // azure-devops: System.IterationPath every created work item gets (e.g. Fabrikam\Sprint 1); empty = project default
 	GitHubProject string            `toml:"github_project,omitempty" json:"github_project,omitempty"` // github: Projects v2 board node id to add created issues to
 	Enabled       bool              `toml:"enabled,omitempty" json:"enabled,omitempty"`               // board sync is on
 	MilestoneMode string            `toml:"milestone_mode,omitempty" json:"milestone_mode,omitempty"` // version (default) | agile | epic

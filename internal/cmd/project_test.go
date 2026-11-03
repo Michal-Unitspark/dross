@@ -1018,3 +1018,172 @@ func TestBoardConfigCarriesFields(t *testing.T) {
 		t.Errorf("Fields = %+v for an unconfigured board, want the zero value", zero.Fields)
 	}
 }
+
+// TestProjectSetGetADOBoardKeys: the four azure-devops [board] keys go through
+// `dross project set` and come back from `dross project get` verbatim — an
+// area or iteration path keeps its backslashes, and a version keeps its minor.
+func TestProjectSetGetADOBoardKeys(t *testing.T) {
+	chdir(t, t.TempDir())
+	scaffoldProject(t)
+	cases := []struct{ key, value string }{
+		{"board.api_version", "6.0"},
+		{"board.auth_scheme", "bearer"},
+		{"board.area_path", `Fabrikam\Web`},
+		{"board.iteration_path", `Fabrikam\Sprint 1`},
+	}
+	for _, c := range cases {
+		mustRunSet(t, c.key, c.value)
+	}
+	for _, c := range cases {
+		out := captureStdout(t, func() {
+			if err := runCmd(t, Project(), "get", c.key); err != nil {
+				t.Errorf("get %s: %v", c.key, err)
+			}
+		})
+		if out != c.value+"\n" {
+			t.Errorf("get %s = %q, want %q", c.key, out, c.value+"\n")
+		}
+	}
+	p, _, err := loadProjectAt(t)
+	if err != nil {
+		t.Fatal(err)
+	}
+	got := []string{string(p.Board.APIVersion), p.Board.AuthScheme, p.Board.AreaPath, p.Board.IterationPath}
+	want := []string{"6.0", "bearer", `Fabrikam\Web`, `Fabrikam\Sprint 1`}
+	if !reflect.DeepEqual(got, want) {
+		t.Errorf("reloaded [board] = %q, want %q", got, want)
+	}
+}
+
+// TestProjectSetBoardAuthSchemeRejectsNonMember: board.auth_scheme is gated on
+// configenum.AuthSchemes, so a near-miss like "token" is refused by name with
+// the allowed list, and project.toml is not touched.
+func TestProjectSetBoardAuthSchemeRejectsNonMember(t *testing.T) {
+	dir := t.TempDir()
+	chdir(t, dir)
+	scaffoldProject(t)
+	path := filepath.Join(dir, ".dross", project.File)
+	before := mustRead(t, path)
+
+	err := runCmd(t, Project(), "set", "board.auth_scheme", "token")
+	if err == nil {
+		t.Fatal("set board.auth_scheme token succeeded")
+	}
+	for _, want := range append([]string{"board.auth_scheme", `"token"`}, configenum.AuthSchemes.Values()...) {
+		if !strings.Contains(err.Error(), want) {
+			t.Errorf("refusal does not say %q: %v", want, err)
+		}
+	}
+	if after := mustRead(t, path); after != before {
+		t.Errorf("a refused set rewrote project.toml:\n--- before\n%s\n--- after\n%s", before, after)
+	}
+}
+
+// writeProjectTOML replaces the fixture's project.toml with body.
+func writeProjectTOML(t *testing.T, dir, body string) string {
+	t.Helper()
+	path := filepath.Join(dir, ".dross", project.File)
+	if err := os.WriteFile(path, []byte(body), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	return path
+}
+
+// TestProjectGetBoardAPIVersionBareNumber: a hand-edited `api_version = 6.0`
+// under [board] is a TOML float; it loads, and reads back as "6.0", not "6".
+func TestProjectGetBoardAPIVersionBareNumber(t *testing.T) {
+	dir := t.TempDir()
+	chdir(t, dir)
+	scaffoldProject(t)
+	writeProjectTOML(t, dir, "[project]\n  name = \"x\"\n\n[runtime]\n  mode = \"native\"\n\n[board]\n  provider = \"azure-devops\"\n  api_version = 6.0\n")
+	out := captureStdout(t, func() {
+		if err := runCmd(t, Project(), "get", "board.api_version"); err != nil {
+			t.Errorf("get: %v", err)
+		}
+	})
+	if out != "6.0\n" {
+		t.Errorf("get board.api_version = %q, want %q", out, "6.0\n")
+	}
+}
+
+// TestBoardDoesNotInheritRemote: [board] is self-contained (locked
+// board_config). [remote]'s api_version and auth_scheme never show through an
+// empty [board].
+func TestBoardDoesNotInheritRemote(t *testing.T) {
+	dir := t.TempDir()
+	chdir(t, dir)
+	scaffoldProject(t)
+	writeProjectTOML(t, dir, "[project]\n  name = \"x\"\n\n[runtime]\n  mode = \"native\"\n\n"+
+		"[remote]\n  provider = \"azure-devops\"\n  api_version = \"6.0\"\n  auth_scheme = \"bearer\"\n\n[board]\n")
+	p, _, err := loadProjectAt(t)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if p.Remote.APIVersion != "6.0" || p.Remote.AuthScheme != "bearer" {
+		t.Fatalf("fixture did not load [remote]: %+v", p.Remote)
+	}
+	for _, key := range []string{"board.api_version", "board.auth_scheme"} {
+		if got, ok := readDotted(p, key); !ok || got != "" {
+			t.Errorf("%s = %q (%v), want empty — [board] inherited from [remote]", key, got, ok)
+		}
+	}
+}
+
+// TestBoardADOKeysAbsentSaveByteIdentical: the four new fields are omitempty,
+// so a project.toml that sets none of them saves back byte-for-byte — no zero
+// value leaks a line into the file.
+func TestBoardADOKeysAbsentSaveByteIdentical(t *testing.T) {
+	dir := t.TempDir()
+	body := "[project]\n  name = \"x\"\n\n[runtime]\n  mode = \"native\"\n\n" +
+		"[board]\n  provider = \"youtrack\"\n  base_url = \"https://yt.example.com\"\n  project = \"PROJ\"\n  enabled = true\n"
+	path := filepath.Join(dir, "project.toml")
+	if err := os.WriteFile(path, []byte(body), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	p, err := project.Load(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := p.Save(path); err != nil {
+		t.Fatalf("save: %v", err)
+	}
+	if got := mustRead(t, path); got != body {
+		t.Errorf("save changed a project.toml with no ADO [board] keys:\n--- want\n%s\n--- got\n%s", body, got)
+	}
+	// And a fresh document (no file yet) carries none of the four keys.
+	fresh := filepath.Join(dir, "fresh.toml")
+	if err := p.Save(fresh); err != nil {
+		t.Fatalf("save fresh: %v", err)
+	}
+	for _, key := range []string{"api_version", "auth_scheme", "area_path", "iteration_path"} {
+		if strings.Contains(mustRead(t, fresh), key) {
+			t.Errorf("fresh project.toml carries an unset %s line:\n%s", key, mustRead(t, fresh))
+		}
+	}
+}
+
+// TestBoardAPIVersionDecodeErrorNamesBoard: a wrong-kind api_version is a load
+// error that names the section it is in. A [board] typo is never blamed on
+// [remote], and a [remote] one still names remote.api_version.
+func TestBoardAPIVersionDecodeErrorNamesBoard(t *testing.T) {
+	load := func(t *testing.T, section string) error {
+		t.Helper()
+		path := filepath.Join(t.TempDir(), "project.toml")
+		body := "[" + section + "]\n  provider = \"azure-devops\"\n  api_version = true\n"
+		if err := os.WriteFile(path, []byte(body), 0o644); err != nil {
+			t.Fatal(err)
+		}
+		_, err := project.Load(path)
+		return err
+	}
+	err := load(t, "board")
+	if err == nil || !strings.Contains(err.Error(), "board.api_version") {
+		t.Errorf("[board] api_version = true: want an error naming board.api_version, got %v", err)
+	}
+	if err != nil && strings.Contains(err.Error(), "remote.api_version") {
+		t.Errorf("[board] api_version = true blamed [remote]: %v", err)
+	}
+	if err := load(t, "remote"); err == nil || !strings.Contains(err.Error(), "remote.api_version") {
+		t.Errorf("[remote] api_version = true: want an error naming remote.api_version, got %v", err)
+	}
+}
