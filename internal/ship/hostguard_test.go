@@ -101,6 +101,10 @@ func TestShipRefusesOffAllowlistAPIBase(t *testing.T) {
 			}
 			return r.Err
 		}},
+		{"azure-devops auto-complete", func() error {
+			_, err := AutoMergePR(adoGuard(base("azure-devops")), 1, "merge")
+			return err
+		}},
 		// The identities host is checked on its own, since on Services it is
 		// not api_base: a connection whose api_base the policy never saw must
 		// still not carry its credential there.
