@@ -1,0 +1,89 @@
+# Live Azure Boards smoke — the record for azure-boards-backend c-8.
+#
+# This file is the runbook and the record in one. The mocked httptest suite is
+# the per-criterion bar (verify_posture); this run is recorded beside it and
+# never substitutes for it, nor it for this. TestADOBoardsLiveRecordHonest and
+# TestADOBoardsLiveRecordStepEvidence (ado_boards_live_record_test.go) validate
+# whatever is written here with the same honesty rules as the ship smoke
+# (internal/liverecord): mock-verified is never reported as live-verified.
+#
+# posture is one of:
+#   mock-only — nothing has run live: every step is not-run.
+#   partial   — a live run happened, and at least one step is not-run or fail.
+#   live      — every step passed live, each with its evidence.
+#
+# Prerequisites — set these up by hand before step 1:
+#   1. Run `make install` in the dross checkout first, so the binary and the
+#      prompts under test are this branch's, not an older install's.
+#   2. A scratch Azure DevOps project (ado-scratch), cloned, with `dross init`
+#      run in it.
+#   3. In its .dross/project.toml, a [board] block of its own — [board] never
+#      inherits from [remote]:
+#        provider = "azure-devops"
+#        base_url = "https://dev.azure.com/<org>"  (or a collection URL)
+#        project  = "<project>"
+#        auth_env = "<VAR holding a PAT with Work Items read & write>"
+#   4. Note the project's process (Agile, Scrum, Basic, CMMI or the inherited
+#      process's own name) and record it as process below; the requirement
+#      item the create step makes must be that process's requirement type.
+#   5. Before the pull step: a Bug filed by hand on the board, outside dross,
+#      with no dross tag — the inbound issue pull exists to surface.
+#   6. Drive the run from a Claude Code session whose working directory is the
+#      scratch project's clone.
+#
+# Fill in after the run: run_at (RFC 3339), api_base and api_version exactly as
+# [board] had them (an unset api_version is the 7.1 default), and process.
+# Never put an httptest, localhost or 127.0.0.1 address anywhere here — that is
+# mock evidence, and the validator rejects it.
+
+posture = "mock-only"
+run_at = ""
+api_base = ""
+api_version = ""
+process = ""
+
+# Steps, in order. result is not-run | pass | fail. evidence is what the step
+# printed, verbatim, naming an ADO URL or id; the typed fields under a step are
+# what the validator checks before it accepts a pass.
+
+[[step]]
+  key = "create"
+  # `dross issue milestone sync`, then `dross issue phase sync` and
+  # `dross issue task sync`: one Epic (the milestone), one item of the
+  # requirement type (the phase) and one Task. Record each as
+  #   epic = { id = <id>, type = "Epic", url = "<base>/<project>/_workitems/edit/<id>" }
+  # and likewise requirement and task, with the type ADO shows.
+  result = "not-run"
+  evidence = ""
+
+[[step]]
+  key = "transition"
+  # `dross issue task sync <phase> <id> --status task-in-progress`. Record
+  # work_item (a created id), from_state (its state at create), and the
+  # read-back state and category of a GET after the sync.
+  result = "not-run"
+  evidence = ""
+
+[[step]]
+  key = "close"
+  # Close the task (`dross task status ... done` and its sync). Record
+  # work_item and the read-back state and category: it must read Completed —
+  # a Resolved- or Removed-category state is not a close.
+  result = "not-run"
+  evidence = ""
+
+[[step]]
+  key = "parent-link"
+  # Read the created items' relations. Record links as
+  #   links = [{ child = <task>, parent = <requirement>, rel = "System.LinkTypes.Hierarchy-Reverse" },
+  #            { child = <requirement>, parent = <epic>, rel = "System.LinkTypes.Hierarchy-Reverse" }]
+  result = "not-run"
+  evidence = ""
+
+[[step]]
+  key = "pull"
+  # `dross issue pull --json`. Record envelope (the printed JSON, verbatim) and
+  # bug_id (the hand-filed Bug's id): it must be listed, with "error": null,
+  # and none of dross's own items may be.
+  result = "not-run"
+  evidence = ""
