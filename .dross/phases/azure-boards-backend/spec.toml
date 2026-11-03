@@ -1,0 +1,93 @@
+[phase]
+  id = "azure-boards-backend"
+  title = "azure-boards-backend"
+  milestone = "v1.8"
+
+[[criteria]]
+  id = "c-1"
+  text = "With [board] provider = azure-devops (org or collection base_url, project, auth_env), every board command builds an Azure Boards client. dross doctor validates the config: each missing field is named, a refused host fails before the token is read, and both Services and on-prem Server URLs are accepted."
+
+[[criteria]]
+  id = "c-2"
+  text = "Milestone, phase and task sync create Azure Boards work items joined by parent-child links (task under phase, phase under milestone). A re-run updates them in place: each is found by its dross identity tag and never duplicated."
+
+[[criteria]]
+  id = "c-3"
+  text = "With no config, each dross lifecycle status moves a work item to the right state for its type under the Agile, Scrum and Basic processes (e.g. a Scrum PBI to 'Committed' but its Task to 'In Progress'). [board].state_map overrides any of them. A status with no reachable state warns and skips without failing the sync."
+
+[[criteria]]
+  id = "c-4"
+  text = "Every close (phase --close, task close, finalize) is verified on read-back: a work item not in a Completed-category state makes the command error naming it, and '(closed)' is never printed for it."
+
+[[criteria]]
+  id = "c-5"
+  text = "dross issue pull --labels bug,enhancement lists new inbound Azure Boards work items in the same {issues, error} envelope. It never returns dross-mirrored work items, and an unreachable board is reported as an error, never as zero."
+
+[[criteria]]
+  id = "c-6"
+  text = "Backlog and deferred items are related to their target work item with an Azure Boards Related link; re-linking is a no-op. Reap's undo restores a work item's exact prior state, verified on read-back."
+
+[[criteria]]
+  id = "c-7"
+  text = "dross phase complete brings every task work item, then the phase work item, to its done state. A second run makes only reads."
+
+[[criteria]]
+  id = "c-8"
+  text = "A live smoke run against a real Azure DevOps org covers work-item create -> transition -> close, plus a parent link and a pull. It is recorded next to the mocked suite with the same honesty check as the ship smoke; mock-verified is never reported as live-verified."
+
+[[criteria]]
+  id = "c-9"
+  text = "When [board].area_path and/or [board].iteration_path are set, every work item dross creates (Epic, requirement, Task) gets them on create, so it shows on that team's board and sprint. Unset, items take the project defaults. dross doctor flags a path that does not exist in the project."
+
+[[criteria]]
+  id = "c-10"
+  text = "On an azure-devops remote whose target branch (main or the milestone branch) has an enabled blocking branch policy, dross phase complete and ship's safety net never git-push .dross chores straight to it. They open an Azure Repos chore PR instead, as on a protected GitHub base. An unprotected branch still gets the direct push."
+  deferred = ["d4c0a4f04bb53856"]
+
+[[decisions]]
+  key = "hierarchy"
+  choice = "Milestone -> Epic; phase -> the process's requirement-backlog type (User Story / PBI / Issue, read from the project's backlog configuration); task -> Task. Parent-child (Hierarchy) links join them. No Feature tier, no iteration milestone mode."
+  why = "Epic, requirement type and Task exist in every default process; phases appear on the team backlog; an Epic is closable, so milestone-sync --close works."
+  locked = true
+
+[[decisions]]
+  key = "state_resolution"
+  choice = "Defaults resolve by state category: each dross status maps to a category (Proposed / InProgress / Resolved / Completed) and the concrete state name is read from the project's states for that work item type. In-review statuses use Resolved where the type has it, else stay InProgress. [board].state_map is a flat dross-status -> state-name override."
+  why = "One rule covers Agile, Scrum, Basic and inherited custom processes without per-process name tables; phase and task statuses are already distinct keys, so a flat override still targets one tier."
+  locked = true
+
+[[decisions]]
+  key = "pull_match"
+  choice = "On azure-devops a requested pull label matches a tag of that name OR a work item type of that name, case-insensitive. 'bug' hits native Bug items and bug-tagged items; on Basic (no Bug type) it degrades to tags."
+  why = "ADO users file bugs as a type, not a tag; tag-only would hide them from /dross-inbox, and a label->type map adds config surface for little gain."
+  locked = true
+
+[[decisions]]
+  key = "board_config"
+  choice = "[board] stays self-contained and never inherits from [remote]. New [board].api_version (default 7.1) and [board].auth_scheme (PAT via Basic with empty user by default, or bearer); doctor checks both."
+  why = "Matches every other board provider; an ADO board with a non-ADO remote works identically; no ADO-only precedence rule."
+  locked = true
+
+[[decisions]]
+  key = "ado_branch_protection"
+  choice = "A branch counts as protected on azure-devops when an enabled, blocking policy configuration is scoped to it (exact ref or matching prefix). dross only reads policy configurations; it never creates or edits one."
+  why = "Any blocking policy is what makes ADO reject a direct push (TF402455); reading without writing keeps 'dross protect' GitHub-only."
+  locked = true
+
+[[decisions]]
+  key = "chore_pr_completion"
+  choice = "The ADO chore PR arms auto-complete with a merge commit (noFastForward), never bypassPolicy. If a merge-type policy forbids merge commits or auto-complete cannot be set, the PR stays open and dross says to complete it by hand."
+  why = "Mirrors GitHub's armed auto-merge chore flow so every local base fast-forwards; ship-loop's 'never arms auto-complete' governs phase PRs, not chore PRs."
+  locked = true
+
+[[decisions]]
+  key = "transport"
+  choice = "Carried from azure-devops-provider: raw REST over net/http, no az CLI. secretscan.ScanPayload before encoding, redact.Scrub on every response body, hostallow check before the token is read."
+  why = "Single static binary with no runtime deps (stack.locked); every new call inherits the screening the provider phase built."
+  locked = true
+
+[[decisions]]
+  key = "verify_posture"
+  choice = "Carried from azure-devops-provider: httptest-mock tests are the per-criterion bar; c-8's live run is recorded separately and never substitutes for, or is substituted by, the mocked suite."
+  why = "The provider test contract is mocked HTTP; milestone criterion 5 asks for a live run, recorded honestly."
+  locked = true
