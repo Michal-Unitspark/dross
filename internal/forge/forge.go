@@ -69,6 +69,14 @@ type Config struct {
 	AuthUser   string // jira: account email for HTTP Basic auth (email:token)
 	BoardID    string // github: Projects v2 board node id to add created issues to (empty = repo issues only)
 
+	// APIVersion is the azure-devops api-version every Boards call carries;
+	// empty = 7.1. AreaPath and IterationPath are the System.AreaPath and
+	// System.IterationPath every created work item gets; empty = the project's
+	// defaults. All three come from [board] alone, never from [remote].
+	APIVersion    string
+	AreaPath      string
+	IterationPath string
+
 	// Fields overrides the tracker-native field names sync writes to. Every
 	// entry is optional; an empty one falls back to the provider's own literal,
 	// so a zero-value Config behaves exactly as it did before this existed.

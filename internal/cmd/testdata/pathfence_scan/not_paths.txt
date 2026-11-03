@@ -97,6 +97,8 @@ findings.Record.Title title
 # ---- forge — issue-tracker API payloads: ids, keys, titles, bodies, states, URLs
 forge.adfNode.Text text
 forge.adfNode.Type type
+forge.adoPatchOp.Op op
+forge.adoPatchOp.Path path
 forge.githubIssue.Body body
 forge.githubIssue.HTMLURL html_url
 forge.githubIssue.NodeID node_id
