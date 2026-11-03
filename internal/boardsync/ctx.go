@@ -108,9 +108,22 @@ func Config(b project.Board, remoteURL string, extra []string) forge.Config {
 			Type:        b.Fields.Type,
 			FixVersions: b.Fields.FixVersions,
 		},
+		// Azure Boards only reads these; every other backend ignores them.
+		// Never from [remote]: a repo's Azure Repos api_version says nothing
+		// about the Boards server it tracks on.
+		APIVersion:    string(b.APIVersion),
+		AreaPath:      b.AreaPath,
+		IterationPath: b.IterationPath,
 	}
-	if configenum.Normalize(b.Provider) == "gitlab" {
+	switch configenum.Normalize(b.Provider) {
+	case "gitlab":
 		cfg.ProjectID = b.Project
+	case "azure-devops":
+		// [board].auth_scheme picks PAT-over-Basic or a bearer token for
+		// Azure Boards alone. forge.New reads AuthScheme for GitLab's REST
+		// header too, so passing it to any other board would let a key that
+		// only documents azure-devops change how a GitLab board signs in.
+		cfg.AuthScheme = b.AuthScheme
 	}
 	return cfg
 }

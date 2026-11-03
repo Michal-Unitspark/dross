@@ -261,6 +261,10 @@ func setBoardState(ctx *Ctx, key, status string, warn *runWarnings) error {
 		if err := c.SetState(key, status, ctx.Proj.Board.StateMap); err != nil {
 			return Wrap(err)
 		}
+	case *forge.AzureBoardsClient:
+		if err := c.SetState(key, status, ctx.Proj.Board.StateMap); err != nil {
+			return Wrap(err)
+		}
 	default:
 		// Every other backend has no state field: forge REST models an issue
 		// as open or closed and nothing else. The status label is already on

@@ -163,6 +163,15 @@ func SyncPhase(ctx *Ctx, phaseID, status string, doClose bool) error {
 			return Wrap(err)
 		}
 	}
+	// Azure Boards moves System.State to the first state of the status's
+	// category in the item type's own order, [board].state_map overriding by
+	// name. A state the type lacks, or a rule rejection, warns and skips
+	// inside SetState without failing the sync.
+	if ado, ok := ctx.Client.(*forge.AzureBoardsClient); ok && status != "" {
+		if err := ado.SetState(key, status, ctx.Proj.Board.StateMap); err != nil {
+			return Wrap(err)
+		}
+	}
 	// One close path for both edges — created-then-closed and updated-then-
 	// closed. It errors rather than warns, so nothing prints "(closed)" for an
 	// issue that is still open.
@@ -192,8 +201,9 @@ func SyncPhase(ctx *Ctx, phaseID, status string, doClose bool) error {
 // a failed write into a false claim about the state of the work, which is what
 // c-5 exists to stop. So an unmapped status is an error, not a warning.
 // The verdict a close is verified against differs by backend, and the branch
-// below is by EXCLUSION — not YouTrack, not Jira — never a three-name allowlist
-// of the flat boards. GitHub is a fourth flat board: github.go's toIssue
+// below is by EXCLUSION — not YouTrack, not Jira, not Azure Boards — never a
+// three-name allowlist of the flat boards. GitHub is a fourth flat board:
+// github.go's toIssue
 // populates State and never Resolved, so an allowlist would either demand
 // Resolved of it and strand every card, or refuse it by name.
 func CloseIssue(ctx *Ctx, key, status string) error {
@@ -214,6 +224,14 @@ func CloseIssue(ctx *Ctx, key, status string) error {
 			return Wrap(err)
 		}
 		return verifyClosed(ctx, key, status, func(iss *forge.Issue) bool { return iss.Resolved })
+	}
+	if ado, ok := ctx.Client.(*forge.AzureBoardsClient); ok {
+		// CloseIssueAs refuses a status whose state is not Completed-category
+		// before its own write (a --status sync may already have moved the
+		// item through SetState), then re-reads the item and errors naming it
+		// unless it reads Completed. The generic close below would ignore the
+		// state_map and close every type the same way.
+		return Wrap(ado.CloseIssueAs(key, status, ctx.Proj.Board.StateMap))
 	}
 	// Every other provider: a plain close, verified on the open/closed state
 	// their toIssue populates. Requiring Resolved here would strand every flat
