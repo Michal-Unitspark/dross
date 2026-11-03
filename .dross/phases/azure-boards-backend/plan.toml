@@ -10,7 +10,7 @@ task_seq = 21
   description = "project.Board gains api_version (project.APIVersion, so a bare 6.0 decodes), auth_scheme, area_path and iteration_path,\neach with omitempty toml and json tags; none inherits from [remote] (locked board_config). `dross project get/set/unset`\ngets arms for all four; board.auth_scheme joins enumKeys checked against configenum.AuthSchemes, and the hard-coded enum\ntables in project_enum_test.go (want map, enumKeyValue, TestProjectSetRejectsOutOfSetValues paths) and validate_enum_test.go\n(forceEnumValue) gain it. A bad [board] api_version names board.api_version, never remote.api_version. Four not_paths.txt\nrows land in the same commit as the fields (reflection guards)."
   covers = ["c-1", "c-9"]
   test_contract = ["if a key is unwired, TestBoardFieldsAllAddressable (reflects over project.Board) fails, and TestProjectSetGetADOBoardKeys fails unless set then get round-trips board.api_version=6.0, board.auth_scheme=bearer, board.area_path=`Fabrikam\\Web` and board.iteration_path=`Fabrikam\\Sprint 1` verbatim, backslashes intact", "if auth_scheme is not enum-checked, `dross project set board.auth_scheme token` exits non-zero naming the AuthSchemes list and leaves project.toml byte-identical", "if the float decode is lost, TestProjectGetBoardAPIVersionBareNumber fails: `[board] api_version = 6.0` reads back \"6.0\", never \"6\"", "if [board] inherits from [remote], TestBoardDoesNotInheritRemote fails: [remote] api_version \"6.0\" and auth_scheme \"bearer\" with an empty [board] leave board.api_version and board.auth_scheme \"\"", "if a zero value leaks into the file, a project.toml with no ADO [board] keys saves byte-identical", "if a field is left unfiled, TestEveryPathShapedFieldIsDeclared fails until the four fields are in not_paths.txt, and TestTomlFieldsCarryMatchingJSONTags fails if any one lacks a json tag", "if the enum tables drift, TestEnumKeysTableCoversEveryEnumTypedField fails on \"enumKeys gained board.auth_scheme\" and TestValidateAndSetShareTheEnumSets/board.auth_scheme=nonmember hits forceEnumValue's no-arm Fatalf, unless project_enum_test.go and validate_enum_test.go both carry board.auth_scheme", "if the decode error names the wrong section, `[board] api_version = true` fails naming board.api_version (never remote.api_version), while `[remote] api_version = true` still names remote.api_version"]
-  status = "pending"
+  status = "done"
 
 [[task]]
   id = "t-2"
@@ -20,7 +20,7 @@ task_seq = 21
   description = "forge.Config gains APIVersion, AreaPath, IterationPath. NewAzureBoards checks in order: base_url, project, auth_env (each\nnamed), api_version shape (default 7.1), base_url shape (exported CheckADOBaseURL; a Server URL needs its collection),\nhostallow — only then os.Getenv; no request. It normalizes area_path / iteration_path once: a value that is neither the\nproject name nor starts with `<project>\\` gets the project prefixed, so the doctor probe and every create use the same full\npath. doRaw: secretscan.ScanPayload before encoding, exactly one api-version, Basic \":\"+PAT (Bearer under bearer),\nX-TFS-FedAuthRedirect: Suppress, no redirects, 203/3xx = sign-in error, redact.Scrub on every body, json-patch+json for\nwork-item writes. doRaw registered as Screened in secretscan.Transports."
   covers = ["c-1"]
   test_contract = ["if a field check is dropped, TestNewAzureBoardsNamesMissingFields fails: empty base_url, project or auth_env each errors naming [board].base_url / [board].project / [board].auth_env while the env is unset, with zero requests; api_version \"7.1&x=1\", \"7.1#x\" and \"../7.1\" error naming [board].api_version before any Getenv", "if the token is read before the host check, TestNewAzureBoardsRefusesHostBeforeToken fails: base_url https://attacker.example with auth_env unset gives errors.Is(err, hostallow.ErrRefused), never \"is not set\"; with a sentinel env set, the sentinel never appears in the error", "if Services or Server URLs are mishandled, TestADOBoardBaseURLShapes fails: https://dev.azure.com/acme, https://acme.visualstudio.com, https://acme.visualstudio.com/DefaultCollection and https://tfs.corp.example/tfs/DefaultCollection are accepted and keep their collection path; https://dev.azure.com and https://dev.azure.com/acme/Proj are refused naming the https://dev.azure.com/<org> form", "if URLs double-escape, project \"Scratch project\" builds /acme/Scratch%20project/_apis/... (never %2520), and an endpoint already carrying api-version=5.0 goes out with exactly one api-version, the configured one", "if the credential drifts, TestADOBoardRequestShape fails: default, basic and private-token send Basic base64(\":\"+PAT) even with AuthUser set; bearer sends \"Bearer <PAT>\"; every request carries api-version=7.1 by default (6.0 when set) and X-TFS-FedAuthRedirect: Suppress", "if the credential can leak, a 400 body echoing the PAT and base64(\":\"+PAT) yields an error containing neither; a 302 to a second httptest server records zero hits there; a 203 errors naming $AUTH_ENV", "if the transport is unregistered or unscreened, TestEveryOutboundSeamIsRegistered and TestScreenPrecedesRequestInEveryScreenedTransport (internal/cmd) report forge.AzureBoardsClient.doRaw", "if a bare Server host is accepted, TestADOBoardBaseURLShapes fails: https://tfs.corp.example (no collection) is refused naming the <host>/<collection> form", "if paths reach ADO unprefixed, TestADOBoardPathNormalization fails: on project Fabrikam, area_path `Web` becomes `Fabrikam\\Web`, iteration_path `Sprint 1` becomes `Fabrikam\\Sprint 1`, and `Fabrikam` and `Fabrikam\\Web` stay unchanged"]
-  status = "pending"
+  status = "done"
 
 [[task]]
   id = "t-3"
@@ -38,7 +38,7 @@ milestone_mode is ignored (milestones are Epics). Not live until `make install` 
     "if a key goes undocumented, TestOptionsCoversADOBoardFields fails unless §12 names azure-devops under board.provider, board.api_version with `7.1`, board.auth_scheme with `bearer`, board.area_path and board.iteration_path",
     "if the no-inheritance rule is lost, the same test fails unless §12 says [board] does not inherit [remote]",
   ]
-  status = "pending"
+  status = "done"
 
 [[task]]
   id = "t-4"
@@ -57,7 +57,7 @@ statusless-thread rule.
     "if a posture rule weakens, TestValidatePostures fails unless each is rejected: live with one not-run step; partial with every step pass; mock-only carrying a pass; a step key twice or an unknown key; an api_base or evidence naming 127.0.0.1/localhost/[::1]; a pass naming neither an ADO id nor a URL on api_base's host; run_at \"yesterday\"",
     "if a pathfence ledger row becomes necessary, TestEveryPathShapedFieldIsDeclared stays green with no not_paths.txt edit, because liverecord types carry no serialization tags",
   ]
-  status = "pending"
+  status = "done"
 
 [[task]]
   id = "t-5"
@@ -74,7 +74,7 @@ Locked ado_branch_protection: read only.
 """
   covers = ["c-10"]
   test_contract = ["if scoping is wrong, TestADOBranchProtectionScopes fails: protected for {enabled, blocking, Exact refs/heads/main, this repo} on main and for {Prefix refs/heads/milestone/, repositoryId null} on milestone/v1.8; refs/heads/Main protects main; matchKind DefaultBranch protects main but not milestone/v1.8; unprotected when the only config has isBlocking false, isEnabled false, isDeleted true, another repositoryId, a repo-wide scope with no refName, or Exact refs/heads/main checked against milestone/v1.8", "if a failed read reads as unprotected, a 401, a 500, a 203 sign-in page, non-JSON, a body without value and a full $top page each give Known=false with a reason naming the policy read, never Known=true/unprotected", "if merge-commit policy is misread, a blocking merge-strategy policy with allowNoFastForward false on main gives allowed=false; allowNoFastForward true, or no such policy, gives true; an unreadable list gives known=false", "if dross writes a policy, TestADOBranchProtectionReadOnly fails when any request recorded across these tests is not a GET", "if the host check is skipped, the new azure-devops branch-policy row of TestShipRefusesOffAllowlistAPIBase sees fake-host hits or a reason without the host refusal", "if the new seam can dial from cmd tests, TestHermeticBranchProtection_NeverDials fails unless stubBranchProtection sets ship.ADOBranchProtectionFunc to Known=true, unprotected"]
-  status = "pending"
+  status = "done"
 
 [[task]]
   id = "t-6"
@@ -99,7 +99,7 @@ so Removed reads open and unresolved.
     "if a missing path reads as present, TestADOCheckPaths fails: area `Fabrikam\\Web` and `Web` both GET .../classificationnodes/Areas/Web; `Fabrikam` alone GETs .../Areas; iteration `Fabrikam\\Sprint 1` GETs .../Iterations/Sprint%201; 404 → missing; 500 or 203 → error, never \"missing\"",
     "if the scrub is removed, the AzureBoardsClient row of TestEveryForgeClientRedacts fails: a canary token echoed by the server never appears in GetIssue's error",
   ]
-  status = "pending"
+  status = "done"
 
 [[task]]
   id = "t-7"
@@ -121,7 +121,7 @@ trailing id. Compile-time assertions pin IssueLinker and ParentLinker on AzureBo
     "if bad ids reach ADO, LinkParent(child, child) and a non-numeric parent each error with zero requests",
     "if GitHub gains a lossy stub, TestGitHubIsNotAParentLinker fails when *GitHubClient satisfies ParentLinker",
   ]
-  status = "pending"
+  status = "done"
 
 [[task]]
   id = "t-8"
@@ -143,7 +143,7 @@ per-step proofs.
     "if the validator is vacuous, in-test fixtures live-with-gap / mock-only / complete-live give reject / accept-as-mock / accept-as-live",
     "if the runbook loses its prerequisites, the test fails unless the comments name dross init on a scratch ADO project, provider = \"azure-devops\", the process, the hand-filed Bug and make install",
   ]
-  status = "pending"
+  status = "done"
 
 [[task]]
   id = "t-9"
@@ -159,7 +159,7 @@ read the outcome back. Locked chore_pr_completion.
 """
   covers = ["c-10"]
   test_contract = ["if the payload drifts, TestADOArmChoreAutoComplete fails: exactly one PATCH to .../pullrequests/41 whose autoCompleteSetBy.id equals connectionData's authenticatedUser id and whose completionOptions.mergeStrategy is \"noFastForward\"; bypassPolicy absent or false, no bypassReason; no recorded body anywhere carries bypassPolicy true", "if a forbidden merge commit is armed, a blocking \"Require a merge strategy\" config on the target with allowNoFastForward false, or an unreadable policy list, gives errors.Is(err, ErrAutoMergeUnavailable) and zero PATCH", "if a refusal is mishandled, a 400 or 403 on the PATCH gives ErrAutoMergeUnavailable; a 500 gives a plain error that is not ErrAutoMergeUnavailable", "if the outcome is guessed, read-back completed → Merged; active with autoCompleteSetBy → AutoEnabled; active without it, or a 200 PATCH answer lacking autoCompleteSetBy, is never AutoEnabled", "if the phase-PR rule regresses, TestADOCompletePayload still bans autoCompleteSetBy in the phase completion body", "if another method is armed or the dispatch is mis-ordered, method \"squash\" on azure-devops errors with zero requests, and AutoMergePR on a github OpenOpts still reaches the gh auto-merge path while sending zero requests to any ADO host", "if the host check is skipped, the azure-devops auto-complete row of TestShipRefusesOffAllowlistAPIBase sees zero fake-host hits and ErrRefused"]
-  status = "pending"
+  status = "done"
 
 [[task]]
   id = "t-10"
@@ -170,7 +170,7 @@ read the outcome back. Locked chore_pr_completion.
   description = "baseprotect.go: one protection dispatch — github → BranchRulesFunc + protect.RequiresPR, azure-devops →\nship.ADOBranchProtectionFunc, others unchecked. routeBaseChores uses it (covers phase complete, finalizeBoard, ship and\nship-recover safety nets). On ADO the \"protection unknown\" error names [remote].auth_env and the PAT, not `gh auth login`.\nchorePR learns its provider: narration says auto-complete armed or complete by hand. pullURL(repoURL, n) keeps its\nsignature and infers ADO from /_git/ to build <url>/pullrequest/<n>, so its callers in chorepr.go, milestone.go and\nphase.go (the phase-complete waiting error) all render ADO links unchanged."
   covers = ["c-10"]
   test_contract = ["if an ADO base is pushed, TestProtectedADOBaseRoutesThroughChorePR fails: on an azure-devops remote with a hook rejecting main and the seam stubbed protected, routeBaseChores opens one chore PR with dross-chores/main == local main, offers the hook no refs/heads/main, and arms only [\"merge\"]", "if the milestone base is missed, the same test on base milestone/v1.8 opens dross-chores/milestone-v1.8 → milestone/v1.8 and the hook sees no refs/heads/milestone/ update", "if an unprotected ADO base is routed, a stub answering unprotected gives Pushed=true, origin main == local main, no chore branch and zero PR opens", "if an unknown read pushes, a Known=false stub gives an error naming the reason and [remote].auth_env (never \"gh auth login\") and an empty hook log", "if code rides a chore PR, a non-.dross commit ahead on a protected ADO main is refused naming the file, with zero PRs opened", "if narration stays GitHub-shaped, TestChorePRNarrationADO fails: ErrAutoMergeUnavailable on azure-devops narrates \"complete it by hand\" with .../_git/r/pullrequest/41 (never /pull/41); an armed PR narrates auto-complete", "if GitHub regresses, every basebranch_chores_test.go and chorepr_test.go case passes unchanged", "if pullURL stays GitHub-shaped, TestPullURLByForge fails: pullURL(\"https://dev.azure.com/o/p/_git/r\", 41) gives https://dev.azure.com/o/p/_git/r/pullrequest/41 and a github repo URL still gives .../pull/41", "if ADO ship regresses under the new dispatch, the existing ADO ship end-to-end fixtures (ship_test.go, ship_cimerge_test.go) pass unchanged with the hermetic ADOBranchProtectionFunc stub, and their httptest mocks record zero policy/configurations requests"]
-  status = "pending"
+  status = "done"
 
 [[task]]
   id = "t-11"
@@ -184,7 +184,7 @@ read the outcome back. Locked chore_pr_completion.
     "if an ineffective key reads as configured, the azure-devops cases fail unless auth_scheme private-token and basic, a set auth_user, and milestone_mode agile each yield one warning naming the key; bearer and an empty auth_scheme yield none",
     "if a warning leaks across providers, [board].auth_scheme set on a jira board yields a \"no effect\" warning, and the existing jira / youtrack / github BoardCombination cases are unchanged",
   ]
-  status = "pending"
+  status = "done"
 
 [[task]]
   id = "t-12"
@@ -205,7 +205,7 @@ PATCH stale title) or creates one; EnsureMilestone delegates.
 """
   covers = ["c-2", "c-5", "c-9"]
   test_contract = ["if type selection breaks, TestADOCreateIssueType fails: [dross, dross/phase:p, dross/task:p/t-1] POSTs .../workitems/$Task; [dross, dross/phase:p] on Scrum POSTs .../workitems/$Product%20Backlog%20Item (escaped once) and on Basic $Issue, with Content-Type application/json-patch+json and System.Tags \"dross; dross/phase:p\"", "if area/iteration leak or drop, TestADOCreateIssueClassification fails: with AreaPath `Fabrikam\\Web` and IterationPath `Fabrikam\\Sprint 1` the requirement, Task and Epic creates each carry both ops with those values; unset, none of the three bodies has either op (no empty string); UpdateIssue never carries either", "if the phase loses its Epic, Milestone 42 adds exactly one relations op rel System.LinkTypes.Hierarchy-Reverse with a url ending /_apis/wit/workItems/42; Milestone 0 adds none; UpdateIssue with a Milestone sends no relation op", "if bad input reaches ADO, a 300-rune title (multi-byte at the cut) is sent as exactly 255 runes; \"a < b\\n- x & y\" is sent as \"a &lt; b<br>- x &amp; y\"; a label containing ';' errors naming it with zero requests", "if tags accumulate, UpdateIssue Labels [a] on an item tagged \"a; b\" sends System.Tags \"a\"; nil Labels sends no tags op; a State patch errors with zero requests", "if the Epic duplicates, TestADOEnsureMilestoneEpic fails: WIQL answering id 3 returns \"3\" with zero POST; two matches pick 99 over 100 and warn; an empty WIQL gives one POST .../workitems/$Epic tagged \"dross; dross/milestone:v1.8\" and titled \"v1.8 — <title>\"; a stale title is PATCHed once, an unchanged one never", "if pull matching is tag-only or type-only, TestADOListIssuesLabelMatch fails: labels [bug, enhancement] on Agile send [System.Tags] CONTAINS 'bug' OR [System.WorkItemType] = 'Bug' OR [System.Tags] CONTAINS 'enhancement', with no type clause for enhancement; Basic gets no type clause; labels dross and dross/phase:x never produce one; `o'brien` is sent as 'o''brien' and \"x' OR [System.Id] > '0\" stays one literal", "if a pull crosses projects, every WIQL carries [System.TeamProject] = @project and is POSTed to /<org>/<project>/_apis/wit/wiql, never the org root", "if CONTAINS is trusted for identity, an id the WIQL returns for dross/task:p/t-10 is dropped from a dross/task:p/t-1 lookup", "if open includes done work, State open omits Done and Removed and keeps Active and Resolved-category items; State all keeps all of them", "if failure reads as zero, a 500 or 203 on WIQL or on the types read returns an error, never an empty slice with a nil error; 450 ids batch as 200/200/50 and a 500 on the second returns (nil, err); a null batch entry (deleted mid-query) is skipped", "if the payload screen is bypassed, the azure-devops row added to allBackends() fails TestCreateIssueRefusedBeforeRequest / TestUpdateIssueBodyPatchRefused when a token in the body reaches the server", "if normalization is bypassed on create, with [board].area_path `Web` on project Fabrikam the requirement, Task and Epic creates each send System.AreaPath `Fabrikam\\Web`, never `Web`"]
-  status = "pending"
+  status = "done"
 
 [[task]]
   id = "t-13"
@@ -233,7 +233,7 @@ StateWriter asserted. Phases lane gets one complete/shipped exemption carrying i
     "if undo goes through the map, TestADOSetStateRawLiteral fails: SetStateRaw(\"42\",\"Resolved\") PATCHes Resolved verbatim and a read-back of Closed errors naming 42; a 400 on the write errors (unlike SetState); the azure-devops rows of TestSetStateRawBypassesTheStateMap and TestSetStateRawVerifiesReadBack pass",
     "if a key goes missing or the lifecycle collapses, the azure-devops rows of TestStateMapsKeyExactlyTheEmittedStatuses, TestStateMapsKeepTheLifecycleStatesDistinct (uat ≠ shipped), TestEveryReapTerminalIsMapped and TestLaneTerminalStatesAreDistinctWithinTheirLane fail on defaultADOStateCategory; the last passes only with one azure-devops Phases complete/shipped exemption that carries its why",
   ]
-  status = "pending"
+  status = "done"
 
 [[task]]
   id = "t-14"
@@ -253,7 +253,7 @@ follows the provider's shape. Adds ADO twins of the protected ship → complete 
     "if unprotected ADO bases lose the push, TestUnprotectedADOBaseStillPushesDirectly fails unless origin main == local main after ship and no dross-chores/main exists",
     "if GitHub regresses, milestone_protected_test.go passes unchanged (its BranchRulesFunc stubs still decide)",
   ]
-  status = "pending"
+  status = "done"
 
 [[task]]
   id = "t-15"
@@ -274,7 +274,7 @@ NewBoard case-count fixture goes 3 → 4 (test fixture only; production layers s
     "if a command path rejects it, TestIssueEnableAcceptsEveryBoardProvider/azure-devops and TestDoctorAcceptsEveryDispatchableBoardProvider/azure-devops fail",
     "if the client drifts off the board surface, var _ BoardClient = (*AzureBoardsClient)(nil) stops compiling",
   ]
-  status = "pending"
+  status = "done"
 
 [[task]]
   id = "t-16"
@@ -290,7 +290,7 @@ metadata fixtures.
 """
   covers = ["c-1", "c-3", "c-4", "c-9"]
   test_contract = ["if Config drops a field, TestConfigCarriesADOFields fails unless Board{api_version 6.0, auth_scheme bearer, area_path, iteration_path} reaches the tracker as api-version=6.0, a Bearer header and an AreaPath op on create", "if [board] inherits [remote], [remote].api_version 5.0 with [board].api_version unset still sends 7.1", "if auth_scheme leaks to other boards, a gitlab board's forge.Config.AuthScheme stays \"\" with [board].auth_scheme set", "if a process resolves wrong in sync, TestADOSyncStateByProcess fails: SyncPhase --status in-progress PATCHes System.State Active / Committed / Doing (Agile/Scrum/Basic); SyncTasks --status task-in-progress PATCHes Active / In Progress / Doing on each task item", "if state_map is not passed, {in-progress: Approved} makes the Scrum phase PATCH carry Approved", "if an unreachable state fails the sync, a state_map value the type lacks warns once per item naming its id, sends no state PATCH, and SyncPhase / SyncTasks return nil with board.json saved", "if \"(closed)\" outruns the tracker, TestADOPhaseCloseReadBack fails: --status complete --close with read-back Active errors naming the work item and ctx.Out has no \"(closed)\"; read-back Done prints it", "if one refused task close strands the rest, SyncTasks --status task-complete --close with task 11 reading back Active and task 12 Done errors naming t-1 only, and task 12 still got its close PATCH", "if the new type-switch arms are mis-ordered or one is missed, TestBoardClientArmsRouteByType fails: a YouTrack client still reaches CloseIssueAs with the state_map, a Jira client still reaches SetState then verifyClosed, and an *AzureBoardsClient in setBoardState, SyncPhase and CloseIssue never falls through to the generic ctx.Client.CloseIssue / default arm"]
-  status = "pending"
+  status = "done"
 
 [[task]]
   id = "t-17"
@@ -312,7 +312,7 @@ ParentLinker. SyncTasks prefers ParentLinker over IssueLinker for task → phase
     "if the milestone close is refused or unverified, TestADOMilestoneClose fails: CheckMilestoneClosable(ADO) is nil with milestone_mode unset; closing the Epic reads back Closed → nil, Active or Resolved → error naming it; forgejo is still refused; with an Epic tagged dross/milestone:v1.8 already on the board and board.json empty, milestone sync reuses it with zero creates",
     "if a linker-only backend loses links, the linkBoard double still receives LinkIssues(parent, task) for every task",
   ]
-  status = "pending"
+  status = "done"
 
 [[task]]
   id = "t-18"
@@ -334,7 +334,7 @@ a re-run only reads.
     "if a re-run writes, TestADOFinalizeRerunOnlyReads fails: the second FinalizePhase sends zero PATCH and zero POST to /_apis/wit/workitems/$* (WIQL POSTs are reads) and narrates \"already complete\"",
     "if a refused task close is hidden, a task reading back In Progress after its close makes FinalizePhase error naming that task while the other cards and the phase item still close",
   ]
-  status = "pending"
+  status = "done"
 
 [[task]]
   id = "t-19"
@@ -351,7 +351,7 @@ iteration_path set, builds the client via boardsync.Config and flags a path Path
 """
   covers = ["c-1", "c-9"]
   test_contract = ["if a missing field is unnamed, TestDoctorADOBoardNamesMissingFields fails: with base_url, project and auth_env unset, doctor prints three ✗ lines naming each, counts 3 issues and exits non-zero", "if the token is read first, TestDoctorADORefusedHostSkipsToken fails: base_url https://attacker.example with $auth_env unset prints a ✗ naming attacker.example, never \"is not set in this shell\"; the injected getenv is called 0 times for auth_env and no HTTP request is made", "if a URL form is rejected, TestDoctorADOBoardURLForms fails unless https://dev.azure.com/acme, https://acme.visualstudio.com and https://tfs.corp.example/tfs/DefaultCollection (host via remote url or allow_hosts) print \"✓ [board] is well-formed (azure-devops @ …)\"; https://dev.azure.com/acme/Proj is ✗ naming the <org> form", "if api_version/auth_scheme go unchecked, \"7.1&x=1\" and \"token\" are each ✗; private-token, a set auth_user and milestone_mode agile are ⚠ only, with the exit unaffected", "if a missing path passes, TestDoctorADOFlagsMissingPath fails: area_path `Fabrikam\\Nope` answered 404 is ✗ naming the path and the project; 200 is ✓; 500 or 203 is ⚠ \"could not verify\", never ✗ or ✓; unset paths send no classification-nodes request; the probe carries api-version=6.0 when [board].api_version = 6.0", "if the BoardProviders loops regress, TestDoctorAcceptsEveryDispatchableBoardProvider/azure-devops and TestFrictionWindow_DoctorAcceptsWorkingProviders/azure-devops go red; TestDoctorValidatesBoardBlock passes unchanged for the other providers", "if the shared doctor fixture trips the ADO URL check, TestDoctorAcceptsEveryDispatchableBoardProvider/azure-devops goes red unless doctor_test.go runDoctorEnum gives azure-devops an ADO-shaped, allow-listed base_url (https://dev.azure.com/acme) instead of the youtrack host"]
-  status = "pending"
+  status = "done"
 
 [[task]]
   id = "t-20"
@@ -374,7 +374,7 @@ assumptions.
     "if \"(closed)\" is printed over an open item, TestIssueCloseADOReadBack fails: with state writes refused, `issue phase sync x --status complete --close` and `issue milestone sync v1.8 --close` exit non-zero naming the work item id, and stdout never contains \"(closed)\"",
     "if complete leaves items open or re-writes, TestCompleteFinalizesADOBoard fails: `dross phase complete x` leaves both task items then the phase item in Done, with task PATCHes ahead of the phase PATCH in the fake's log; a second run sends zero PATCH and zero POST to /_apis/wit/workitems/$* and leaves board.json byte-identical",
   ]
-  status = "pending"
+  status = "done"
 
 [[task]]
   id = "t-21"
