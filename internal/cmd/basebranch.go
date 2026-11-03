@@ -8,12 +8,9 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/Rivil/dross/internal/configenum"
 	"github.com/Rivil/dross/internal/gitrun"
 	"github.com/Rivil/dross/internal/localstore"
 	"github.com/Rivil/dross/internal/project"
-	"github.com/Rivil/dross/internal/protect"
-	"github.com/Rivil/dross/internal/ship"
 	"github.com/Rivil/dross/internal/state"
 )
 
@@ -77,8 +74,10 @@ func pushBaseIfAheadDrossOnly(repoDir, base string) (pushed bool, err error) {
 // It reads the shared origin comparison (compareWithOrigin — the
 // shared_origin_gate locked decision: the same reading gates the PR-record
 // push, and neither carries its own copy). Nothing ahead, or no origin/<base>,
-// is a no-op. With commits ahead on a GitHub remote it asks GitHub whether the
-// base refuses direct pushes, and routes on the answer:
+// is a no-op. With commits ahead on a GitHub or Azure DevOps remote it asks
+// the forge whether the base refuses direct pushes (readBaseProtection — a
+// GitHub ruleset requiring a PR, or an enabled blocking Azure Repos branch
+// policy), and routes on the answer:
 //
 //   - protected: .dross-only commits — purely ahead or ahead and behind — go
 //     through a chore PR (publishChorePR); a code commit ahead is refused,
@@ -109,18 +108,18 @@ func routeBaseChores(repoDir, base string) (baseChores, error) {
 	if err != nil {
 		return baseChores{}, err
 	}
-	if configenum.Normalize(p.Remote.Provider) == "github" {
+	if protectionReadable(p.Remote.Provider) {
 		hosts, err := remotePolicy(root, repoDir, p)
 		if err != nil {
 			return baseChores{}, err
 		}
 		opts := buildOpenOpts(p, hosts)
-		res := ship.BranchRulesFunc(opts, base)
+		prot := readBaseProtection(p, opts, base)
 		switch {
-		case !res.Known:
+		case !prot.Known:
 			return baseChores{}, fmt.Errorf("can't tell whether origin's %s refuses direct pushes (%s), so the .dross chores ahead on it were not pushed — "+
-				"fix: run `gh auth login`, or check [remote] in .dross/project.toml; then re-run", base, res.Reason)
-		case protect.RequiresPR(res.Rules):
+				"fix: %s; then re-run", base, prot.Reason, prot.Fix)
+		case prot.Protected:
 			if f, sha, err := firstNonDross(repoDir, d.Ahead); err != nil {
 				return baseChores{}, err
 			} else if f != "" {
