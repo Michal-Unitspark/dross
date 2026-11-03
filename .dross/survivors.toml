@@ -4693,3 +4693,183 @@
   line = 152
   accepted_in = "azure-devops-provider"
   category = "gremlins-attribution-ceiling"
+
+[[accepted]]
+  key = "26176a1189c4d33f"
+  file = "internal/ship/azuredevops_ci.go"
+  op = "CONDITIONALS_NEGATION"
+  text = "case status == \"notapplicable\":"
+  line = 120
+  accepted_in = "azure-devops-ship-loop"
+  category = "gremlins-attribution-ceiling"
+
+[[accepted]]
+  key = "e7d9939fefad454a"
+  file = "internal/ship/azuredevops_ci.go"
+  op = "CONDITIONALS_NEGATION"
+  text = "case status == \"rejected\":"
+  line = 127
+  accepted_in = "azure-devops-ship-loop"
+  category = "gremlins-attribution-ceiling"
+
+[[accepted]]
+  key = "716c05be25b39dd1"
+  file = "internal/ship/azuredevops_ci.go"
+  op = "CONDITIONALS_NEGATION"
+  text = "case status == \"approved\":"
+  line = 129
+  accepted_in = "azure-devops-ship-loop"
+  category = "gremlins-attribution-ceiling"
+
+[[accepted]]
+  key = "b67e7e812cbec721"
+  file = "internal/ship/azuredevops_ci.go"
+  op = "CONDITIONALS_NEGATION"
+  text = "case status == \"running\":"
+  line = 131
+  accepted_in = "azure-devops-ship-loop"
+  category = "gremlins-attribution-ceiling"
+
+[[accepted]]
+  key = "06d9e1783b26b86a"
+  file = "internal/ship/azuredevops_ci.go"
+  op = "CONDITIONALS_NEGATION"
+  text = "case status == \"queued\":"
+  line = 133
+  accepted_in = "azure-devops-ship-loop"
+  category = "gremlins-attribution-ceiling"
+
+[[accepted]]
+  key = "170d9e4bf57784c1"
+  file = "internal/ship/azuredevops_ci.go"
+  op = "CONDITIONALS_NEGATION"
+  text = "case status == \"broken\":"
+  line = 135
+  accepted_in = "azure-devops-ship-loop"
+  category = "gremlins-attribution-ceiling"
+
+[[accepted]]
+  key = "e54b4b44936bd71e"
+  file = "internal/ship/bitbucket_ci.go"
+  op = "CONDITIONALS_NEGATION"
+  text = "case unknown != \"\":"
+  line = 120
+  accepted_in = "azure-devops-ship-loop"
+  category = "gremlins-attribution-ceiling"
+
+[[accepted]]
+  key = "73ab291d5b6edb4a"
+  file = "internal/ship/azuredevops_threads.go"
+  op = "CONDITIONALS_NEGATION"
+  text = "case ctx.RightFileStart != nil && ctx.RightFileStart.Line > 0:"
+  line = 83
+  accepted_in = "azure-devops-ship-loop"
+  category = "gremlins-attribution-ceiling"
+
+[[accepted]]
+  key = "9afaf9d090bcf8a7"
+  file = "internal/ship/azuredevops_threads.go"
+  op = "CONDITIONALS_BOUNDARY"
+  text = "case ctx.RightFileStart != nil && ctx.RightFileStart.Line > 0:"
+  line = 83
+  accepted_in = "azure-devops-ship-loop"
+  category = "gremlins-attribution-ceiling"
+
+[[accepted]]
+  key = "701012b406c4bc0b"
+  file = "internal/ship/azuredevops_threads.go"
+  op = "CONDITIONALS_NEGATION"
+  text = "case ctx.LeftFileStart != nil:"
+  line = 85
+  accepted_in = "azure-devops-ship-loop"
+  category = "gremlins-attribution-ceiling"
+
+[[accepted]]
+  key = "6ea08a6458f6d541"
+  file = "internal/ship/bitbucket_merge.go"
+  op = "CONDITIONALS_NEGATION"
+  text = "case status == http.StatusOK:"
+  line = 92
+  accepted_in = "azure-devops-ship-loop"
+  category = "gremlins-attribution-ceiling"
+
+[[accepted]]
+  key = "9d64940158c26039"
+  file = "internal/ship/bitbucket_merge.go"
+  op = "CONDITIONALS_NEGATION"
+  text = "case status == http.StatusAccepted:"
+  line = 98
+  accepted_in = "azure-devops-ship-loop"
+  category = "gremlins-attribution-ceiling"
+
+[[accepted]]
+  key = "086153579a5a3efc"
+  file = "internal/ship/bitbucket_merge.go"
+  op = "CONDITIONALS_NEGATION"
+  text = "case status == http.StatusBadRequest && bbMergeCheckRefusal(body):"
+  line = 107
+  accepted_in = "azure-devops-ship-loop"
+  category = "gremlins-attribution-ceiling"
+
+[[accepted]]
+  key = "37ae62c94711aae4"
+  file = "internal/ship/bitbucket_merge.go"
+  op = "CONDITIONALS_NEGATION"
+  text = "case loc.Scheme != base.Scheme || !strings.EqualFold(loc.Host, base.Host):"
+  line = 145
+  accepted_in = "azure-devops-ship-loop"
+  category = "gremlins-attribution-ceiling"
+
+[[accepted]]
+  key = "e1cfea523df417d2"
+  file = "internal/ship/bitbucket_merge.go"
+  op = "CONDITIONALS_NEGATION"
+  text = "case len(loc.Path) <= len(prefix) || !strings.EqualFold(loc.Path[:len(prefix)], prefix) || path.Clean(loc.Path) != loc.Path:"
+  line = 147
+  accepted_in = "azure-devops-ship-loop"
+  category = "gremlins-attribution-ceiling"
+
+[[accepted]]
+  key = "12f3eeb83a07006c"
+  file = "internal/ship/bitbucket_merge.go"
+  op = "CONDITIONALS_BOUNDARY"
+  text = "case len(loc.Path) <= len(prefix) || !strings.EqualFold(loc.Path[:len(prefix)], prefix) || path.Clean(loc.Path) != loc.Path:"
+  line = 147
+  accepted_in = "azure-devops-ship-loop"
+  category = "gremlins-attribution-ceiling"
+
+[[accepted]]
+  key = "478d02ccdbc13103"
+  file = "internal/ship/bitbucket_merge.go"
+  op = "ARITHMETIC_BASE"
+  text = "bbMergeInterval = 3 * time.Second"
+  line = 26
+  accepted_in = "azure-devops-ship-loop"
+  category = "const-initializer-arithmetic"
+
+[[accepted]]
+  key = "ca28c69bce33bfc7"
+  file = "internal/ship/bitbucket_merge.go"
+  op = "ARITHMETIC_BASE"
+  text = "bbMergeWait     = 90 * time.Second"
+  line = 27
+  accepted_in = "azure-devops-ship-loop"
+  category = "const-initializer-arithmetic"
+
+[[accepted]]
+  key = "e1bd1e29e3326c1e"
+  file = "internal/ship/azuredevops_merge.go"
+  op = "ARITHMETIC_BASE"
+  text = "adoMergeInterval = 3 * time.Second"
+  line = 24
+  accepted_in = "azure-devops-ship-loop"
+  category = "const-initializer-arithmetic"
+
+[[accepted]]
+  key = "a708f4b255367960"
+  file = "internal/ship/azuredevops_merge.go"
+  op = "ARITHMETIC_BASE"
+  text = "adoMergeWait     = 90 * time.Second"
+  line = 25
+  accepted_in = "azure-devops-ship-loop"
+  category = "const-initializer-arithmetic"

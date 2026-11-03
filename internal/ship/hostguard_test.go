@@ -85,6 +85,13 @@ func TestShipRefusesOffAllowlistAPIBase(t *testing.T) {
 			_, err := FindOpenPRByHead(adoGuard(base("azure-devops")), "phase/x")
 			return err
 		}},
+		{"azure-devops comments", func() error { _, err := ListPRComments(adoGuard(base("azure-devops")), 1); return err }},
+		{"azure-devops head", func() error { _, err := PRHeadOf(adoGuard(base("azure-devops")), 1); return err }},
+		{"azure-devops user", func() error { _, err := AuthenticatedUser(adoGuard(base("azure-devops"))); return err }},
+		{"azure-devops dependents", func() error {
+			_, err := OpenPRsTargeting(adoGuard(base("azure-devops")), "milestone/v1")
+			return err
+		}},
 		// The identities host is checked on its own, since on Services it is
 		// not api_base: a connection whose api_base the policy never saw must
 		// still not carry its credential there.

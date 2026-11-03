@@ -311,6 +311,24 @@ Skip the verify gate.
 Post a markdown comment to a PR (used by
 .BR /dross-review ).
 .TP
+.B dross ship ci \fIphase-id\fR
+Read CI once on the phase PR's watched head
+.RI ( origin/phase/<id> )
+on Azure DevOps or Bitbucket and print one
+.B ci:
+line.
+The exit status carries the verdict: 0 pass, 2 fail, 3 pending, 4 none,
+5 ask, 1 the read itself failed.
+.TP
+.B dross ship merge \fIphase-id\fR
+Squash-merge the phase PR at its watched head on Azure DevOps or
+Bitbucket, keeping
+.I phase/<id>
+and never bypassing a branch policy; waits until the forge reports it
+merged.
+Exit 0 merged, 2 held by a branch policy (awaiting-merge), 1 any other
+failure.
+.TP
 .B dross pr comments \fIpr\fR [\fB--all\fR]
 List the review comments on a phase PR that still need a verdict \(em or
 were edited since theirs \(em each as one metadata line and its body

@@ -101,6 +101,7 @@
   locked = true
 
 [[deferred]]
+  id = "6829c1210133eae6"
   text = "Remaining Azure DevOps ship surfaces: /dross-respond comment listing, PR head and authenticated user plus pr reply; /dross-watch open-PR listing; milestone-dependents open-PRs-targeting lookup; ship.md CI-watch (builds/policy for the head SHA) and squash-merge."
   why = "Re-split at the guard boundary: this phase delivers recognition + the dispatch trio + dedupe; the rest is azure-devops-ship-loop."
   target = "azure-devops-ship-loop"

@@ -6,7 +6,6 @@ import (
 
 	"github.com/Rivil/dross/internal/boardsync"
 	"github.com/Rivil/dross/internal/forge"
-	"github.com/Rivil/dross/internal/project"
 	"github.com/Rivil/dross/internal/prtriage"
 	"github.com/Rivil/dross/internal/render"
 	"github.com/Rivil/dross/internal/ship"
@@ -142,22 +141,35 @@ func Watch() *cobra.Command {
 }
 
 // openPRDigest asks the forge for its open PRs and splits them for the digest.
-// Any reason the answer is unknown — no [remote] provider or url, a project
-// that will not load, an unsupported provider, gh missing, unauthenticated or
-// offline, a page too full to trust — returns (nil, nil), so both fields are
-// omitted rather than printed empty. watch runs on a timer; the forge is one
-// more thing that must never fail the tick.
+// The lister gets the full [remote] opts — host policy, api_base, credential
+// env, api_version — since a REST forge (Azure DevOps) needs every one of
+// them. Any reason the answer is unknown — no [remote] provider or url, a
+// project that will not load, a host policy that will not resolve, an
+// unsupported provider, gh missing, unauthenticated or offline, a failed or
+// sign-in answer, a page too full to trust — returns (nil, nil), so both
+// fields are omitted rather than printed empty. watch runs on a timer; the
+// forge is one more thing that must never fail the tick.
 func openPRDigest() (*[]watch.BotPR, *[]watch.ShipPR) {
 	p, _, err := loadProject()
 	if err != nil || p.Remote.Provider == "" || p.Remote.URL == "" {
 		return nil, nil
 	}
-	prs, err := ship.ListOpenPRsFunc(ship.OpenOpts{Provider: p.Remote.Provider, URL: p.Remote.URL})
+	root, err := FindRoot()
+	if err != nil {
+		return nil, nil
+	}
+	repoDir := filepath.Dir(root)
+	hosts, err := remotePolicy(root, repoDir, p)
+	if err != nil {
+		return nil, nil
+	}
+	opts := buildOpenOpts(p, hosts)
+	prs, err := ship.ListOpenPRsFunc(opts)
 	if err != nil {
 		return nil, nil
 	}
 	bots, ships := watch.SplitPRs(prs, time.Now())
-	countUntriaged(p, prs, ships)
+	countUntriaged(opts, repoDir, prs, ships)
 	return &bots, &ships
 }
 
@@ -168,17 +180,7 @@ func openPRDigest() (*[]watch.BotPR, *[]watch.ShipPR) {
 // comment fetch that fails: each leaves that PR's count at zero, shown as no
 // count at all, and never fails the tick. The caller is looked up once per
 // tick, and only when there is a phase PR to count.
-func countUntriaged(p *project.Project, prs []ship.OpenPRRecord, ships []watch.ShipPR) {
-	root, err := FindRoot()
-	if err != nil {
-		return
-	}
-	repoDir := filepath.Dir(root)
-	hosts, err := remotePolicy(root, repoDir, p)
-	if err != nil {
-		return
-	}
-	opts := buildOpenOpts(p, hosts)
+func countUntriaged(opts ship.OpenOpts, repoDir string, prs []ship.OpenPRRecord, ships []watch.ShipPR) {
 	cross := make(map[int]bool, len(prs))
 	for _, pr := range prs {
 		cross[pr.Number] = pr.IsCrossRepository

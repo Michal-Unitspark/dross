@@ -205,6 +205,10 @@ var enumScanSites = []scanSite{
 	{"ship.OpenPR", "internal/ship/open.go", "OpenPR", 3, true},
 	{"ship.PostComment", "internal/ship/comment.go", "PostComment", 3, true},
 	{"ship.GetPRStatus", "internal/ship/merged.go", "GetPRStatus", 3, true},
+	// ship ci and merge read only two backends; the rest are explicit
+	// Unsupported arms, so a new provider still has to choose one.
+	{"ship.CIStatus", "internal/ship/ci.go", "CIStatus", 3, true},
+	{"ship.MergePR", "internal/ship/merge.go", "MergePR", 3, true},
 	{"forge.New", "internal/forge/forge.go", "New", 3, true},
 	{"forge.NewBoard", "internal/forge/forge.go", "NewBoard", 3, true},
 	{"project.DetectRemote", "internal/project/remote.go", "DetectRemote", 3, false},
@@ -300,12 +304,13 @@ func assertSubset(t *testing.T, label string, got, want []string) {
 
 // --- the guards -------------------------------------------------------------
 
-// The three ship entry points must agree with each other and with
-// ShipProviders. Implementing a backend in OpenPR and forgetting PostComment
-// yields a repo that can open a PR and then cannot comment on it — which is
-// exactly what /dross-review does next.
+// The ship entry points must agree with each other and with ShipProviders.
+// Implementing a backend in OpenPR and forgetting PostComment yields a repo
+// that can open a PR and then cannot comment on it — which is exactly what
+// /dross-review does next. ci and merge count an explicit Unsupported arm: a
+// provider must be named either way.
 func TestShipDispatchMatchesShipProviders(t *testing.T) {
-	for _, label := range []string{"ship.OpenPR", "ship.PostComment", "ship.GetPRStatus"} {
+	for _, label := range []string{"ship.OpenPR", "ship.PostComment", "ship.GetPRStatus", "ship.CIStatus", "ship.MergePR"} {
 		t.Run(label, func(t *testing.T) {
 			assertSetEqual(t, label, scanFor(t, label).cases, configenum.ShipProviders.Values())
 		})

@@ -80,6 +80,8 @@ func ListPRComments(opts OpenOpts, n int) ([]PRComment, error) {
 		return bitbucketPRComments(opts, n)
 	case "gitlab":
 		return gitlabPRComments(opts, n)
+	case "azure-devops":
+		return azureDevOpsPRComments(opts, n)
 	default:
 		return nil, fmt.Errorf("unsupported provider %q (expected %s)", opts.Provider, configenum.ShipProviders.List())
 	}
@@ -100,6 +102,8 @@ func PRHeadOf(opts OpenOpts, n int) (PRHead, error) {
 		return bitbucketPRHead(opts, n)
 	case "gitlab":
 		return gitlabPRHead(opts, n)
+	case "azure-devops":
+		return azureDevOpsPRHead(opts, n)
 	default:
 		return PRHead{}, fmt.Errorf("unsupported provider %q (expected %s)", opts.Provider, configenum.ShipProviders.List())
 	}
@@ -117,6 +121,8 @@ func AuthenticatedUser(opts OpenOpts) (Account, error) {
 		return bitbucketAuthenticatedUser(opts)
 	case "gitlab":
 		return gitlabAuthenticatedUser(opts)
+	case "azure-devops":
+		return azureDevOpsAuthenticatedUser(opts)
 	default:
 		return Account{}, fmt.Errorf("unsupported provider %q (expected %s)", opts.Provider, configenum.ShipProviders.List())
 	}

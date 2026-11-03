@@ -25,6 +25,11 @@ The subagents review a *diff*, not the live working tree. Get one cohesive diff 
 
 - GitHub: `gh pr diff <pr-number>` — emits unified diff to stdout. Pipe to `.dross/phases/<phase-id>/review-diff.patch`.
 - Forgejo / Gitea: `curl -s -H "Authorization: token $<auth_env>" "<api_base>/repos/<owner>/<repo>/pulls/<pr-number>.diff" > .dross/phases/<phase-id>/review-diff.patch`.
+- Azure DevOps: build the diff locally from git — no API call and no credential. The base is the PR's target branch: `base` in `dross changes show <phase-id>`. Fetch both branches first, then take the three-dot diff (what the phase added since it left the base, the same diff the PR shows):
+  ```
+  git fetch origin <base> phase/<phase-id>
+  git diff origin/<base>...origin/phase/<phase-id> > .dross/phases/<phase-id>/review-diff.patch
+  ```
 
 Confirm the file exists and is non-empty before continuing.
 

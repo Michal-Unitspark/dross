@@ -1,11 +1,17 @@
 package cmd
 
 import (
+	"errors"
+	"fmt"
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"strings"
+	"sync/atomic"
 	"testing"
 
+	"github.com/Rivil/dross/internal/hostallow"
 	"github.com/Rivil/dross/internal/milestone"
 )
 
@@ -314,5 +320,96 @@ func TestFinalizeAcceptsMergeIntoRecordedParent(t *testing.T) {
 	}
 	if strings.Contains(out, "main is at origin") {
 		t.Errorf("the output claims main advanced when it did not:\n%s", out)
+	}
+}
+
+// adoDependentPR is an active PR as ADO's list returns it.
+func adoDependentPR(id int, target string) string {
+	return fmt.Sprintf(`{"pullRequestId":%d,"title":"PR %d","status":"active","sourceRefName":"refs/heads/phase/p%d","targetRefName":"refs/heads/%s"}`, id, id, id, target)
+}
+
+// TestGuardOpenPRsTargetingAzureDevOps drives the dependents check against an
+// Azure DevOps Server collection: an active PR into the branch refuses the
+// delete naming it and its browser URL, even on a full page; a failed lookup
+// degrades to the announced skip; an api_base off the host allowlist is the
+// policy's refusal, never the skip, and reaches nothing.
+func TestGuardOpenPRsTargetingAzureDevOps(t *testing.T) {
+	var hits atomic.Int32
+	var code atomic.Int32
+	var list atomic.Value
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		hits.Add(1)
+		if r.Method != "GET" || !strings.HasSuffix(r.URL.EscapedPath(), "/coll/P/_apis/git/repositories/R/pullrequests") ||
+			r.URL.Query().Get("searchCriteria.targetRefName") != "refs/heads/milestone/v1" {
+			t.Errorf("unexpected request: %s %s", r.Method, r.URL)
+			w.WriteHeader(http.StatusNotFound)
+			return
+		}
+		w.WriteHeader(int(code.Load()))
+		_, _ = w.Write([]byte(list.Load().(string)))
+	}))
+	t.Cleanup(srv.Close)
+	serve := func(status int, prs ...string) {
+		code.Store(int32(status))
+		list.Store(`{"value":[` + strings.Join(prs, ",") + `],"count":` + fmt.Sprint(len(prs)) + `}`)
+		hits.Store(0)
+	}
+
+	prRepo(t)
+	t.Setenv("MOCK_ADO_PAT", adoShipPAT)
+	setRemote := func(apiBase string) {
+		t.Helper()
+		for _, set := range [][]string{
+			{"set", "remote.provider", "azure-devops"},
+			{"set", "remote.url", srv.URL + "/coll/P/_git/R"},
+			{"set", "remote.api_base", apiBase},
+			{"set", "remote.auth_env", "MOCK_ADO_PAT"},
+		} {
+			if err := runCmd(t, Project(), set...); err != nil {
+				t.Fatalf("project %v: %v", set, err)
+			}
+		}
+	}
+	setRemote(srv.URL + "/coll")
+	// The remote's browser URL is canonicalised to https.
+	browser := strings.Replace(srv.URL, "http://", "https://", 1) + "/coll/P/_git/R/pullrequest/5"
+
+	serve(200, adoDependentPR(5, "milestone/v1"))
+	var out string
+	err := captureInto(t, &out, func() error { return guardOpenPRsTargeting("milestone/v1") })
+	if err == nil || !strings.Contains(err.Error(), "#5") || !strings.Contains(err.Error(), browser) {
+		t.Errorf("an active dependent: got %v, want a refusal naming #5 and %s", err, browser)
+	}
+
+	full := make([]string, 100)
+	for i := range full {
+		full[i] = adoDependentPR(100+i, "main")
+	}
+	full[57] = adoDependentPR(5, "milestone/v1")
+	serve(200, full...)
+	err = captureInto(t, &out, func() error { return guardOpenPRsTargeting("milestone/v1") })
+	if err == nil || !strings.Contains(err.Error(), "#5") {
+		t.Errorf("a full page holding the dependent: got %v, want a refusal naming #5", err)
+	}
+
+	serve(500)
+	list.Store(`{"message":"boom"}`)
+	err = captureInto(t, &out, func() error { return guardOpenPRsTargeting("milestone/v1") })
+	if err != nil || !strings.Contains(out, "open-PR check skipped") {
+		t.Errorf("a 500: got %v and\n%s\nwant the announced skip", err, out)
+	}
+
+	// Same server, named by another host: not on the derived allowlist.
+	setRemote(strings.Replace(srv.URL, "127.0.0.1", "localhost", 1) + "/coll")
+	serve(200, adoDependentPR(5, "milestone/v1"))
+	err = captureInto(t, &out, func() error { return guardOpenPRsTargeting("milestone/v1") })
+	if !errors.Is(err, hostallow.ErrRefused) {
+		t.Errorf("an off-allowlist api_base: got %v, want ErrRefused", err)
+	}
+	if strings.Contains(out, "open-PR check skipped") {
+		t.Errorf("a host refusal was announced as a skip:\n%s", out)
+	}
+	if n := hits.Load(); n != 0 {
+		t.Errorf("the off-allowlist api_base received %d request(s)", n)
 	}
 }

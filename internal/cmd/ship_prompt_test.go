@@ -1,9 +1,12 @@
 package cmd
 
 import (
+	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
 	"regexp"
+	"strconv"
 	"strings"
 	"testing"
 )
@@ -178,7 +181,10 @@ func TestShipPromptNoUnguardedSwitch(t *testing.T) {
 	for _, forbidden := range []string{
 		"--delete-branch",
 		"shouldremovesourcebranch", // should_remove_source_branch
-		"deletesourcebranch",       // delete_source_branch
+		"deletesourcebranch",       // delete_source_branch, deleteSourceBranch
+		"closesourcebranch",        // close_source_branch (Bitbucket)
+		"bypasspolicy",             // bypassPolicy (Azure DevOps)
+		"autocompletesetby",        // autoCompleteSetBy (Azure DevOps)
 		"git checkout",
 		"git switch",
 	} {
@@ -573,5 +579,264 @@ func TestShipPromptGitHubCIWatchWaitsForRuns(t *testing.T) {
 	}
 	if seen == 0 {
 		t.Fatal("no prompts found — the ban checked nothing")
+	}
+}
+
+// --- §5 / §6 on Azure DevOps and Bitbucket (azure-devops-ship-loop c-5, c-6, c-10, c-11) ---
+
+// shipCIExits is every exit status `dross ship ci` can end with, read from the
+// binary: the verdict constants, and the status any untagged error maps to.
+func shipCIExits() map[int]string {
+	return map[int]string{
+		0:                         "pass",
+		exitCIFail:                "fail",
+		exitCIPending:             "pending",
+		exitCINone:                "none",
+		exitCIAsk:                 "ask",
+		ExitCode(errors.New("x")): "error",
+	}
+}
+
+// shipExitLine is the one line of section that carries "exit <code> = <word>".
+func shipExitLine(t *testing.T, section string, code int, word string) string {
+	t.Helper()
+	needle := fmt.Sprintf("exit %d = %s", code, word)
+	for _, line := range strings.Split(section, "\n") {
+		if strings.Contains(line, needle) {
+			return line
+		}
+	}
+	t.Errorf("no line carries %q", needle)
+	return ""
+}
+
+// shipADOArm is section from the Azure DevOps / Bitbucket arm that opens with
+// start to the next line that opens a sibling bullet or a bold block.
+func shipADOArm(t *testing.T, section, start string) string {
+	t.Helper()
+	at := strings.Index(section, start)
+	if at < 0 {
+		t.Fatalf("no Azure DevOps / Bitbucket arm opening %q", start)
+	}
+	arm := section[at:]
+	for _, end := range []string{"\n- ", "\non failure:", "\n2. mark the board"} {
+		if i := strings.Index(arm, end); i >= 0 {
+			arm = arm[:i]
+		}
+	}
+	return arm
+}
+
+// TestShipPromptAzureDevOpsCI: §5 polls `dross ship ci <phase-id>` on Azure
+// DevOps and Bitbucket every ~30s, maps every verdict to its next step, and
+// never reads none or ask as a pass.
+func TestShipPromptAzureDevOpsCI(t *testing.T) {
+	gate := promptSection(t, shipPromptContent(t), "## 5. ci gate")
+	arm := shipADOArm(t, gate, "azure devops / bitbucket: poll dross ship ci <phase-id> every ~30s")
+	for _, want := range []string{"~10-minute window", "none and ask are never a pass", "only exit 0 is"} {
+		if !strings.Contains(arm, want) {
+			t.Errorf("§5's Azure DevOps / Bitbucket arm must say %q", want)
+		}
+	}
+	for _, step := range []struct {
+		code    int
+		verdict string
+		next    []string
+	}{
+		{0, "pass", []string{"go to §6"}},
+		{exitCIFail, "fail", []string{"on failure", "link"}},
+		{exitCIPending, "pending", []string{"keep polling"}},
+		{exitCINone, "none", []string{"keep polling", "proceed without ci or stop"}},
+		{exitCIAsk, "ask", []string{"proceed or stop at once", "reason shown"}},
+	} {
+		line := shipExitLine(t, arm, step.code, step.verdict)
+		for _, want := range step.next {
+			if !strings.Contains(line, want) {
+				t.Errorf("§5's %s line must say %q: %s", step.verdict, want, line)
+			}
+		}
+		if step.verdict != "pass" && strings.Contains(line, "go to §6") {
+			t.Errorf("§5 sends %s to the merge gate: %s", step.verdict, line)
+		}
+	}
+	if strings.Contains(arm, "curl") {
+		t.Error("§5's Azure DevOps / Bitbucket arm hands the model a curl call")
+	}
+}
+
+// TestShipPromptStaleHeadAsks: a pending that still carries a reason — the PR
+// does not carry the watched head — is asked about at the window's end, with
+// the reason shown, instead of being polled forever.
+func TestShipPromptStaleHeadAsks(t *testing.T) {
+	gate := promptSection(t, shipPromptContent(t), "## 5. ci gate")
+	line := shipExitLine(t, gate, exitCIPending, "pending")
+	for _, want := range []string{"pending that carries a reason", "end of a ~10-minute window", "proceed or stop", "reason shown"} {
+		if !strings.Contains(line, want) {
+			t.Errorf("§5's pending line must say %q: %s", want, line)
+		}
+	}
+	// A pending stuck in the queue reaches the same window-end ask: it is the
+	// other state polling alone would never leave.
+	queued, ask := strings.Index(line, "a pending (queued)"), strings.Index(line, "end of a ~10-minute window")
+	if queued < 0 || ask < 0 || queued > ask {
+		t.Errorf("§5's pending line must send a pending (queued) to the window-end ask: %s", line)
+	}
+}
+
+// shipLineWith is the one line of section containing needle.
+func shipLineWith(t *testing.T, section, needle string) string {
+	t.Helper()
+	for _, line := range strings.Split(section, "\n") {
+		if strings.Contains(line, needle) {
+			return line
+		}
+	}
+	t.Errorf("no line carries %q", needle)
+	return ""
+}
+
+var shipExitClaim = regexp.MustCompile(`exit (\d+) = ([a-z]+)`)
+
+// TestShipPromptCIExitCodesMatch: the statuses §5 lists for ship ci, and the
+// merged and blocked statuses §6 lists for ship merge, are the binary's own.
+func TestShipPromptCIExitCodesMatch(t *testing.T) {
+	content := shipPromptContent(t)
+	ci := shipCIExits()
+	gate := promptSection(t, content, "## 5. ci gate")
+	for code, word := range ci {
+		shipExitLine(t, gate, code, word)
+	}
+	for _, m := range shipExitClaim.FindAllStringSubmatch(gate, -1) {
+		code, _ := strconv.Atoi(m[1])
+		if ci[code] != m[2] {
+			t.Errorf("§5 says exit %d = %s; dross ship ci exits %d on %q", code, m[2], code, ci[code])
+		}
+	}
+
+	merge := map[int]string{0: "merged", exitMergeBlocked: "blocked"}
+	mgate := promptSection(t, content, "## 6. merge gate")
+	for code, word := range merge {
+		shipExitLine(t, mgate, code, word)
+	}
+	for _, m := range shipExitClaim.FindAllStringSubmatch(mgate, -1) {
+		code, _ := strconv.Atoi(m[1])
+		if ci[code] != m[2] && merge[code] != m[2] {
+			t.Errorf("§6 says exit %d = %s, which neither dross ship ci nor dross ship merge exits with", code, m[2])
+		}
+	}
+}
+
+// TestShipPromptWatchesClassicPipelines: an Azure DevOps repo without
+// azure-pipelines.yml is still watched, and the skip sentence never covers
+// either provider dross ship ci reads.
+func TestShipPromptWatchesClassicPipelines(t *testing.T) {
+	gate := promptSection(t, shipPromptContent(t), "## 5. ci gate")
+	skip := ""
+	for _, line := range strings.Split(gate, "\n") {
+		if strings.Contains(line, "skip this section only if") {
+			skip = line
+		}
+	}
+	if skip == "" {
+		t.Fatal("§5 lost its skip sentence")
+	}
+	never := strings.Index(skip, "on azure-devops and bitbucket never skip this section")
+	other := strings.Index(skip, "on every other provider, skip this section only if")
+	if never < 0 || other < 0 || other < never {
+		t.Errorf("§5's skip sentence must exclude azure-devops and bitbucket before it allows a skip: %s", skip)
+	}
+	for _, want := range []string{"no azure-pipelines.yml", "still watched"} {
+		if !strings.Contains(skip, want) {
+			t.Errorf("§5 must say %q", want)
+		}
+	}
+}
+
+// TestShipPromptMergeGate: on Azure DevOps and Bitbucket §6 reads CI again
+// right before `dross ship merge`, merges on a pass or on §5's proceed for the
+// same head, never merges a fail or a moved head, sends a policy block to
+// awaiting-merge, and never completes the phase after a failed merge.
+func TestShipPromptMergeGate(t *testing.T) {
+	gate := promptSection(t, shipPromptContent(t), "## 6. merge gate")
+	arm := shipADOArm(t, gate, "azure devops / bitbucket: a fresh ci read, then dross ship merge")
+	ci, merge := strings.Index(arm, "dross ship ci <phase-id> immediately before the merge"), strings.Index(arm, "run dross ship merge <phase-id>")
+	if ci < 0 || merge < 0 || merge < ci {
+		t.Errorf("§6 must run dross ship ci immediately before dross ship merge (at %d, %d)", ci, merge)
+	}
+	if line := shipExitLine(t, arm, 0, "pass"); !strings.Contains(line, "→ merge") {
+		t.Errorf("§6 must merge on a pass: %s", line)
+	}
+	// A moved head never merges, whatever the verdict — checked ahead of every
+	// verdict, so no proceed rule below can reach it.
+	moved := shipLineWith(t, arm, "a head that moved since §5")
+	for _, want := range []string{"no merge", "whatever the verdict"} {
+		if !strings.Contains(moved, want) {
+			t.Errorf("§6's moved-head line must say %q: %s", want, moved)
+		}
+	}
+	if m, p := strings.Index(arm, moved), strings.Index(arm, "exit 0 = pass"); m < 0 || p < 0 || m > p {
+		t.Error("§6 must check for a moved head before it reads any verdict")
+	}
+	// None and ask reach the merge on §5's proceed for the same head — on their
+	// own line, so the rule cannot drift to another verdict.
+	proceed := shipLineWith(t, arm, fmt.Sprintf("exit %d none or exit %d ask", exitCINone, exitCIAsk))
+	for _, want := range []string{"merge only if the user chose proceed in §5 for this same head", "otherwise ask again"} {
+		if !strings.Contains(proceed, want) {
+			t.Errorf("§6's none/ask line must say %q: %s", want, proceed)
+		}
+	}
+	if strings.Contains(proceed, "pending") {
+		t.Errorf("§6 lets a none/ask proceed carry over to a pending: %s", proceed)
+	}
+	// A running build never merges on a proceed given before it started.
+	if pending := shipLineWith(t, arm, fmt.Sprintf("exit %d pending", exitCIPending)); !strings.Contains(pending, "a pending (running) never merges") {
+		t.Errorf("§6's pending line must say a pending (running) never merges: %s", pending)
+	}
+	// A fail never merges.
+	if refuse := shipLineWith(t, arm, fmt.Sprintf("exit %d fail", exitCIFail)); !strings.Contains(refuse, "no merge") {
+		t.Errorf("§6's fail line must say no merge: %s", refuse)
+	}
+	if !strings.Contains(arm, "never run dross phase complete") {
+		t.Error("§6's Azure DevOps / Bitbucket arm must say a failed merge never runs dross phase complete")
+	}
+	if line := shipExitLine(t, arm, exitMergeBlocked, "blocked"); !strings.Contains(line, "awaiting-merge") {
+		t.Errorf("§6 must send a policy block to awaiting-merge: %s", line)
+	}
+	if strings.Contains(arm, "curl") {
+		t.Error("§6's Azure DevOps / Bitbucket arm hands the model a curl call")
+	}
+}
+
+var shipMergeTimeout = regexp.MustCompile("`dross ship merge <phase-id>`[^\n]*`timeout: (\\d+)`")
+
+// TestShipPromptMergeTimeout: `dross ship merge` waits for the forge, so §6
+// gives its Bash call an explicit timeout above the 2-minute default.
+func TestShipPromptMergeTimeout(t *testing.T) {
+	m := shipMergeTimeout.FindStringSubmatch(rawShipSection(t, "## 6. Merge gate"))
+	if m == nil {
+		t.Fatal("§6 runs dross ship merge with no explicit Bash timeout on the same line")
+	}
+	if ms, _ := strconv.Atoi(m[1]); ms <= 120000 {
+		t.Errorf("§6's dross ship merge timeout is %dms — not above the 2-minute default", ms)
+	}
+}
+
+// TestReadmeDocumentsShipCIMerge: README's command table and the man page name
+// both commands.
+func TestReadmeDocumentsShipCIMerge(t *testing.T) {
+	root := repoRootFromTest(t)
+	for file, wants := range map[string][]string{
+		"README.md":    {"| `dross ship ci <phase-id>` |", "| `dross ship merge <phase-id>` |"},
+		"docs/dross.1": {".B dross ship ci", ".B dross ship merge"},
+	} {
+		b, err := os.ReadFile(filepath.Join(root, file))
+		if err != nil {
+			t.Fatal(err)
+		}
+		for _, want := range wants {
+			if !strings.Contains(string(b), want) {
+				t.Errorf("%s does not document %q", file, want)
+			}
+		}
 	}
 }
