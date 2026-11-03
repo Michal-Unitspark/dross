@@ -44,6 +44,8 @@ type AzureBoardsClient struct {
 	areaPath      string
 	iterationPath string
 
+	meta adoMetaCache // process metadata, read lazily (azureboards_meta.go)
+
 	http *http.Client
 }
 
@@ -55,6 +57,17 @@ const adoBoardsDefaultAPIVersion = "7.1"
 // spliced into the query of every call, so it is refused before the token is
 // read.
 var adoBoardsAPIVersionShape = regexp.MustCompile(`^[0-9]+\.[0-9]+(-preview(\.[0-9]+)?)?$`)
+
+// adoStatusError is a non-2xx answer that is not a sign-in page. Its message
+// is the status line with the scrubbed body; a caller that branches on the
+// status — PathExists reads a 404 as "missing" — uses errors.As, which reaches
+// it through redact.Err's wrapper.
+type adoStatusError struct {
+	Status int
+	msg    string
+}
+
+func (e *adoStatusError) Error() string { return e.msg }
 
 // errADOBoardsSignIn is wrapped when Azure DevOps answers with a sign-in page,
 // or a redirect to one, instead of an API response: the credential was not
@@ -280,10 +293,14 @@ func (c *AzureBoardsClient) doRaw(method, endpoint string, body, out any) error 
 		return fmt.Errorf("%s %s: %w", method, u.Redacted(), err)
 	}
 	defer resp.Body.Close()
-	respBody, _ := io.ReadAll(resp.Body)
+	raw, _ := io.ReadAll(resp.Body)
 	// Scrubbed HERE, where the body enters the package, so every use of it
 	// below is safe by construction — including an echoed base64(":"+token).
-	respBody = []byte(redact.Scrub(string(respBody), c.authEnv, c.token))
+	// Two scrubs, by use: the text an error quotes names the env var to check;
+	// the bytes decoded into values get the bare marker, so no config value
+	// (the env var's name) can ride a decoded field into a path a caller opens.
+	respBody := []byte(redact.Scrub(string(raw), c.authEnv, c.token))
+	decodeBody := []byte(redact.Scrub(string(raw), "", c.token))
 
 	switch status := resp.StatusCode; {
 	case status == http.StatusNonAuthoritativeInfo, status >= 300 && status < 400:
@@ -302,10 +319,10 @@ func (c *AzureBoardsClient) doRaw(method, endpoint string, body, out any) error 
 		case http.StatusNotFound:
 			hint = fmt.Sprintf(" (project %q or endpoint not found — check [board].base_url and [board].project)", c.project)
 		}
-		return fmt.Errorf("%s %s: HTTP %d%s: %s", method, u.Path, status, hint, snippet)
+		return &adoStatusError{Status: status, msg: fmt.Sprintf("%s %s: HTTP %d%s: %s", method, u.Path, status, hint, snippet)}
 	}
-	if out != nil && len(respBody) > 0 {
-		if err := json.Unmarshal(respBody, out); err != nil {
+	if out != nil && len(decodeBody) > 0 {
+		if err := json.Unmarshal(decodeBody, out); err != nil {
 			return fmt.Errorf("decode %s response: %w", u.Path, err)
 		}
 	}
