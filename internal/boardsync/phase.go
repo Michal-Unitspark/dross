@@ -141,6 +141,22 @@ func SyncPhase(ctx *Ctx, phaseID, status string, doClose bool) error {
 		if _, err := ctx.Client.UpdateIssue(key, patch); err != nil {
 			return Wrap(err)
 		}
+		// Azure Boards' parent is its own relation (Hierarchy-Reverse), and
+		// its UpdateIssue ignores IssuePatch.Milestone, so the updated edge
+		// re-parents here: a phase whose milestone changed moves under the
+		// new Epic, and one already there is left alone. The create edge
+		// needs nothing — IssueInput.Milestone parents it. Gated on the
+		// concrete client, not forge.ParentLinker: only there is the
+		// milestone id a work item (elsewhere it is a version or a forge
+		// milestone number, which must never be linked as a parent). A
+		// failure warns rather than fails: the item is the substance, the
+		// link is grouping, and the next sync retries it.
+		if ado, ok := ctx.Client.(*forge.AzureBoardsClient); ok && milestoneID > 0 {
+			if err := ado.LinkParent(strconv.Itoa(milestoneID), key); err != nil {
+				fmt.Fprintf(os.Stderr, "warning: could not put %s under milestone %s's item %d (%v) — it carries the phase label; the next sync retries\n",
+					key, spec.Phase.Milestone, milestoneID, err)
+			}
+		}
 		// Re-record: the key may have come from the tracker rather than the
 		// cache (an adopted or re-resolved issue), and board.json has to catch
 		// up or the next run pays for the lookup again.
