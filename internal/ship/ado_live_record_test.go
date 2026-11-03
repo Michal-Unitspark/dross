@@ -9,14 +9,18 @@ import (
 	"regexp"
 	"strings"
 	"testing"
-	"time"
 
 	"github.com/BurntSushi/toml"
+
+	"github.com/Rivil/dross/internal/liverecord"
 )
 
 // The live Azure DevOps smoke record (c-7) and the validator that keeps it
 // honest. The record is testdata/ado_live_smoke.toml; its comments are the
-// runbook. Everything here is test-local: nothing in the binary reads it.
+// runbook. Everything here is test-local: nothing in the binary reads it. The
+// rules every live record shares — postures, the loopback screen, exactly-once
+// steps, run_at, evidence naming ADO — are liverecord.Validate; the per-step
+// proofs and the statusless-thread rule below are this record's own.
 
 // liveRecordPath is the committed record.
 var liveRecordPath = filepath.Join("testdata", "ado_live_smoke.toml")
@@ -71,34 +75,25 @@ type liveRecord struct {
 }
 
 var (
-	// liveLoopback is mock evidence: an httptest server listens on loopback.
-	liveLoopback = regexp.MustCompile(`(?i)localhost|127\.[0-9]+\.[0-9]+\.[0-9]+|\[::1\]`)
-	// liveADOID is an Azure DevOps id in a step's evidence: a PR, build or
-	// thread number, or an identity GUID. A URL counts only on api_base's
-	// host (liveEvidenceNamesADO).
-	liveADOID    = regexp.MustCompile(`(?i)\b(PR|build|thread) #?[1-9][0-9]*\b|#[1-9][0-9]*\b|\b[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\b`)
-	liveURL      = regexp.MustCompile(`https://\S+`)
 	liveDedupe   = regexp.MustCompile(`found open PR #[1-9][0-9]*`)
 	livePRURL    = regexp.MustCompile(`^https://\S+/_git/\S+/pullrequest/[1-9][0-9]*$`)
 	liveCIOutput = regexp.MustCompile(`^ci: (pass|fail|pending|none|ask)\b`)
 )
 
-// liveEvidenceNamesADO is evidence that names an Azure DevOps id, or a URL on
-// the run's own ADO host.
-func liveEvidenceNamesADO(r liveRecord, evidence string) bool {
-	if liveADOID.MatchString(evidence) {
-		return true
+// generic converts the record into the shape liverecord.Validate judges. The
+// steps keep their order, so a Proof's index addresses r.Steps directly.
+func (r liveRecord) generic() liverecord.Record {
+	g := liverecord.Record{
+		Posture:    r.Posture,
+		RunAt:      r.RunAt,
+		APIBase:    r.APIBase,
+		APIVersion: r.APIVersion,
+		Required:   []liverecord.Field{{Name: "phase", Value: r.Phase}},
 	}
-	base, err := url.Parse(r.APIBase)
-	if err != nil || base.Host == "" {
-		return false
+	for _, s := range r.Steps {
+		g.Steps = append(g.Steps, liverecord.Step{Key: s.Key, Result: s.Result, Evidence: s.Evidence, Texts: s.texts()})
 	}
-	for _, raw := range liveURL.FindAllString(evidence, -1) {
-		if u, err := url.Parse(raw); err == nil && strings.EqualFold(u.Host, base.Host) {
-			return true
-		}
-	}
-	return false
+	return g
 }
 
 // liveLsRemoteHas is ls-remote output listing exactly ref, not a ref it is a
@@ -176,83 +171,21 @@ func liveStepProof(r liveRecord, s liveStep) error {
 // validateLiveRecord accepts the record as the posture it can prove — the one
 // it declares, or nothing. threadStatus is adoThreadStatus.
 func validateLiveRecord(r liveRecord, threadStatus string) (string, error) {
-	if liveLoopback.MatchString(r.APIBase) {
-		return "", fmt.Errorf("api_base %q is a loopback address: mock evidence", r.APIBase)
+	posture, err := liverecord.Validate(r.generic(), liveStepKeys, func(i int) error {
+		return liveStepProof(r, r.Steps[i])
+	})
+	if err != nil {
+		return "", err
 	}
-	seen := map[string]int{}
-	ran, passed := 0, 0
-	for _, s := range r.Steps {
-		seen[s.Key]++
-		for _, text := range s.texts() {
-			if liveLoopback.MatchString(text) {
-				return "", fmt.Errorf("step %s names a loopback address (%q): mock evidence", s.Key, text)
-			}
-		}
-		switch s.Result {
-		case "not-run":
-			continue
-		case "pass":
-			passed++
-			if !liveEvidenceNamesADO(r, s.Evidence) {
-				return "", fmt.Errorf("step %s passed without evidence naming an ADO URL or id", s.Key)
-			}
-			if err := liveStepProof(r, s); err != nil {
-				return "", fmt.Errorf("step %s passed on hollow evidence: %w", s.Key, err)
-			}
-		case "fail":
-		default:
-			return "", fmt.Errorf("step %s has result %q (want not-run, pass or fail)", s.Key, s.Result)
-		}
-		ran++
-	}
-	for _, k := range liveStepKeys {
-		if seen[k] != 1 {
-			return "", fmt.Errorf("step %s appears %d times, want exactly once", k, seen[k])
-		}
-		delete(seen, k)
-	}
-	for k := range seen {
-		return "", fmt.Errorf("step %s is not a c-7 step", k)
+	// statusless_thread_blocks is set by a step that ran, so a mock-only record
+	// carrying it carries a live result.
+	if posture == liverecord.MockOnly && r.StatuslessThreadBlocks != nil {
+		return "", errors.New("a mock-only record carries a live result")
 	}
 	if r.StatuslessThreadBlocks != nil && *r.StatuslessThreadBlocks && threadStatus == "" {
 		return "", errors.New("a statusless thread blocks completion, yet adoThreadStatus still posts statusless threads")
 	}
-
-	ranLive := func() error {
-		if r.RunAt == "" || r.APIVersion == "" || r.APIBase == "" || r.Phase == "" {
-			return errors.New("a live run needs run_at, api_version, api_base and phase")
-		}
-		if _, err := time.Parse(time.RFC3339, r.RunAt); err != nil {
-			return fmt.Errorf("run_at %q is not RFC 3339", r.RunAt)
-		}
-		return nil
-	}
-	switch r.Posture {
-	case "mock-only":
-		if ran > 0 || r.StatuslessThreadBlocks != nil {
-			return "", errors.New("a mock-only record carries a live result")
-		}
-	case "partial":
-		if err := ranLive(); err != nil {
-			return "", err
-		}
-		if ran == 0 {
-			return "", errors.New("a partial record has no step that ran")
-		}
-		if passed == len(liveStepKeys) {
-			return "", errors.New("every step passed: that is live, not partial")
-		}
-	case "live":
-		if err := ranLive(); err != nil {
-			return "", err
-		}
-		if passed != len(liveStepKeys) {
-			return "", fmt.Errorf("only %d of %d steps passed: that is partial at best", passed, len(liveStepKeys))
-		}
-	default:
-		return "", fmt.Errorf("posture %q is not mock-only, partial or live", r.Posture)
-	}
-	return r.Posture, nil
+	return posture, nil
 }
 
 // --- fixtures ---
