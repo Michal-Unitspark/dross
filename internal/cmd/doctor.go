@@ -72,6 +72,7 @@ func Doctor() *cobra.Command {
 			pinWarnings := 0
 			protectionWarnings := 0
 			hookWarnings := 0
+			boardProbeWarnings := 0
 
 			// --- Foundational files ---
 			//
@@ -170,27 +171,38 @@ func Doctor() *cobra.Command {
 					boardIssues++
 				}
 
-				if b.AuthEnv == "" {
-					Print("  ✗ [board].auth_env is not set (board ops read the token from this env var)")
-					boardIssues++
-				} else if v := os.Getenv(b.AuthEnv); v == "" {
-					Printf("  ✗ [board].auth_env = %s but $%s is not set in this shell\n", b.AuthEnv, b.AuthEnv)
-					boardIssues++
-				}
-
-				// base_url is optional only where the backend has an address to
-				// fall back on (github → https://api.github.com). Optional is
-				// not unvalidated: a value that *is* set is still parsed, so a
-				// malformed github base_url fails rather than being ignored.
-				switch {
-				case b.BaseURL == "":
-					if configenum.BoardRequiresBaseURL(b.Provider) {
-						Printf("  ✗ [board].base_url is not set (the %s backend has no default API address)\n", b.Provider)
+				if isADOBoard(b.Provider) {
+					// Its own arm (doctor_board_ado.go): the host is checked
+					// against the allowlist before $auth_env is read, and
+					// project, api_version, auth_scheme and any configured
+					// area / iteration path are checked too.
+					ado := checkADOBoard(p, root, repoDir)
+					boardIssues += ado.issues
+					boardProbeWarnings += ado.warnings
+				} else {
+					if b.AuthEnv == "" {
+						Print("  ✗ [board].auth_env is not set (board ops read the token from this env var)")
+						boardIssues++
+					} else if v := os.Getenv(b.AuthEnv); v == "" {
+						Printf("  ✗ [board].auth_env = %s but $%s is not set in this shell\n", b.AuthEnv, b.AuthEnv)
 						boardIssues++
 					}
-				case !looksLikeBoardURL(b.BaseURL):
-					Printf("  ✗ [board].base_url = %q is not a valid URL (expected http(s)://host)\n", b.BaseURL)
-					boardIssues++
+
+					// base_url is optional only where the backend has an
+					// address to fall back on (github → https://api.github.com).
+					// Optional is not unvalidated: a value that *is* set is
+					// still parsed, so a malformed github base_url fails rather
+					// than being ignored.
+					switch {
+					case b.BaseURL == "":
+						if configenum.BoardRequiresBaseURL(b.Provider) {
+							Printf("  ✗ [board].base_url is not set (the %s backend has no default API address)\n", b.Provider)
+							boardIssues++
+						}
+					case !looksLikeBoardURL(b.BaseURL):
+						Printf("  ✗ [board].base_url = %q is not a valid URL (expected http(s)://host)\n", b.BaseURL)
+						boardIssues++
+					}
 				}
 
 				// Empty milestone_mode defaults to version in code; the Set
@@ -609,7 +621,7 @@ func Doctor() *cobra.Command {
 				Print("")
 			}
 
-			return finalizeDoctor(issues, len(warnings)+redProofWarnings+duplicateSlugWarnings+backfillResidueWarnings+pinWarnings+protectionWarnings+hookWarnings)
+			return finalizeDoctor(issues, len(warnings)+redProofWarnings+duplicateSlugWarnings+backfillResidueWarnings+pinWarnings+protectionWarnings+hookWarnings+boardProbeWarnings)
 		},
 	}
 }
