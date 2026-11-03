@@ -75,16 +75,6 @@ var inertKeyReasons = map[string]string{
 	// which is what surfaced them.
 	"paths.e2e":  "no dross code path reads it — mutation scoping works from the phase's changed files, not from a declared directory; it records the layout for a reader",
 	"paths.i18n": "no dross code path reads it — nothing in dross is locale-aware; it records the layout for a reader",
-
-	// The azure-devops [board] keys (azure-boards-backend t-1). The schema and
-	// the dotted get/set land first so every later task can set them; the
-	// readers land in named tasks of the same phase, and the reverse check
-	// below fails the moment one does — so each entry is dropped by the task
-	// that gives it a reader, never left behind.
-	"board.auth_scheme":    "azure-boards-backend t-1 lands the key; doctor reads it in t-11 (BoardCombination) and boardsync.Config in t-16",
-	"board.api_version":    "azure-boards-backend t-1 lands the key; boardsync.Config carries it into forge.Config in t-16",
-	"board.area_path":      "azure-boards-backend t-1 lands the key; boardsync.Config carries it into forge.Config in t-16",
-	"board.iteration_path": "azure-boards-backend t-1 lands the key; boardsync.Config carries it into forge.Config in t-16",
 }
 
 // TestNoSettableKeyIsInert is the guard.

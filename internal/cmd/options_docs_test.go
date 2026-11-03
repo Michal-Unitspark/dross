@@ -144,6 +144,56 @@ func TestOptionsCoversTheProviderConditionalRemoteFields(t *testing.T) {
 	}
 }
 
+// TestOptionsCoversADOBoardFields: §12 documents the azure-devops board — the
+// provider value, the four keys that apply to it alone (each as its own bullet
+// carrying what makes it actionable), and the rule that [board] never inherits
+// from [remote], which is what a reader beside an Azure Repos remote gets
+// wrong first.
+func TestOptionsCoversADOBoardFields(t *testing.T) {
+	section := optionsSection(t, optionsPrompt(t), "## 12. Issue board")
+	if !strings.Contains(section, "github · azure-devops)") {
+		t.Errorf("§12 does not list azure-devops among the board.provider values:\n%s", section)
+	}
+	for key, wants := range map[string][]string{
+		"board.api_version":    {"`7.1`", "`5.0`", "`6.0`", "`7.0`"},
+		"board.auth_scheme":    {"`bearer`", "Entra ID", "empty user"},
+		"board.area_path":      {"backslash", "default area"},
+		"board.iteration_path": {"backslash", "default iteration"},
+	} {
+		bullet := optionsBullet(section, key)
+		if bullet == "" {
+			t.Errorf("§12 has no `- `%s`` bullet", key)
+			continue
+		}
+		for _, want := range wants {
+			if !strings.Contains(bullet, want) {
+				t.Errorf("the %s bullet does not say %q: %s", key, want, bullet)
+			}
+		}
+	}
+	if !strings.Contains(section, "`[board]` never inherits from `[remote]`") {
+		t.Errorf("§12 does not say [board] never inherits from [remote]:\n%s", section)
+	}
+	if !strings.Contains(section, "milestones are always Epics") {
+		t.Errorf("§12 does not say milestone_mode is ignored on azure-devops (milestones are Epics)")
+	}
+}
+
+// optionsSection returns options.md from the heading line up to the next `## `
+// heading, failing when the heading is missing.
+func optionsSection(t *testing.T, prompt, heading string) string {
+	t.Helper()
+	start := strings.Index(prompt, "\n"+heading+"\n")
+	if start < 0 {
+		t.Fatalf("options.md has no %q heading", heading)
+	}
+	rest := prompt[start+1:]
+	if end := strings.Index(rest[len(heading):], "\n## "); end >= 0 {
+		rest = rest[:len(heading)+end+1]
+	}
+	return rest
+}
+
 // optionsBullet returns the options.md bullet line that documents key.
 func optionsBullet(prompt, key string) string {
 	for _, line := range strings.Split(prompt, "\n") {
