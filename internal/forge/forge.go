@@ -256,8 +256,9 @@ type StateWriter interface {
 
 // NewBoard returns the board client for the configured provider: the YouTrack
 // backend for provider=youtrack, the Jira backend for provider=jira, the GitHub
-// (repo-issues + Projects v2) backend for provider=github, otherwise the forge
-// REST Client (forgejo/gitea/gitlab). It is the single entry point board
+// (repo-issues + Projects v2) backend for provider=github, the Azure Boards
+// (work items) backend for provider=azure-devops, otherwise the forge REST
+// Client (forgejo/gitea/gitlab). It is the single entry point board
 // operations use to resolve a client from the [board] config.
 func NewBoard(cfg Config) (BoardClient, error) {
 	switch configenum.Normalize(cfg.Provider) {
@@ -267,6 +268,8 @@ func NewBoard(cfg Config) (BoardClient, error) {
 		return NewJira(cfg)
 	case "github":
 		return NewGitHubProjects(cfg)
+	case "azure-devops":
+		return NewAzureBoards(cfg)
 	}
 	return New(cfg)
 }
