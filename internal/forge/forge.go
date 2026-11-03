@@ -213,6 +213,19 @@ type IssueLinker interface {
 	LinkIssues(from, to string) error
 }
 
+// ParentLinker is the optional capability of putting one issue UNDER another
+// — a parent-child (hierarchy) link, as distinct from IssueLinker's peer
+// relation. It sits beside IssueLinker rather than on BoardClient for the same
+// reason: a tracker without a hierarchy (GitHub's REST issues) fails the
+// assertion instead of satisfying it with a lossy stub, and the caller keeps
+// whatever label carries the relationship.
+type ParentLinker interface {
+	// LinkParent makes parent the parent of child, replacing a different
+	// parent child already has. Idempotent: a child already under parent is
+	// left untouched.
+	LinkParent(parent, child string) error
+}
+
 // StateWriter is the optional capability of writing a LITERAL tracker state
 // onto an issue, bypassing the dross lifecycle state map.
 //
