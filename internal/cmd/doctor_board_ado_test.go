@@ -11,7 +11,7 @@ import (
 
 // doctor's azure-devops [board] arm (azure-boards-backend c-1, c-9).
 
-const adoDoctorToken = "DROSS_TEST_ADO_DOCTOR_TOKEN"
+const adoDoctorPATEnv = "DROSS_TEST_ADO_DOCTOR_PAT"
 
 // adoDoctorRun is a dross repo with an azure-devops [board] — the Services
 // org URL, project Fabrikam, a set token — with fields applied over it (""
@@ -27,7 +27,7 @@ func adoDoctorRun(t *testing.T, fields map[string]string, before func(dir string
 	all := map[string]string{
 		"board.provider": "azure-devops",
 		"board.base_url": "https://dev.azure.com/acme",
-		"board.auth_env": adoDoctorToken,
+		"board.auth_env": adoDoctorPATEnv,
 		"board.project":  "Fabrikam",
 		"board.enabled":  "true",
 	}
@@ -41,7 +41,7 @@ func adoDoctorRun(t *testing.T, fields map[string]string, before func(dir string
 	for k, v := range all {
 		setProjectFieldEvenIfInvalid(t, dir, k, v)
 	}
-	t.Setenv(adoDoctorToken, "secret")
+	t.Setenv(adoDoctorPATEnv, "secret")
 	if before != nil {
 		before(dir)
 	}
