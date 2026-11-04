@@ -397,4 +397,4 @@ a rev-test failure returns.
     "if a leg is hollow, TestADOBoardsLiveRecordStepEvidence (t-8) rejects it unless the record shows three distinct typed ids with _workitems/edit URLs, an InProgress-category transition read-back, a Completed-category close read-back, a task → phase → Epic Hierarchy-Reverse chain, and a pull envelope with \"error\":null listing the hand-filed Bug and none of the dross ids",
     "if the run never happens, the committed record stays mock-only and the honesty test rejects any edit that flips it to live without run_at, api_version, api_base and process",
   ]
-  status = "pending"
+  status = "in_progress"

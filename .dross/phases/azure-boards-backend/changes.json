@@ -3,6 +3,18 @@
   "base": "milestone/v1.8",
   "base_commit": "1afe652b4b0a161ea82c1cc76b83cb21a26bfaf3",
   "tasks": {
+    "quick-1": {
+      "files": [
+        "internal/forge/azureboards_items.go",
+        "internal/forge/azureboards_items_test.go",
+        "internal/cmd/ado_board_fake_test.go",
+        "internal/cmd/issue_ado_test.go",
+        "internal/boardsync/azureboards_state_sync_test.go"
+      ],
+      "commit": "5456f0c",
+      "completed_at": "2026-11-04T13:40:38.904079629Z",
+      "notes": "quick: Azure Boards — replace, not merge, the tag set on update (live t-21: op add merges System.Tags; only replace replaces)"
+    },
     "t-1": {
       "files": [
         "internal/project/project.go",
