@@ -36,11 +36,37 @@
 # Never put an httptest, localhost or 127.0.0.1 address anywhere here — that is
 # mock evidence, and the validator rejects it.
 
-posture = "mock-only"
-run_at = ""
-api_base = ""
-api_version = ""
-process = ""
+posture = "live"
+run_at = "2026-11-04T13:41:35Z"
+api_base = "https://jrpridhamservices.visualstudio.com"
+api_version = "7.1"
+process = "Basic"
+
+# The run: the installed binary at dross commit 2f432b1, from the scratch
+# project's clone, against Scratch project. Its process is Basic — Epic /
+# Issue / Task, each with To Do (Proposed), Doing (InProgress) and Done
+# (Completed). [board] used the legacy base_url above, the remote's own host,
+# with api_version unset (the 7.1 default).
+#
+# A first run on commit 5cc7cf3 (work items 418, 419 and 420) passed every
+# step below, but its tags piled up: a PATCH "add" on /fields/System.Tags
+# merges into the tags the item has, so 420 kept dross/status:task-in-progress
+# beside dross/status:task-complete. Quick 1.8.3.1 (5456f0c) fixed it —
+# UpdateIssue sends "replace", the fakes merge on "add" — and the steps were
+# re-run on fresh items. This record is that re-run.
+#
+# The mocked API assumptions, as the service answered them (writes went only
+# to the hand-filed item 421):
+#   backlogconfiguration — project-scoped, with no team segment, answers 200
+#     with the default team's backlogs. As mocked.
+#   [System.Tags] CONTAINS — matches whole tags only: 'dro', 'bu' and
+#     'dross/status:task' match nothing. As mocked.
+#   System.Tags writes — "add" merges into the set; "replace" replaces it,
+#     works on an untagged item, and "" clears it. The mock had "add"
+#     replacing; fixed in 1.8.3.1.
+#   A stale /rev test op — HTTP 412, VS403351. As mocked.
+# Basic has no Bug type, so the hand-filed Bug is an Issue tagged bug, which
+# the pull matched on the tag alone.
 
 # Steps, in order. result is not-run | pass | fail. evidence is what the step
 # printed, verbatim, naming an ADO URL or id; the typed fields under a step are
@@ -53,37 +79,53 @@ process = ""
   # requirement type (the phase) and one Task. Record each as
   #   epic = { id = <id>, type = "Epic", url = "<base>/<project>/_workitems/edit/<id>" }
   # and likewise requirement and task, with the type ADO shows.
-  result = "not-run"
-  evidence = ""
+  result = "pass"
+  evidence = "milestone v0.3 -> board 422 · phase boards-smoke-rerun -> board 423 (planned) · task sync exit 0, board.json boards-smoke-rerun/t-1 -> 424. GET: work item 422 Epic, work item 423 Issue, work item 424 Task, each To Do"
+  epic = { id = 422, type = "Epic", url = "https://jrpridhamservices.visualstudio.com/Scratch%20project/_workitems/edit/422" }
+  requirement = { id = 423, type = "Issue", url = "https://jrpridhamservices.visualstudio.com/Scratch%20project/_workitems/edit/423" }
+  task = { id = 424, type = "Task", url = "https://jrpridhamservices.visualstudio.com/Scratch%20project/_workitems/edit/424" }
 
 [[step]]
   key = "transition"
   # `dross issue task sync <phase> <id> --status task-in-progress`. Record
   # work_item (a created id), from_state (its state at create), and the
   # read-back state and category of a GET after the sync.
-  result = "not-run"
-  evidence = ""
+  result = "pass"
+  evidence = "dross issue task sync boards-smoke-rerun t-1 --status task-in-progress: exit 0. GET work item 424: rev 3, System.State To Do -> Doing, tags dross; dross/phase:boards-smoke-rerun; dross/status:task-in-progress; dross/task:boards-smoke-rerun/t-1"
+  work_item = 424
+  from_state = "To Do"
+  state = "Doing"
+  category = "InProgress"
 
 [[step]]
   key = "close"
   # Close the task (`dross task status ... done` and its sync). Record
   # work_item and the read-back state and category: it must read Completed —
   # a Resolved- or Removed-category state is not a close.
-  result = "not-run"
-  evidence = ""
+  result = "pass"
+  evidence = "dross issue task sync boards-smoke-rerun t-1 --status task-complete --close: exit 0. GET work item 424: rev 5, Doing -> Done, one status tag left, dross/status:task-complete. Then dross issue phase sync boards-smoke-rerun --status complete --close: phase boards-smoke-rerun -> board 423 (closed); work item 423 reads Done with dross/status:complete alone"
+  work_item = 424
+  state = "Done"
+  category = "Completed"
 
 [[step]]
   key = "parent-link"
   # Read the created items' relations. Record links as
   #   links = [{ child = <task>, parent = <requirement>, rel = "System.LinkTypes.Hierarchy-Reverse" },
   #            { child = <requirement>, parent = <epic>, rel = "System.LinkTypes.Hierarchy-Reverse" }]
-  result = "not-run"
-  evidence = ""
+  result = "pass"
+  evidence = "GET workitems?ids=422,423,424&$expand=relations: work item 424 Hierarchy-Reverse -> 423, work item 423 Hierarchy-Reverse -> 422, mirrored as Hierarchy-Forward 422 -> 423 -> 424; the task carries no Related link"
+  links = [
+    { child = 424, parent = 423, rel = "System.LinkTypes.Hierarchy-Reverse" },
+    { child = 423, parent = 422, rel = "System.LinkTypes.Hierarchy-Reverse" },
+  ]
 
 [[step]]
   key = "pull"
   # `dross issue pull --json`. Record envelope (the printed JSON, verbatim) and
   # bug_id (the hand-filed Bug's id): it must be listed, with "error": null,
   # and none of dross's own items may be.
-  result = "not-run"
-  evidence = ""
+  result = "pass"
+  evidence = "dross issue pull --labels bug,enhancement --json: exit 0, stderr empty; lists work item 421 (the hand-filed Issue tagged bug) and none of 422, 423, 424"
+  envelope = '{"issues":[{"Number":421,"Key":"421","Title":"Login page returns 500 after password reset","Body":"","State":"open","Labels":["bug"],"Milestone":"","URL":"https://jrpridhamservices.visualstudio.com/Scratch%20project/_workitems/edit/421","WorkflowState":"To Do","Resolved":false}],"error":null}'
+  bug_id = 421

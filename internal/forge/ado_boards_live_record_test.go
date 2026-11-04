@@ -325,7 +325,7 @@ func boardsStep(t *testing.T, r *boardsLiveRecord, key string) *boardsLiveStep {
 // TestADOBoardsLiveRecordHonest: the record can claim live only with every
 // step passed live, and the committed record is held to exactly that.
 func TestADOBoardsLiveRecordHonest(t *testing.T) {
-	t.Run("the committed record validates as mock-only", func(t *testing.T) {
+	t.Run("the committed record validates as live", func(t *testing.T) {
 		var r boardsLiveRecord
 		if _, err := toml.DecodeFile(boardsLiveRecordPath, &r); err != nil {
 			t.Fatal(err)
@@ -334,10 +334,11 @@ func TestADOBoardsLiveRecordHonest(t *testing.T) {
 		if err != nil {
 			t.Fatalf("%s: %v", boardsLiveRecordPath, err)
 		}
-		// The template ships unrun; a real run replaces this file's posture,
-		// and the line below with it, in the same commit.
-		if got != liverecord.MockOnly {
-			t.Errorf("%s validates as %s, want the mock-only template", boardsLiveRecordPath, got)
+		// The live run of 2026-11-04 (t-21) replaced the mock-only template,
+		// and this line with it; a later run that loses a step must say so
+		// here too, in the same commit.
+		if got != liverecord.Live {
+			t.Errorf("%s validates as %s, want the live run t-21 recorded", boardsLiveRecordPath, got)
 		}
 	})
 
