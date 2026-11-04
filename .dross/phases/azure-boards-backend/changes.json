@@ -248,6 +248,22 @@
         }
       ]
     },
+    "t-21": {
+      "files": [
+        "internal/forge/testdata/ado_boards_live_smoke.toml",
+        "internal/forge/ado_boards_live_record_test.go"
+      ],
+      "commit": "d8c79b9",
+      "completed_at": "2026-11-04T13:50:11.269336605Z",
+      "landmarks": [
+        {
+          "feature": "azure boards live smoke",
+          "symbol": "TestADOBoardsLiveRecordHonest",
+          "loc": "internal/forge/ado_boards_live_record_test.go:327",
+          "what": "live Boards run on a Basic-process scratch project recorded as posture live — create, transition, close, parent-link and pull read back over REST"
+        }
+      ]
+    },
     "t-3": {
       "files": [
         "assets/prompts/options.md",
