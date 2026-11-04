@@ -388,6 +388,13 @@ func TestADOUpdateIssueFields(t *testing.T) {
 	if tags, _ := opValue(ups[0].ops, "/fields/System.Tags"); tags != "a" {
 		t.Errorf("System.Tags = %v, want a", tags)
 	}
+	// The service merges an add into the existing tags (live smoke, t-21):
+	// only replace drops b.
+	for _, op := range ups[0].ops {
+		if op["path"] == "/fields/System.Tags" && op["op"] != "replace" {
+			t.Errorf("System.Tags op = %v, want replace", op["op"])
+		}
+	}
 	if len(iss.Labels) != 1 || iss.Labels[0] != "a" {
 		t.Errorf("Labels = %v, want [a]", iss.Labels)
 	}

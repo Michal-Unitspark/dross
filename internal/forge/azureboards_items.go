@@ -178,7 +178,10 @@ func (c *AzureBoardsClient) UpdateIssue(key string, patch IssuePatch) (*Issue, e
 		if err != nil {
 			return nil, err
 		}
-		ops = append(ops, adoPatchOp{Op: "add", Path: "/fields/System.Tags", Value: tags})
+		// replace, never add: the service merges an add into the tags the
+		// item already has (live smoke, t-21), so an add would keep every
+		// label the patch drops. replace works on an untagged item too.
+		ops = append(ops, adoPatchOp{Op: "replace", Path: "/fields/System.Tags", Value: tags})
 	}
 	if err := screenFields("PATCH", fields); err != nil {
 		return nil, err
@@ -286,8 +289,10 @@ func (c *AzureBoardsClient) labelClause(labels []string) (string, map[string]str
 	return "(" + strings.Join(parts, " OR ") + ")", types, nil
 }
 
-// matchesLabels is the exact post-filter CONTAINS needs: CONTAINS is a
-// substring test, so dross/task:p/t-1 would otherwise match dross/task:p/t-10.
+// matchesLabels is the exact post-filter for labelClause's query. On
+// System.Tags, CONTAINS matched whole tags only in the live smoke (t-21:
+// 'dro' found nothing tagged dross); the filter keeps the match exact on
+// this side regardless, so a wider server-side match never reaches a caller.
 func matchesLabels(w adoWorkItem, labels []string, types map[string]string) bool {
 	tags := adoTagLabels(w.tags)
 	for _, l := range labels {

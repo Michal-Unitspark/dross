@@ -317,11 +317,10 @@ func (f *adoFake) apply(id int, it *adoFakeItem, ops []adoFakeOp) (int, string) 
 	for _, op := range ops {
 		switch {
 		case op.Op == "test" && op.Path == "/rev":
-			// A stale revision fails the whole patch. Which status the
-			// service gives it is one of the things the live smoke (t-21)
-			// pins; 412 is the fake's stand-in.
+			// A stale revision fails the whole patch with 412, as the live
+			// smoke (t-21) read it.
 			if n, ok := op.Value.(float64); !ok || int(n) != it.rev {
-				return http.StatusPreconditionFailed, "TF26071: This work item has been changed by someone else since you opened it."
+				return http.StatusPreconditionFailed, fmt.Sprintf("VS403351: Test Operation for path /rev failed, value %d was not equal to test value %v.", it.rev, op.Value)
 			}
 		case (op.Op == "add" || op.Op == "replace") && strings.HasPrefix(op.Path, "/fields/"):
 			field := strings.TrimPrefix(op.Path, "/fields/")
@@ -335,7 +334,12 @@ func (f *adoFake) apply(id int, it *adoFakeItem, ops []adoFakeOp) (int, string) 
 			case "System.Description":
 				it.desc = v
 			case "System.Tags":
-				it.tags = adoFakeTags(v) // a write replaces the whole set
+				// As the live smoke (t-21) found: add merges into the set the
+				// item has, replace replaces it — "" clears it.
+				if op.Op == "add" {
+					v = it.tags + ";" + v
+				}
+				it.tags = adoFakeTags(v)
 			case "System.AreaPath":
 				it.area = v
 			case "System.IterationPath":

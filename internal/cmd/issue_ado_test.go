@@ -106,6 +106,57 @@ func TestIssuePullADOEnvelope(t *testing.T) {
 	})
 }
 
+// TestADOStatusChangeReplacesStatusTag: moving a card to a new status leaves
+// exactly that dross/status: tag on it. The live service merges a tags "add"
+// into the set the item has (t-21), so an update that adds would strand the
+// old status tag beside the new one.
+func TestADOStatusChangeReplacesStatusTag(t *testing.T) {
+	for _, c := range []struct {
+		name, typ string
+		steps     [][]string
+		want      string
+	}{
+		{"task", "Task", [][]string{
+			{"phase", "sync", "x"},
+			{"task", "sync", "x", "t-1", "--status", "task-in-progress"},
+			{"task", "sync", "x", "t-1", "--status", "task-complete"},
+		}, "dross/status:task-complete"},
+		{"phase", adoFakeRequirement, [][]string{
+			{"phase", "sync", "x", "--status", "planned"},
+			{"phase", "sync", "x", "--status", "in-progress"},
+		}, "dross/status:in-progress"},
+	} {
+		t.Run(c.name, func(t *testing.T) {
+			f := newADOFake(t)
+			dir, _ := adoBoardRepo(t, f)
+			adoPhaseFiles(t, dir)
+			for _, args := range c.steps {
+				var err error
+				captureStdout(t, func() { err = runCmd(t, Issue(), args...) })
+				if err != nil {
+					t.Fatalf("issue %v: %v", args, err)
+				}
+			}
+			ids := f.idsOf(c.typ)
+			if len(ids) != 1 {
+				t.Fatalf("%s items = %v, want one", c.typ, ids)
+			}
+			f.mu.Lock()
+			tags := f.items[ids[0]].tags
+			f.mu.Unlock()
+			var status []string
+			for _, tag := range strings.Split(tags, ";") {
+				if tag = strings.TrimSpace(tag); strings.HasPrefix(tag, "dross/status:") {
+					status = append(status, tag)
+				}
+			}
+			if len(status) != 1 || status[0] != c.want {
+				t.Errorf("work item %d status tags = %v, want only %s (tags %q)", ids[0], status, c.want, tags)
+			}
+		})
+	}
+}
+
 // TestIssueCloseADOReadBack: with every state write refused — or accepted and
 // not recorded, which only the read-back can catch — --close fails naming the
 // work item and never prints "(closed)" over an open item.

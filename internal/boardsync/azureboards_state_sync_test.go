@@ -198,7 +198,11 @@ func (tr *adoTracker) apply(id int, it *adoItem, ops []map[string]any) {
 			}
 		case op["op"] == "add" && path == "/fields/System.Title":
 			it.title = val
-		case op["op"] == "add" && path == "/fields/System.Tags":
+		case op["op"] == "add" && path == "/fields/System.Tags" && it.tags != "":
+			// The live service merges an add into the tags the item has;
+			// only replace replaces them (t-21).
+			it.tags += "; " + val
+		case (op["op"] == "add" || op["op"] == "replace") && path == "/fields/System.Tags":
 			it.tags = val
 		case op["op"] == "add" && path == "/relations/-":
 			rel, _ := op["value"].(map[string]any)
