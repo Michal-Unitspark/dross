@@ -324,6 +324,39 @@
         }
       ]
     },
+    "t-26": {
+      "files": [
+        "internal/cmd/milestone_protected_ado_test.go",
+        "internal/ship/azuredevops_policy_test.go"
+      ],
+      "commit": "bf8791c",
+      "completed_at": "2026-11-05T14:45:43.527368206Z",
+      "landmarks": [
+        {
+          "feature": "ado milestone chore routing",
+          "symbol": "TestADOMilestoneCompleteWaitsForOpenChorePR",
+          "loc": "internal/cmd/milestone_protected_ado_test.go:171",
+          "what": "milestone chore wait reads only its own base's policies; Prefix scopes match case-insensitively and at full-ref length"
+        }
+      ]
+    },
+    "t-27": {
+      "files": [
+        "internal/forge/azureboards.go",
+        "internal/forge/azureboards_state.go",
+        "internal/forge/azureboards_state_test.go"
+      ],
+      "commit": "2c48396",
+      "completed_at": "2026-11-05T14:45:43.539655473Z",
+      "landmarks": [
+        {
+          "feature": "ado state resolution",
+          "symbol": "ruleRejection",
+          "loc": "internal/forge/azureboards_state.go:111",
+          "what": "SetState skips only a TF401320 rule-rejected 400 (read from the whole scrubbed body); any other 400 is an error naming the item"
+        }
+      ]
+    },
     "t-3": {
       "files": [
         "assets/prompts/options.md",
@@ -1200,6 +1233,55 @@
           "severity": "NOTE",
           "criterion": "c-9",
           "text": "the both-paths subtest compares the joined probe list \"Areas/Web, Iterations/Sprint 9\", so it also pins the area-before-iteration row order of probeADOPaths; reordering the rows would fail it although the contract is only one probe each",
+          "resolution": "non-blocking, left"
+        }
+      ]
+    },
+    "t-26": {
+      "outcome": "pass",
+      "rounds": 1,
+      "findings": [
+        {
+          "round": 1,
+          "kind": "quality",
+          "severity": "NOTE",
+          "criterion": "c-10",
+          "text": "The new exact-equality assertion also catches a duplicate policy read of milestone/v1.8 during the wait, which is stricter than the contract asks; current code makes exactly one read on this path (milestone.go:1155), so it holds.",
+          "resolution": "non-blocking, left"
+        }
+      ]
+    },
+    "t-27": {
+      "outcome": "pass",
+      "rounds": 2,
+      "findings": [
+        {
+          "round": 1,
+          "kind": "quality",
+          "severity": "FLAG",
+          "criterion": "c-3",
+          "text": "No test proves ruleRejection reads the full body rather than the capped message: both TF401320 and non-rule test bodies are under the 500-byte snippet cap, so switching the check to se.msg would still pass. A body with TF401320 placed past byte 500 would pin the reason adoStatusError.body was added.",
+          "resolution": "non-blocking, left"
+        },
+        {
+          "round": 1,
+          "kind": "quality",
+          "severity": "NOTE",
+          "text": "The body kept on adoStatusError is respBody, which has already been through redact.Scrub, so the transport decision on scrubbing every response body holds.",
+          "resolution": "non-blocking, left"
+        },
+        {
+          "round": 2,
+          "kind": "quality",
+          "severity": "NOTE",
+          "text": "adoStatusError.body stores the scrubbed respBody (not the raw bytes), so the new field keeps the transport rule that every response body is scrubbed; Error() still returns only the capped msg",
+          "resolution": "non-blocking, left"
+        },
+        {
+          "round": 2,
+          "kind": "quality",
+          "severity": "NOTE",
+          "text": "the past-the-cap subtest puts TF401320 after byte 600, so it would catch a regression that checks the 500-byte message instead of the body",
           "resolution": "non-blocking, left"
         }
       ]

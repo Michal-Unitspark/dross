@@ -447,7 +447,7 @@ a rev-test failure returns.
   description = "Verify amend (FLAG c-10, milestone_protected_ado_test.go:190 and azuredevops_policy.go:257). Test-only. The milestone-complete chore-wait reads exactly milestone/v1.8's branch policies, never another branch's; a Prefix scope matches a ref spelled in a different case, and a Prefix equal to the whole ref covers it."
   covers = ["c-10"]
   test_contract = ["if the chore wait reads the wrong branch's protection, TestADOMilestoneCompleteWaitsForOpenChorePR fails: the policy reads must be exactly [milestone/v1.8]", "if a Prefix scope compares case-sensitively, TestADOBranchProtectionScopes' 'prefix refs/heads/Milestone/ protects milestone/v1.8' case fails", "if the Prefix length guard turns strict (len(ref) > len(prefix)), TestADOBranchProtectionScopes' 'prefix equal to the whole ref' case fails"]
-  status = "pending"
+  status = "done"
 
 [[task]]
   id = "t-27"
@@ -457,4 +457,4 @@ a rev-test failure returns.
   description = "Verify amend (FLAG c-3, azureboards_state.go:121-126). SetState warns and skips a state PATCH only when Azure Boards answers 400 with a TF401320 rule error (no reachable state: a required field, a disallowed transition). Any other 400 — a malformed patch, an unknown field — is an error naming the work item, never a silent skip. adoStatusError keeps the scrubbed body so the check reads the body, not the message."
   covers = ["c-3"]
   test_contract = ["if SetState swallows every 400, TestADOSetStateUnreachable's 'a 400 that is not a rule rejection' case fails: it requires a non-nil error naming work item 42 and no warning on stderr", "if the TF401320 check is dropped or inverted, TestADOSetStateUnreachable's 'a 400 rule rejection' case fails: it requires nil and a warning naming item 42"]
-  status = "pending"
+  status = "done"
