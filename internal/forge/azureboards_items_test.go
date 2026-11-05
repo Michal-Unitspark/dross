@@ -576,13 +576,7 @@ func TestADOListIssuesFilters(t *testing.T) {
 	s.put(23, "User Story", "Removed", "gone", "bug")
 	c := newTestAzureBoards(t, s.Server, nil)
 
-	ids := func(iss []Issue) []int {
-		var out []int
-		for _, i := range iss {
-			out = append(out, i.Number)
-		}
-		return out
-	}
+	ids := issueNumbers
 	s.wiqlIDs = []int{1, 10}
 	got, err := c.ListIssues(IssueFilter{State: "all", Labels: []string{"dross/task:p/t-1"}})
 	if err != nil || len(got) != 1 || got[0].Number != 1 {
@@ -596,6 +590,64 @@ func TestADOListIssuesFilters(t *testing.T) {
 	got, err = c.ListIssues(IssueFilter{State: "all", Labels: []string{"bug"}})
 	if err != nil || fmt.Sprint(ids(got)) != "[20 21 22 23]" {
 		t.Errorf("all bug = %v, %v; want [20 21 22 23]", ids(got), err)
+	}
+}
+
+// issueNumbers is the work-item ids of iss, in order.
+func issueNumbers(iss []Issue) []int {
+	var out []int
+	for _, i := range iss {
+		out = append(out, i.Number)
+	}
+	return out
+}
+
+// TestADOListIssuesStateClosed: closed keeps exactly the Completed-category
+// items, of any type — never a Proposed, InProgress, Resolved or Removed one
+// — with or without labels, and the state is read case- and
+// space-insensitively, as open and all are.
+func TestADOListIssuesStateClosed(t *testing.T) {
+	s := newADOItemsServer(t, "User Story", "Bug", "Task", "User Story")
+	s.put(30, "User Story", "New", "proposed", "bug")
+	s.put(31, "Bug", "Active", "in progress", "")
+	s.put(32, "User Story", "Resolved", "resolved", "bug")
+	s.put(33, "User Story", "Closed", "completed story", "bug")
+	s.put(34, "Bug", "Closed", "completed bug", "")
+	s.put(35, "User Story", "Removed", "removed", "bug")
+	s.wiqlIDs = []int{30, 31, 32, 33, 34, 35}
+	c := newTestAzureBoards(t, s.Server, nil)
+
+	for _, f := range []IssueFilter{
+		{State: "closed", Labels: []string{"bug"}},
+		{State: " Closed ", Labels: []string{"bug"}},
+		{State: "closed"},
+	} {
+		got, err := c.ListIssues(f)
+		if err != nil || fmt.Sprint(issueNumbers(got)) != "[33 34]" {
+			t.Errorf("ListIssues(%+v) = %v, %v; want only the Completed items [33 34]", f, issueNumbers(got), err)
+		}
+	}
+}
+
+// TestADOListIssuesTagCaseInsensitive (pull_match): a requested label
+// matches a tag of that name in any case, either way round — label bug hits
+// tags Bug and BUG, label BUG hits tag bug — while a tag that only contains
+// the label does not. The project has no Bug type, so only tags can match.
+func TestADOListIssuesTagCaseInsensitive(t *testing.T) {
+	s := newADOItemsServer(t, "User Story", "Task", "User Story")
+	s.put(40, "User Story", "Active", "title case", "Bug")
+	s.put(41, "User Story", "Active", "upper case", "other; BUG")
+	s.put(42, "User Story", "Active", "lower case", "bug")
+	s.put(43, "User Story", "Active", "wider tag", "bugfix")
+	s.put(44, "User Story", "Active", "untagged", "")
+	s.wiqlIDs = []int{40, 41, 42, 43, 44}
+	c := newTestAzureBoards(t, s.Server, nil)
+
+	for _, label := range []string{"bug", "BUG", "Bug"} {
+		got, err := c.ListIssues(IssueFilter{State: "open", Labels: []string{label}})
+		if err != nil || fmt.Sprint(issueNumbers(got)) != "[40 41 42]" {
+			t.Errorf("label %q = %v, %v; want [40 41 42] (every case of the tag, not bugfix)", label, issueNumbers(got), err)
+		}
 	}
 }
 
