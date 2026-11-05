@@ -241,10 +241,36 @@ func TestADOSetStateUnreachable(t *testing.T) {
 		s.patchStatus, s.patchBody = http.StatusBadRequest, `{"message":"TF401320: Rule Error for field Effort. Error code: Required."}`
 		var err error
 		out := captureStderrForge(t, func() { err = stateClient(t, s).SetState("42", "in-progress", nil) })
-		if err != nil || !strings.Contains(out, "42") {
+		if err != nil || !strings.Contains(out, "warning") || !strings.Contains(out, "42") {
 			t.Errorf("a 400 = %v, stderr %q; want a warning naming the item and nil", err, out)
 		}
 	})
+	t.Run("a rule rejection past the message cap", func(t *testing.T) {
+		// customProperties can precede message in an Azure DevOps error body,
+		// pushing the code past the 500 bytes an error message quotes.
+		s := newADOStateServer(t, map[string]*adoStateItem{"42": {"Product Backlog Item", "New"}}, map[string][]ADOState{"Product Backlog Item": scrumPBI})
+		s.patchStatus = http.StatusBadRequest
+		s.patchBody = `{"customProperties":{"pad":"` + strings.Repeat("x", 600) + `"},"message":"TF401320: Rule Error for field State."}`
+		var err error
+		out := captureStderrForge(t, func() { err = stateClient(t, s).SetState("42", "in-progress", nil) })
+		if err != nil || !strings.Contains(out, "warning") {
+			t.Errorf("a TF401320 past byte 500 = %v, stderr %q; want a warning and nil — the check reads the whole body", err, out)
+		}
+	})
+	for name, body := range map[string]string{
+		"an unknown field":  `{"message":"TF51535: Cannot find field System.Stat."}`,
+		"a malformed patch": `{"message":"You must pass a valid patch document in the body of the request."}`,
+	} {
+		t.Run("a 400 that is not a rule rejection: "+name, func(t *testing.T) {
+			s := newADOStateServer(t, map[string]*adoStateItem{"42": {"Product Backlog Item", "New"}}, map[string][]ADOState{"Product Backlog Item": scrumPBI})
+			s.patchStatus, s.patchBody = http.StatusBadRequest, body
+			var err error
+			out := captureStderrForge(t, func() { err = stateClient(t, s).SetState("42", "in-progress", nil) })
+			if err == nil || !strings.Contains(err.Error(), "work item 42") || strings.Contains(out, "warning") {
+				t.Errorf("a non-rule 400 = %v, stderr %q; want an error naming work item 42 and no warning", err, out)
+			}
+		})
+	}
 	t.Run("a 500", func(t *testing.T) {
 		s := newADOStateServer(t, map[string]*adoStateItem{"42": {"Product Backlog Item", "New"}}, map[string][]ADOState{"Product Backlog Item": scrumPBI})
 		s.patchStatus, s.patchBody = http.StatusInternalServerError, `oops`

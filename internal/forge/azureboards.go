@@ -59,11 +59,14 @@ const adoBoardsDefaultAPIVersion = "7.1"
 var adoBoardsAPIVersionShape = regexp.MustCompile(`^[0-9]+\.[0-9]+(-preview(\.[0-9]+)?)?$`)
 
 // adoStatusError is a non-2xx answer that is not a sign-in page. Its message
-// is the status line with the scrubbed body; a caller that branches on the
+// is the status line with the scrubbed body, capped; body is the whole
+// scrubbed body, for a caller that branches on what Azure DevOps said
+// (SetState skips only a TF401320 rule error). A caller that branches on the
 // status — PathExists reads a 404 as "missing" — uses errors.As, which reaches
 // it through redact.Err's wrapper.
 type adoStatusError struct {
 	Status int
+	body   string
 	msg    string
 }
 
@@ -319,7 +322,7 @@ func (c *AzureBoardsClient) doRaw(method, endpoint string, body, out any) error 
 		case http.StatusNotFound:
 			hint = fmt.Sprintf(" (project %q or endpoint not found — check [board].base_url and [board].project)", c.project)
 		}
-		return &adoStatusError{Status: status, msg: fmt.Sprintf("%s %s: HTTP %d%s: %s", method, u.Path, status, hint, snippet)}
+		return &adoStatusError{Status: status, body: string(respBody), msg: fmt.Sprintf("%s %s: HTTP %d%s: %s", method, u.Path, status, hint, snippet)}
 	}
 	if out != nil && len(decodeBody) > 0 {
 		if err := json.Unmarshal(decodeBody, out); err != nil {

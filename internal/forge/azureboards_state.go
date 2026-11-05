@@ -99,12 +99,27 @@ func (c *AzureBoardsClient) writeState(id int, state string) error {
 	return c.do(http.MethodPatch, c.projectAPI("/wit/workitems/"+strconv.Itoa(id)), patch, nil)
 }
 
+// adoRuleError is the code Azure Boards refuses a write with when the
+// process's rules forbid it: a required field left empty, a transition the
+// type does not allow.
+const adoRuleError = "TF401320"
+
+// ruleRejection reports whether err is Azure Boards refusing a write on a
+// process rule — an HTTP 400 whose body carries TF401320. That is the one 400
+// that means "no reachable state"; a 400 for anything else (a malformed patch,
+// an unknown field) is a fault in the request.
+func ruleRejection(err error) bool {
+	var se *adoStatusError
+	return errors.As(err, &se) && se.Status == http.StatusBadRequest && strings.Contains(se.body, adoRuleError)
+}
+
 // SetState moves a work item to the state a dross lifecycle status resolves
 // to. A state board sync cannot reach is a cosmetic loss, not a failed sync:
 // a type with no state for the status, an override naming a state the type
 // lacks, or a 400 rule rejection (TF401320 — a required field, a disallowed
 // transition) warns on stderr and returns nil, as Jira and YouTrack do. An
-// item already in the target is left alone; any other failure is an error.
+// item already in the target is left alone; any other failure — another 400
+// included — is an error naming the item.
 func (c *AzureBoardsClient) SetState(key, status string, override map[string]string) error {
 	w, states, err := c.itemWithStates(key)
 	if err != nil {
@@ -119,8 +134,7 @@ func (c *AzureBoardsClient) SetState(key, status string, override map[string]str
 		return nil
 	}
 	if err := c.writeState(w.id, target.Name); err != nil {
-		var se *adoStatusError
-		if errors.As(err, &se) && se.Status == http.StatusBadRequest {
+		if ruleRejection(err) {
 			fmt.Fprintf(os.Stderr, "warning: Azure Boards refused moving work item %d to %q for %q — skipping: %v\n", w.id, target.Name, status, err)
 			return nil
 		}
