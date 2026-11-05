@@ -3,6 +3,7 @@ package forge
 import (
 	"encoding/base64"
 	"errors"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -339,6 +340,92 @@ func TestADOBoardCredentialNeverLeaks(t *testing.T) {
 		err := c.do(http.MethodGet, c.projectAPI("/wit/workitems/1"), nil, nil)
 		if !errors.Is(err, errADOBoardsSignIn) || !strings.Contains(err.Error(), "$"+adoBoardsTokenEnv) {
 			t.Errorf("a 203 must be a sign-in error naming $%s, got %v", adoBoardsTokenEnv, err)
+		}
+	})
+}
+
+// TestADOBoardStatusClassification: the sign-in range is exactly 203 and
+// 300-399 — a 300 and a 399 are sign-in errors, a 400 is a status error that
+// carries its code and is never a sign-in one. A 401, 403 and 404 each carry
+// their own hint and no other, a 500 none; an error quotes at most the first
+// 500 bytes of the body.
+func TestADOBoardStatusClassification(t *testing.T) {
+	call := func(t *testing.T, status int, body string) error {
+		t.Helper()
+		srv, _ := adoBoardsServer(t, func(w http.ResponseWriter, r *http.Request) {
+			w.WriteHeader(status)
+			w.Write([]byte(body))
+		})
+		c := newTestAzureBoards(t, srv, nil)
+		err := c.do(http.MethodGet, c.projectAPI("/wit/workitems/1"), nil, nil)
+		if err == nil {
+			t.Fatalf("a %d was not an error", status)
+		}
+		return err
+	}
+	statusOf := func(err error) int {
+		var se *adoStatusError
+		if errors.As(err, &se) {
+			return se.Status
+		}
+		return 0
+	}
+
+	for _, status := range []int{http.StatusMultipleChoices, 399} {
+		t.Run(fmt.Sprintf("%d is sign-in", status), func(t *testing.T) {
+			err := call(t, status, "")
+			if !errors.Is(err, errADOBoardsSignIn) || statusOf(err) != 0 {
+				t.Errorf("a %d must be a sign-in error, not a status error: %v", status, err)
+			}
+		})
+	}
+	t.Run("400 is a status error", func(t *testing.T) {
+		err := call(t, http.StatusBadRequest, `{"message":"TF401320: rule error"}`)
+		if errors.Is(err, errADOBoardsSignIn) {
+			t.Errorf("a 400 became a sign-in error: %v", err)
+		}
+		if got := statusOf(err); got != http.StatusBadRequest {
+			t.Errorf("a 400 is a status error with Status %d, want 400: %v", got, err)
+		}
+	})
+
+	hints := map[int]string{
+		http.StatusUnauthorized: " (check $" + adoBoardsTokenEnv + " — the PAT may be expired or lack the Work Items scope): ",
+		http.StatusForbidden:    " (the token lacks permission for this project or action): ",
+		http.StatusNotFound:     ` (project "Fabrikam" or endpoint not found — check [board].base_url and [board].project): `,
+	}
+	for status, hint := range hints {
+		t.Run(fmt.Sprintf("%d hint", status), func(t *testing.T) {
+			err := call(t, status, "")
+			if statusOf(err) != status || !strings.Contains(err.Error(), fmt.Sprintf("HTTP %d%s", status, hint)) {
+				t.Errorf("a %d must be a status error carrying %q: %v", status, hint, err)
+			}
+			for other, h := range hints {
+				if other != status && strings.Contains(err.Error(), h) {
+					t.Errorf("a %d carries the %d hint: %v", status, other, err)
+				}
+			}
+		})
+	}
+	t.Run("500 has no hint", func(t *testing.T) {
+		err := call(t, http.StatusInternalServerError, "boom")
+		if !strings.HasSuffix(err.Error(), ": HTTP 500: boom") {
+			t.Errorf("a 500 must quote its body after the bare status: %v", err)
+		}
+	})
+
+	t.Run("body capped at 500 bytes", func(t *testing.T) {
+		head := strings.Repeat("0123456789", 50)
+		err := call(t, http.StatusInternalServerError, head+"TAIL")
+		if !strings.HasSuffix(err.Error(), "HTTP 500: "+head) || strings.Contains(err.Error(), "TAIL") {
+			t.Errorf("want the body's first 500 bytes and nothing past them: %v", err)
+		}
+	})
+	t.Run("a 500-byte body is whole", func(t *testing.T) {
+		body := strings.Repeat("0123456789", 49) + "012345678Z"
+		err := call(t, http.StatusInternalServerError, body)
+		if !strings.HasSuffix(err.Error(), "HTTP 500: "+body) {
+			t.Errorf("a body of exactly 500 bytes was cut: %v", err)
 		}
 	})
 }

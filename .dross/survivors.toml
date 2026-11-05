@@ -4934,7 +4934,7 @@
   op = "CONDITIONALS_BOUNDARY"
   text = "case status >= 300:"
   line = 308
-  reason = "equivalent mutant: 'case status >= 300' → '> 300' differs only at HTTP 300, and the case above it (status >= 300 && status < 400) already takes every 300, so this arm never sees one — no input can tell the two apart"
+  reason = "equivalent mutant: 'case status >= 300' → '> 300' differs only at HTTP 300, and the case above it (status >= 300 && status < 400) already takes every 300 — TestADOBoardStatusClassification pins a 300 as a sign-in error, never a status error — so this arm never sees one and no input can tell the two apart"
   accepted_in = "azure-boards-backend"
 
 [[accepted]]
@@ -4943,7 +4943,7 @@
   op = "ARITHMETIC_BASE"
   text = "hint = \" (check $\" + c.authEnv + \" — the PAT may be expired or lack the Work Items scope)\""
   line = 316
-  reason = "not viable: the + operators on this line join strings, and string - string does not compile (go vet: operator - not defined on string), so no test can run this mutant; gremlins lists it NOT COVERED only because the 401-hint block never ran — that untested block is recorded as a FLAG in azure-boards-backend's verify.toml, not silenced here"
+  reason = "not viable: the + operators on this line join strings, and string - string does not compile (go vet: operator - not defined on string), so no test can run this mutant; the 401-hint block it sits in is pinned by TestADOBoardStatusClassification's 401 case"
   accepted_in = "azure-boards-backend"
 
 [[accepted]]
