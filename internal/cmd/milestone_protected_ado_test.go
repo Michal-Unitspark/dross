@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"path/filepath"
+	"reflect"
 	"strings"
 	"testing"
 
@@ -187,7 +188,7 @@ func TestADOMilestoneCompleteWaitsForOpenChorePR(t *testing.T) {
 	if len(s.opened) != 0 {
 		t.Errorf("opened %v while a chore PR was open", openedHeads(s))
 	}
-	if len(*asked) == 0 {
-		t.Error("the wait never read milestone/v1.8's branch policies")
+	if !reflect.DeepEqual(*asked, []string{"milestone/v1.8"}) {
+		t.Errorf("branch policies read for %v; want exactly [milestone/v1.8] — the wait's own base", *asked)
 	}
 }

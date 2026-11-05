@@ -121,6 +121,8 @@ func TestADOBranchProtectionScopes(t *testing.T) {
 		{"exact main, this repo", blocking(scope("refs/heads/main", "Exact", adoPolicyRepoID)), "main", true},
 		{"exact main, refs/heads form", blocking(scope("refs/heads/main", "Exact", adoPolicyRepoID)), "refs/heads/main", true},
 		{"prefix milestone/, every repo", blocking(scope("refs/heads/milestone/", "Prefix", nil)), "milestone/v1.8", true},
+		{"prefix refs/heads/Milestone/ protects milestone/v1.8", blocking(scope("refs/heads/Milestone/", "Prefix", nil)), "milestone/v1.8", true},
+		{"prefix equal to the whole ref", blocking(scope("refs/heads/main", "Prefix", adoPolicyRepoID)), "main", true},
 		{"exact refs/heads/Main protects main", blocking(scope("refs/heads/Main", "Exact", adoPolicyRepoID)), "main", true},
 		{"repo id compared case-insensitively", blocking(scope("refs/heads/main", "Exact", strings.ToUpper(adoPolicyRepoID))), "main", true},
 		{"no matchKind is exact", blocking(scope("refs/heads/main", "", adoPolicyRepoID)), "main", true},
