@@ -4981,3 +4981,12 @@
   line = 124
   reason = "gremlins switch-case attribution ceiling: go-cover gives a case condition no block, so gremlins marks it NOT COVERED although the arm runs — hand-applied in verify of azure-boards-backend (2026-11-04), the mutant is killed by TestADOArmOutcomeReadBack/active_and_not_armed"
   accepted_in = "azure-boards-backend"
+
+[[accepted]]
+  key = "2984d281e2c141b0"
+  file = "internal/forge/azureboards.go"
+  op = "CONDITIONALS_BOUNDARY"
+  text = "case status == http.StatusNonAuthoritativeInfo, status >= 300 && status < 400:"
+  line = 306
+  reason = "gremlins switch-case attribution ceiling: go-cover gives a case condition no block, so gremlins marks it NOT COVERED although the arm runs — hand-applied in verify of azure-boards-backend (2026-11-05), both boundary columns are killed by TestADOBoardStatusClassification (>= 300 → > 300: a 300 is no longer a sign-in error; < 400 → <= 400: a 400 becomes one)"
+  accepted_in = "azure-boards-backend"
