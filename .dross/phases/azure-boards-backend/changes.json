@@ -264,6 +264,66 @@
         }
       ]
     },
+    "t-22": {
+      "files": [
+        "internal/forge/azureboards_test.go"
+      ],
+      "commit": "0ab0a20",
+      "completed_at": "2026-11-05T07:09:29.866379028Z",
+      "landmarks": [
+        {
+          "feature": "azure boards transport",
+          "symbol": "TestADOBoardStatusClassification",
+          "loc": "internal/forge/azureboards_test.go:352",
+          "what": "pins doRaw's 203/300-399 sign-in range, the 400 status error, per-status hints and the 500-byte body cap"
+        }
+      ]
+    },
+    "t-23": {
+      "files": [
+        "internal/forge/azureboards_items_test.go"
+      ],
+      "commit": "d78404c",
+      "completed_at": "2026-11-05T07:13:57.683067182Z",
+      "landmarks": [
+        {
+          "feature": "azure boards inbound pull",
+          "symbol": "TestADOListIssuesStateClosed",
+          "loc": "internal/forge/azureboards_items_test.go:609",
+          "what": "pins ListIssues state closed to Completed-category items only and the case-insensitive whole-tag label match"
+        }
+      ]
+    },
+    "t-24": {
+      "files": [
+        "internal/boardsync/azureboards_finalize_test.go"
+      ],
+      "commit": "544cf28",
+      "completed_at": "2026-11-05T07:19:00.461064063Z",
+      "landmarks": [
+        {
+          "feature": "azure boards phase finalize",
+          "symbol": "TestADOFinalizeReportsRefusedPhaseClose",
+          "loc": "internal/boardsync/azureboards_finalize_test.go:227",
+          "what": "pins a refused phase-card close at finalize as an error naming the card and NOT closed narration on both the synced and created arms"
+        }
+      ]
+    },
+    "t-25": {
+      "files": [
+        "internal/cmd/doctor_board_ado_test.go"
+      ],
+      "commit": "f834448",
+      "completed_at": "2026-11-05T07:23:29.942571983Z",
+      "landmarks": [
+        {
+          "feature": "azure boards doctor checks",
+          "symbol": "TestDoctorADOFlagsMissingIterationPath",
+          "loc": "internal/cmd/doctor_board_ado_test.go:310",
+          "what": "pins doctor probing an iteration_path alone against the Iterations tree, ✗ on 404 and ✓ on 200, one probe per configured path"
+        }
+      ]
+    },
     "t-3": {
       "files": [
         "assets/prompts/options.md",
@@ -1063,6 +1123,83 @@
           "kind": "quality",
           "severity": "NOTE",
           "text": "The fake reuses TF201036 for its self-link refusal as well as the second-parent refusal; the second-parent subtest targets a different item, so the shared code cannot hide a wrong refusal there.",
+          "resolution": "non-blocking, left"
+        }
+      ]
+    },
+    "t-22": {
+      "outcome": "pass",
+      "rounds": 1,
+      "findings": [
+        {
+          "round": 1,
+          "kind": "quality",
+          "severity": "NOTE",
+          "criterion": "c-1",
+          "text": "Changing the snippet cap from `len(snippet) \u003e 500` to `\u003e= 500` behaves the same, since slicing a 500-byte string to [:500] keeps all of it. No test can catch that change, and none is needed; the exact-500 case does catch the cap tightening to 499.",
+          "resolution": "non-blocking, left"
+        },
+        {
+          "round": 1,
+          "kind": "quality",
+          "severity": "NOTE",
+          "text": "The 404 hint and the no-hint 500 case go beyond what the record claims (300/400/401/403/truncation). They are extra coverage, not drift. The inner loop checking for other statuses' hints adds little, because the exact-format match already rules them out.",
+          "resolution": "non-blocking, left"
+        }
+      ]
+    },
+    "t-23": {
+      "outcome": "pass",
+      "rounds": 1,
+      "findings": [
+        {
+          "round": 1,
+          "kind": "quality",
+          "severity": "NOTE",
+          "criterion": "c-5",
+          "text": "TestADOListIssuesStateClosed runs with a Bug type present, so under label bug items 31/34 match by type and 30/32/33/35 by tag; the closed-only result [33 34] kills a negated closed arm in all three filter variants, and the no-label variant keeps that check from depending on label matching",
+          "resolution": "non-blocking, left"
+        },
+        {
+          "round": 1,
+          "kind": "quality",
+          "severity": "NOTE",
+          "criterion": "c-5",
+          "text": "TestADOListIssuesTagCaseInsensitive uses a project with no Bug type so only tags can match; the bugfix item also checks that a tag must match whole, not as a substring",
+          "resolution": "non-blocking, left"
+        }
+      ]
+    },
+    "t-24": {
+      "outcome": "pass",
+      "rounds": 1,
+      "findings": [
+        {
+          "round": 1,
+          "kind": "quality",
+          "severity": "NOTE",
+          "text": "test_contract says the phase card 'read back In Progress'; the test pins it to Committed, which is the InProgress-category state of the Scrum Product Backlog Item type, so it matches the category meaning rather than the literal state name",
+          "resolution": "non-blocking, left"
+        },
+        {
+          "round": 1,
+          "kind": "quality",
+          "severity": "NOTE",
+          "text": "the two subtests ('tasks' and 'none') cover both phase-close branches in FinalizePhase: finalizeCard for a synced card and closeNew for a card created at finalize",
+          "resolution": "non-blocking, left"
+        }
+      ]
+    },
+    "t-25": {
+      "outcome": "pass",
+      "rounds": 1,
+      "findings": [
+        {
+          "round": 1,
+          "kind": "quality",
+          "severity": "NOTE",
+          "criterion": "c-9",
+          "text": "the both-paths subtest compares the joined probe list \"Areas/Web, Iterations/Sprint 9\", so it also pins the area-before-iteration row order of probeADOPaths; reordering the rows would fail it although the contract is only one probe each",
           "resolution": "non-blocking, left"
         }
       ]

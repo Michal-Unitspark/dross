@@ -407,7 +407,7 @@ a rev-test failure returns.
   description = "Verify amend (BLOCKING azureboards.go:306 CONDITIONALS_BOUNDARY x2; FLAG azureboards.go:311-318). Test-only. A 300 is a sign-in error (errADOBoardsSignIn) and a 400 is an *adoStatusError with Status 400, never a sign-in error; a 401 and a 403 each carry their own hint (the 401 naming $auth_env); a response body over 500 bytes is truncated to exactly 500 in the error."
   covers = ["c-1"]
   test_contract = ["if the sign-in range widens to 400 (status <= 400), TestADOBoardStatusClassification's 400 case fails: it requires an *adoStatusError with Status 400 and not errADOBoardsSignIn", "if the sign-in range narrows past 300 (status > 300), TestADOBoardStatusClassification's 300 case fails: it requires errors.Is(err, errADOBoardsSignIn)", "if the 401/403 hints or the 500-byte snippet cap change, TestADOBoardStatusClassification's hint and truncation cases fail"]
-  status = "pending"
+  status = "done"
 
 [[task]]
   id = "t-23"
@@ -417,7 +417,7 @@ a rev-test failure returns.
   description = "Verify amend (BLOCKING azureboards_items.go:361 CONDITIONALS_NEGATION; FLAG pull_match locked decision, azureboards_items.go:299-302). Test-only. ListIssues with State closed returns only Completed-category items (drops New/Active and Removed); a requested label matches a tag spelled in a different case."
   covers = ["c-5"]
   test_contract = ["if the closed arm of adoStateWanted is negated, TestADOListIssuesStateClosed fails: it requires exactly the Completed-category item and none of the Proposed, InProgress or Removed ones", "if matchesLabels' tag compare turns case-sensitive, TestADOListIssuesTagCaseInsensitive fails: a Bug-tagged item must match label bug"]
-  status = "pending"
+  status = "done"
 
 [[task]]
   id = "t-24"
@@ -427,7 +427,7 @@ a rev-test failure returns.
   description = "Verify amend (FLAG c-4 weak, boardsync/finalize.go:118-147). Test-only. When the phase work item reads back not Completed after finalize's close, FinalizePhase errors naming the phase card, the task cards still close, and the narration says NOT closed — '(closed)' is never printed for the phase card."
   covers = ["c-4"]
   test_contract = ["if finalize reports a phase card that read back In Progress as closed, TestADOFinalizeReportsRefusedPhaseClose fails: it requires an error naming the phase card and narration without '(closed)'", "if one refused phase close strands the task cards, TestADOFinalizeReportsRefusedPhaseClose fails: both task items must read Done"]
-  status = "pending"
+  status = "done"
 
 [[task]]
   id = "t-25"
@@ -437,4 +437,4 @@ a rev-test failure returns.
   description = "Verify amend (FLAG c-9 weak, doctor_board_ado.go:102 and :129). Test-only. With only board.iteration_path set, doctor probes the iteration classification node: a 404 is a ✗ naming iteration_path and the project, a 200 a ✓; with both paths set, each is probed once."
   covers = ["c-9"]
   test_contract = ["if the '|| b.IterationPath != \"\"' probe guard is dropped, TestDoctorADOFlagsMissingIterationPath fails: an iteration-only config must probe once and ✗ a missing path", "if the iteration row of probeADOPaths is dropped or probes the area kind, TestDoctorADOFlagsMissingIterationPath fails: the probe must hit the iterations node and the ✗ must name iteration_path"]
-  status = "pending"
+  status = "done"
