@@ -4873,3 +4873,111 @@
   line = 25
   accepted_in = "azure-devops-ship-loop"
   category = "const-initializer-arithmetic"
+
+[[accepted]]
+  key = "12c02272014fc238"
+  file = "internal/cmd/doctor_board_ado.go"
+  op = "CONDITIONALS_NEGATION"
+  text = "case err != nil:"
+  line = 136
+  reason = "gremlins switch-case attribution ceiling: go-cover gives a case condition no block, so gremlins marks it NOT COVERED although the arm runs — hand-applied in verify of azure-boards-backend (2026-11-04), the mutant is killed by TestDoctorADOFlagsMissingPath (404 is missing)"
+  accepted_in = "azure-boards-backend"
+
+[[accepted]]
+  key = "e4c241d6e7999ece"
+  file = "internal/forge/azureboards_meta.go"
+  op = "CONDITIONALS_NEGATION"
+  text = "case err == nil:"
+  line = 220
+  reason = "gremlins switch-case attribution ceiling: go-cover gives a case condition no block, so gremlins marks it NOT COVERED although the arm runs — hand-applied in verify of azure-boards-backend (2026-11-04), the mutant is killed by TestADOCheckPaths"
+  accepted_in = "azure-boards-backend"
+
+[[accepted]]
+  key = "6166fe9c9bc9de9b"
+  file = "internal/forge/azureboards_meta.go"
+  op = "CONDITIONALS_NEGATION"
+  text = "case errors.As(err, &status) && status.Status == http.StatusNotFound:"
+  line = 222
+  reason = "gremlins switch-case attribution ceiling: go-cover gives a case condition no block, so gremlins marks it NOT COVERED although the arm runs — hand-applied in verify of azure-boards-backend (2026-11-04), the mutant is killed by TestADOCheckPaths"
+  accepted_in = "azure-boards-backend"
+
+[[accepted]]
+  key = "22450877d01f1554"
+  file = "internal/forge/azureboards.go"
+  op = "CONDITIONALS_NEGATION"
+  text = "case host == adoServicesHost:"
+  line = 175
+  reason = "gremlins switch-case attribution ceiling: go-cover gives a case condition no block, so gremlins marks it NOT COVERED although the arm runs — hand-applied in verify of azure-boards-backend (2026-11-04), the mutant is killed by TestADOBoardBaseURLShapes"
+  accepted_in = "azure-boards-backend"
+
+[[accepted]]
+  key = "2a08f7fc29703264"
+  file = "internal/forge/azureboards.go"
+  op = "CONDITIONALS_NEGATION"
+  text = "case status == http.StatusNonAuthoritativeInfo, status >= 300 && status < 400:"
+  line = 306
+  reason = "gremlins switch-case attribution ceiling: go-cover gives a case condition no block, so gremlins marks it NOT COVERED although the arm runs — hand-applied in verify of azure-boards-backend (2026-11-04), the mutant is killed by TestADOCreateIssueType/task (== 203 and >= 300 negated) and TestADOCheckPaths (< 400 negated) — all three columns"
+  accepted_in = "azure-boards-backend"
+
+[[accepted]]
+  key = "8dea3499bcc7e483"
+  file = "internal/forge/azureboards.go"
+  op = "CONDITIONALS_NEGATION"
+  text = "case status >= 300:"
+  line = 308
+  reason = "gremlins switch-case attribution ceiling: go-cover gives a case condition no block, so gremlins marks it NOT COVERED although the arm runs — hand-applied in verify of azure-boards-backend (2026-11-04), the mutant is killed by TestADOCreateIssueType/task"
+  accepted_in = "azure-boards-backend"
+
+[[accepted]]
+  key = "9f6444c19f98e671"
+  file = "internal/forge/azureboards.go"
+  op = "CONDITIONALS_BOUNDARY"
+  text = "case status >= 300:"
+  line = 308
+  reason = "equivalent mutant: 'case status >= 300' → '> 300' differs only at HTTP 300, and the case above it (status >= 300 && status < 400) already takes every 300, so this arm never sees one — no input can tell the two apart"
+  accepted_in = "azure-boards-backend"
+
+[[accepted]]
+  key = "f73d1cf954999c7d"
+  file = "internal/forge/azureboards.go"
+  op = "ARITHMETIC_BASE"
+  text = "hint = \" (check $\" + c.authEnv + \" — the PAT may be expired or lack the Work Items scope)\""
+  line = 316
+  reason = "not viable: the + operators on this line join strings, and string - string does not compile (go vet: operator - not defined on string), so no test can run this mutant; gremlins lists it NOT COVERED only because the 401-hint block never ran — that untested block is recorded as a FLAG in azure-boards-backend's verify.toml, not silenced here"
+  accepted_in = "azure-boards-backend"
+
+[[accepted]]
+  key = "5803748e5c9d5087"
+  file = "internal/ship/azuredevops_policy.go"
+  op = "CONDITIONALS_NEGATION"
+  text = "case s.refName == \"\":"
+  line = 254
+  reason = "gremlins switch-case attribution ceiling: go-cover gives a case condition no block, so gremlins marks it NOT COVERED although the arm runs — hand-applied in verify of azure-boards-backend (2026-11-04), the mutant is killed by TestADOArmRefusesForbiddenMergeCommit/allowNoFastForward_false"
+  accepted_in = "azure-boards-backend"
+
+[[accepted]]
+  key = "eed785a24175dc1e"
+  file = "internal/ship/azuredevops_automerge.go"
+  op = "CONDITIONALS_NEGATION"
+  text = "case now.status == \"completed\":"
+  line = 120
+  reason = "gremlins switch-case attribution ceiling: go-cover gives a case condition no block, so gremlins marks it NOT COVERED although the arm runs — hand-applied in verify of azure-boards-backend (2026-11-04), the mutant is killed by TestADOArmChoreAutoComplete/no_merge-strategy_policy"
+  accepted_in = "azure-boards-backend"
+
+[[accepted]]
+  key = "f2f8b0a4e2aea7ca"
+  file = "internal/ship/azuredevops_automerge.go"
+  op = "CONDITIONALS_NEGATION"
+  text = "case now.status == \"active\" && now.armedBy != \"\":"
+  line = 122
+  reason = "gremlins switch-case attribution ceiling: go-cover gives a case condition no block, so gremlins marks it NOT COVERED although the arm runs — hand-applied in verify of azure-boards-backend (2026-11-04), the mutant is killed by TestADOArmChoreAutoComplete/no_merge-strategy_policy (both the status and the armedBy column)"
+  accepted_in = "azure-boards-backend"
+
+[[accepted]]
+  key = "dc85fc9e5be5a3dd"
+  file = "internal/ship/azuredevops_automerge.go"
+  op = "CONDITIONALS_NEGATION"
+  text = "case now.status == \"active\":"
+  line = 124
+  reason = "gremlins switch-case attribution ceiling: go-cover gives a case condition no block, so gremlins marks it NOT COVERED although the arm runs — hand-applied in verify of azure-boards-backend (2026-11-04), the mutant is killed by TestADOArmOutcomeReadBack/active_and_not_armed"
+  accepted_in = "azure-boards-backend"
