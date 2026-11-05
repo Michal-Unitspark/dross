@@ -302,3 +302,68 @@ func TestDoctorADOFlagsMissingPath(t *testing.T) {
 		}
 	})
 }
+
+// TestDoctorADOFlagsMissingIterationPath: an iteration_path set on its own
+// is probed, against the Iterations tree — a 404 is a ✗ naming
+// iteration_path and the project, a 200 a ✓ — and with both paths set each
+// is probed exactly once, against its own tree.
+func TestDoctorADOFlagsMissingIterationPath(t *testing.T) {
+	run := func(t *testing.T, status int, fields map[string]string) (string, error, []*http.Request) {
+		t.Helper()
+		srv, seen := adoPathServer(t, status)
+		all := map[string]string{"board.base_url": srv.URL + "/tfs/DefaultCollection", "board.iteration_path": `Fabrikam\Sprint 9`}
+		for k, v := range fields {
+			all[k] = v
+		}
+		out, err := adoDoctorRun(t, all, func(string) {
+			if err := runCmd(t, Local(), "set", "allow_hosts", srv.Listener.Addr().String()); err != nil {
+				t.Fatal(err)
+			}
+		})
+		return out, err, *seen
+	}
+	// trees is each probe's node below classificationnodes/, in order.
+	trees := func(seen []*http.Request) string {
+		var out []string
+		for _, r := range seen {
+			_, node, _ := strings.Cut(r.URL.Path, "/_apis/wit/classificationnodes/")
+			out = append(out, node)
+		}
+		return strings.Join(out, ", ")
+	}
+
+	t.Run("404 is missing", func(t *testing.T) {
+		out, err, seen := run(t, http.StatusNotFound, nil)
+		board := boardLines(out)
+		if !strings.Contains(board, `✗ [board].iteration_path = "Fabrikam\\Sprint 9" does not exist in project Fabrikam`) {
+			t.Errorf("want a ✗ naming iteration_path and the project:\n%s", board)
+		}
+		if strings.Contains(board, "area_path") {
+			t.Errorf("an iteration-only config reported on area_path:\n%s", board)
+		}
+		if err == nil || trees(seen) != "Iterations/Sprint 9" {
+			t.Errorf("err = %v with probes [%s]; want a failing doctor after one Iterations probe", err, trees(seen))
+		}
+	})
+	t.Run("200 exists", func(t *testing.T) {
+		out, err, seen := run(t, http.StatusOK, nil)
+		if !strings.Contains(boardLines(out), `✓ [board].iteration_path = "Fabrikam\\Sprint 9" exists in project Fabrikam`) || err != nil {
+			t.Errorf("err = %v; want a ✓ for the iteration path:\n%s", err, boardLines(out))
+		}
+		if trees(seen) != "Iterations/Sprint 9" {
+			t.Errorf("probes = [%s], want one Iterations probe", trees(seen))
+		}
+	})
+	t.Run("both paths, one probe each", func(t *testing.T) {
+		out, err, seen := run(t, http.StatusOK, map[string]string{"board.area_path": `Fabrikam\Web`})
+		if err != nil || trees(seen) != "Areas/Web, Iterations/Sprint 9" {
+			t.Errorf("err = %v with probes [%s]; want one Areas and one Iterations probe", err, trees(seen))
+		}
+		board := boardLines(out)
+		for _, want := range []string{`✓ [board].area_path = "Fabrikam\\Web" exists`, `✓ [board].iteration_path = "Fabrikam\\Sprint 9" exists`} {
+			if !strings.Contains(board, want) {
+				t.Errorf("want %q:\n%s", want, board)
+			}
+		}
+	})
+}
