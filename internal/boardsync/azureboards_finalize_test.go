@@ -17,12 +17,16 @@ import (
 // finalize goes under the phase card; a re-run only reads.
 
 // finalizeADO is phase auth (two tasks) on tr, synced as far as upTo says
-// ("phase" or "tasks"), with changes.json complete.
+// ("phase" or "tasks"; "none" leaves every card for finalize to create),
+// with changes.json complete.
 func finalizeADO(t *testing.T, tr *adoTracker, upTo string) *Ctx {
 	t.Helper()
 	ctx := adoRepo(t, tr, `{}`, nil)
 	phaseRepo(t, ctx, authSpec, twoTaskPlan)
 	captureStderr(t, func() {
+		if upTo == "none" {
+			return
+		}
 		if err := SyncPhase(ctx, "auth", "", false); err != nil {
 			t.Fatal(err)
 		}
@@ -212,5 +216,49 @@ func TestADOFinalizeReportsRefusedTaskClose(t *testing.T) {
 		if s := tr.items[id].state; s != "Done" {
 			t.Errorf("work item %d reads %s; one refused task stranded it", id, s)
 		}
+	}
+}
+
+// TestADOFinalizeReportsRefusedPhaseClose: a phase item that reads back
+// Committed after finalize's close — whether the card was synced before or
+// created by finalize itself — fails finalize naming the phase card and no
+// task, is narrated NOT closed and never "(closed)", and does not strand the
+// task items, which still close.
+func TestADOFinalizeReportsRefusedPhaseClose(t *testing.T) {
+	for _, upTo := range []string{"tasks", "none"} {
+		t.Run("synced to "+upTo, func(t *testing.T) {
+			tr := newADOTracker(t, scrumProcess)
+			ctx := finalizeADO(t, tr, upTo) // phase 10, tasks 11 and 12
+			tr.mu.Lock()
+			tr.stick[10] = "Committed"
+			tr.mu.Unlock()
+			out := ctx.Out.(interface {
+				fmt.Stringer
+				Reset()
+			})
+			out.Reset()
+			var err error
+			captureStderr(t, func() { err = FinalizePhase(ctx, "auth") })
+			if err == nil || !strings.Contains(err.Error(), "phase 10:") || strings.Contains(err.Error(), "task ") {
+				t.Fatalf("err = %v; want a failure naming the phase card 10 and no task", err)
+			}
+			narration := out.String()
+			if strings.Contains(narration, "(closed)") || strings.Contains(narration, "created, closed") || strings.Contains(narration, "already complete") {
+				t.Errorf("narration = %q; a phase card that read back Committed was reported done", narration)
+			}
+			if !strings.Contains(narration, "phase auth -> board 10 (NOT closed); 2 task card(s) closed") {
+				t.Errorf("narration = %q; want the phase card NOT closed and both task cards closed", narration)
+			}
+			tr.mu.Lock()
+			defer tr.mu.Unlock()
+			if s := tr.items[10].state; s != "Committed" {
+				t.Errorf("phase item 10 reads %s; the refusal fixture did not hold", s)
+			}
+			for _, id := range []int{11, 12} {
+				if s := tr.items[id].state; s != "Done" {
+					t.Errorf("task item %d reads %s; the refused phase close stranded it", id, s)
+				}
+			}
+		})
 	}
 }
