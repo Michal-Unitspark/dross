@@ -48,6 +48,10 @@ func SyncTasks(ctx *Ctx, phaseID, only, status string, doClose bool) error {
 		return fmt.Errorf("phase %s has no board issue yet — run `dross issue phase sync %s` first", phaseID, phaseID)
 	}
 
+	// A tracker with a real parent link (Azure Boards' Hierarchy-Reverse)
+	// is preferred over a plain relation: a Task under its phase item is what
+	// the board's hierarchy views read, where a Related link groups nothing.
+	parentLinker, canParent := ctx.Client.(forge.ParentLinker)
 	linker, canLink := ctx.Client.(forge.IssueLinker)
 	warn := &runWarnings{}
 	var refused []string
@@ -66,6 +70,14 @@ func SyncTasks(ctx *Ctx, phaseID, only, status string, doClose bool) error {
 				continue
 			}
 			return err
+		}
+		if canParent {
+			if err := parentLinker.LinkParent(parent, key); err != nil {
+				// Once per run, the rest still parented; the next sync
+				// finds the task unparented and retries.
+				warn.once(&warn.noLink, "could not put task issues under %s (%v) — they carry the phase label; the next sync retries", parent, err)
+			}
+			continue
 		}
 		if !canLink {
 			// ONCE per run, not once per task: an eight-task phase would
@@ -258,6 +270,10 @@ func setBoardState(ctx *Ctx, key, status string, warn *runWarnings) error {
 			return Wrap(err)
 		}
 	case *forge.JiraClient:
+		if err := c.SetState(key, status, ctx.Proj.Board.StateMap); err != nil {
+			return Wrap(err)
+		}
+	case *forge.AzureBoardsClient:
 		if err := c.SetState(key, status, ctx.Proj.Board.StateMap); err != nil {
 			return Wrap(err)
 		}

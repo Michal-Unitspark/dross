@@ -148,7 +148,7 @@ func TestFindOpenPRByHeadForgejo500IsError(t *testing.T) {
 
 // An unknown provider is a plain error naming the supported list — never the
 // ErrHeadPRLookupUnsupported sentinel, which is reserved for a known provider
-// whose lookup isn't wired (none today; the deferred azure-devops arm).
+// whose lookup isn't wired (none today).
 func TestFindOpenPRByHeadUnknownProviderIsPlainError(t *testing.T) {
 	_, err := FindOpenPRByHead(OpenOpts{Provider: "sourcehut"}, "phase/x")
 	if err == nil {
@@ -172,5 +172,98 @@ func TestFindOpenPRByHeadFuncDefaultsToFindOpenPRByHead(t *testing.T) {
 	_, err := FindOpenPRByHeadFunc(OpenOpts{Provider: "sourcehut"}, "phase/x")
 	if err == nil || !strings.Contains(err.Error(), configenum.ShipProviders.List()) {
 		t.Errorf("FindOpenPRByHeadFunc should delegate to FindOpenPRByHead, got: %v", err)
+	}
+}
+
+// adoHeadServer answers the active-PR list. It asserts the server-side
+// filter, then returns body whatever was asked — so a test can also play a
+// server that ignored the filter.
+func adoHeadServer(t *testing.T, wantRef string, status int, body string) *httptest.Server {
+	t.Helper()
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		q := r.URL.Query()
+		if wantRef != "" {
+			if got := q.Get("searchCriteria.sourceRefName"); got != wantRef {
+				t.Errorf("searchCriteria.sourceRefName = %q, want %q", got, wantRef)
+			}
+			if got := q.Get("searchCriteria.status"); got != "active" {
+				t.Errorf("searchCriteria.status = %q, want active", got)
+			}
+		}
+		w.WriteHeader(status)
+		_, _ = w.Write([]byte(body))
+	}))
+	t.Cleanup(srv.Close)
+	return srv
+}
+
+func adoHeadOpts(srv *httptest.Server) OpenOpts {
+	return OpenOpts{
+		Provider: " Azure-DevOps ", URL: "https://dev.azure.com/o/p/_git/r", APIBase: srv.URL + "/o",
+		AuthEnv: "MOCK_ADO_PAT", Hosts: hostallow.Derive(srv.URL, nil),
+	}
+}
+
+// TestFindOpenPRByHeadAzureDevOps: the azure-devops arm filters active PRs by
+// full source ref, re-checks every hit, and never reads a failed lookup as
+// "no PR" or as "unsupported".
+func TestFindOpenPRByHeadAzureDevOps(t *testing.T) {
+	t.Setenv("MOCK_ADO_PAT", "pat")
+
+	t.Run("hit", func(t *testing.T) {
+		srv := adoHeadServer(t, "refs/heads/phase/x", 200,
+			`{"count":1,"value":[{"pullRequestId":17,"status":"active","sourceRefName":"refs/heads/phase/x"}]}`)
+		res, err := FindOpenPRByHead(adoHeadOpts(srv), "phase/x")
+		if err != nil || res == nil || res.Number != 17 || res.URL != "https://dev.azure.com/o/p/_git/r/pullrequest/17" {
+			t.Errorf("got %+v, %v; want #17 at https://dev.azure.com/o/p/_git/r/pullrequest/17", res, err)
+		}
+	})
+
+	t.Run("head with & and + round-trips", func(t *testing.T) {
+		srv := adoHeadServer(t, "refs/heads/phase/a&b+c", 200,
+			`{"value":[{"pullRequestId":3,"status":"active","sourceRefName":"refs/heads/phase/a&b+c"}]}`)
+		if res, err := FindOpenPRByHead(adoHeadOpts(srv), "phase/a&b+c"); err != nil || res == nil || res.Number != 3 {
+			t.Errorf("got %+v, %v; want #3", res, err)
+		}
+	})
+
+	t.Run("none", func(t *testing.T) {
+		srv := adoHeadServer(t, "refs/heads/phase/x", 200, `{"count":0,"value":[]}`)
+		if res, err := FindOpenPRByHead(adoHeadOpts(srv), "phase/x"); res != nil || err != nil {
+			t.Errorf("got (%+v, %v), want (nil, nil)", res, err)
+		}
+	})
+
+	t.Run("server ignored the filter", func(t *testing.T) {
+		srv := adoHeadServer(t, "", 200, `{"value":[
+			{"pullRequestId":4,"status":"active","sourceRefName":"refs/heads/other"},
+			{"pullRequestId":5,"status":"abandoned","sourceRefName":"refs/heads/phase/x"},
+			{"pullRequestId":6,"status":"active","sourceRefName":"refs/heads/phase/x","forkSource":{"repository":{"id":"f"}}}
+		]}`)
+		if res, err := FindOpenPRByHead(adoHeadOpts(srv), "phase/x"); res != nil || err != nil {
+			t.Errorf("got (%+v, %v), want (nil, nil) — none of those is this phase's PR", res, err)
+		}
+	})
+
+	for name, tc := range map[string]struct {
+		status int
+		body   string
+	}{
+		"500":              {500, `{"message":"boom"}`},
+		"203 sign-in page": {http.StatusNonAuthoritativeInfo, `<html>Sign In</html>`},
+		"unparseable body": {200, `not json`},
+		"no value list":    {200, `{"count":0}`},
+		"match with no id": {200, `{"value":[{"status":"active","sourceRefName":"refs/heads/phase/x"}]}`},
+	} {
+		t.Run(name, func(t *testing.T) {
+			srv := adoHeadServer(t, "", tc.status, tc.body)
+			res, err := FindOpenPRByHead(adoHeadOpts(srv), "phase/x")
+			if err == nil || res != nil {
+				t.Fatalf("got (%+v, %v), want (nil, err)", res, err)
+			}
+			if errors.Is(err, ErrHeadPRLookupUnsupported) {
+				t.Errorf("a failed lookup reads as unsupported: %v", err)
+			}
+		})
 	}
 }

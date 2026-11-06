@@ -202,10 +202,18 @@ func TestFrictionWindow_DoctorAcceptsWorkingProviders(t *testing.T) {
 			if err := runCmd(t, Init()); err != nil {
 				t.Fatalf("init: %v", err)
 			}
+			// azure-devops is checked for an org URL on an allowed host;
+			// dev.azure.com is a built-in one. Its client is real, so the
+			// case runs with no network rather than dial it.
+			baseURL := "https://board.example.com"
+			if provider == "azure-devops" {
+				baseURL = "https://dev.azure.com/acme"
+				noNetwork(t)
+			}
 			for _, kv := range [][2]string{
 				{"remote.auth_env", tokenEnv},
 				{"board.provider", provider},
-				{"board.base_url", "https://board.example.com"},
+				{"board.base_url", baseURL},
 				{"board.auth_env", tokenEnv},
 				{"board.project", "PROJ"},
 				{"board.enabled", "true"},

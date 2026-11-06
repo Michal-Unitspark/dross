@@ -1,0 +1,145 @@
+[verify]
+  phase = "azure-devops-ship-loop"
+  generated_at = 2026-11-02T20:02:36.719434555Z
+  verdict = "pass"
+  finalized = true
+  finalized_at = 2026-11-02T22:39:23.9684962Z
+  measured_commit = "fa0c7366b6656b2d3ce042693ee7d6145e542b1d"
+  measured_tree = "ea1989d538540d64dd35d93a6329e2237d51b34b"
+
+[summary]
+  mutation_status = "measured"
+  measured_on = "local"
+  mutation_score = 0.909853249475891
+  mutants_killed = 434
+  mutants_survived = 43
+  mutants_not_covered = 43
+  mutants_no_block = 43
+  mutants_test_gap = 0
+  mutants_in_scope = 477
+  unclassified_in_scope = 0
+  criteria_total = 11
+  criteria_covered = 11
+  criteria_uncovered = 0
+
+  [[summary.leg]]
+    language = "go"
+    tool = "gremlins"
+    killed = 434
+    survived = 43
+    timeout = 0
+    in_scope = 477
+    score = 0.909853249475891
+    file_count = 40
+    measured_on = "local"
+    whole_file = ["internal/cmd/enum_divergence_test.go — adapter-lacks-range-runner", "internal/cmd/milestone_dependents_test.go — adapter-lacks-range-runner", "internal/cmd/pr_azuredevops_test.go — adapter-lacks-range-runner", "internal/cmd/review_prompt_test.go — adapter-lacks-range-runner", "internal/cmd/ship.go — adapter-lacks-range-runner", "internal/cmd/ship_cimerge.go — adapter-lacks-range-runner", "internal/cmd/ship_cimerge_test.go — adapter-lacks-range-runner", "internal/cmd/ship_prompt_test.go — adapter-lacks-range-runner", "internal/cmd/watch.go — adapter-lacks-range-runner", "internal/cmd/watch_prompt_test.go — adapter-lacks-range-runner", "internal/cmd/watch_test.go — adapter-lacks-range-runner", "internal/ship/ado_live_record_test.go — adapter-lacks-range-runner", "internal/ship/azuredevops_ci.go — adapter-lacks-range-runner", "internal/ship/azuredevops_ci_fetch.go — adapter-lacks-range-runner", "internal/ship/azuredevops_ci_fetch_test.go — adapter-lacks-range-runner", "internal/ship/azuredevops_ci_test.go — adapter-lacks-range-runner", "internal/ship/azuredevops_dispatch_test.go — adapter-lacks-range-runner", "internal/ship/azuredevops_identity.go — adapter-lacks-range-runner", "internal/ship/azuredevops_identity_test.go — adapter-lacks-range-runner", "internal/ship/azuredevops_merge.go — adapter-lacks-range-runner", "internal/ship/azuredevops_merge_test.go — adapter-lacks-range-runner", "internal/ship/azuredevops_openprs.go — adapter-lacks-range-runner", "internal/ship/azuredevops_openprs_test.go — adapter-lacks-range-runner", "internal/ship/azuredevops_prread.go — adapter-lacks-range-runner", "internal/ship/azuredevops_prread_test.go — adapter-lacks-range-runner", "internal/ship/azuredevops_threads.go — adapter-lacks-range-runner", "internal/ship/azuredevops_threads_test.go — adapter-lacks-range-runner", "internal/ship/basepr.go — adapter-lacks-range-runner", "internal/ship/bitbucket.go — adapter-lacks-range-runner", "internal/ship/bitbucket_ci.go — adapter-lacks-range-runner", "internal/ship/bitbucket_ci_test.go — adapter-lacks-range-runner", "internal/ship/bitbucket_merge.go — adapter-lacks-range-runner", "internal/ship/bitbucket_merge_test.go — adapter-lacks-range-runner", "internal/ship/bitbucket_test.go — adapter-lacks-range-runner", "internal/ship/ci.go — adapter-lacks-range-runner", "internal/ship/cimerge_dispatch_test.go — adapter-lacks-range-runner", "internal/ship/hostguard_test.go — adapter-lacks-range-runner", "internal/ship/merge.go — adapter-lacks-range-runner", "internal/ship/openprs.go — adapter-lacks-range-runner", "internal/ship/prcomments.go — adapter-lacks-range-runner"]
+
+[[criterion]]
+  id = "c-1"
+  status = "covered"
+  tests = ["internal/ship/azuredevops_threads_test.go:TestADOThreadReplies", "internal/ship/azuredevops_threads_test.go:TestADOThreadsSkipNoise", "internal/ship/azuredevops_threads_test.go:TestADOThreadCommentIDs", "internal/ship/azuredevops_threads_test.go:TestADOThreadInlineAnchor", "internal/ship/azuredevops_threads_test.go:TestADOThreadsNeverPartial", "internal/ship/azuredevops_threads_test.go:TestADOThreadAuthorNotGuessedBot", "internal/ship/azuredevops_threads_test.go:TestADOThreadAuthorUniqueName", "internal/cmd/pr_azuredevops_test.go:TestPRCommentsAzureDevOps", "internal/cmd/pr_azuredevops_test.go:TestPRCommentsAzureDevOpsThreadReplies"]
+  notes = "t-19 closed the prior weak: TestADOThreadReplies walks two multi-comment threads (system + deleted comment mid-thread) and pins all 5 human replies by count, distinct digits-only <thread><comment> id, inherited anchor, own author and thread link, so a first-comment-only loop or noise that breaks the walk fails; the cmd test lists a reviewer reply below dross's own reply in one inline thread. Noise skipping, anchoring, author id/uniqueName, Bot unknown, all-status listing and never-partial still asserted."
+
+[[criterion]]
+  id = "c-2"
+  status = "covered"
+  tests = ["internal/ship/azuredevops_prread_test.go:TestADOPRHeadRef", "internal/ship/azuredevops_prread_test.go:TestADOPRHeadOpen", "internal/ship/azuredevops_prread_test.go:TestADOPRHeadFork", "internal/cmd/pr_azuredevops_test.go:TestPRCommentsAzureDevOpsNotAPhasePR"]
+  notes = "Ref without refs/heads/, active/Active open vs completed/abandoned closed (unknown errors), forkSource -> CrossRepo, and the browser URL are each asserted; cmd refuses a closed or fork PR."
+
+[[criterion]]
+  id = "c-3"
+  status = "covered"
+  tests = ["internal/ship/azuredevops_identity_test.go:TestADOAuthenticatedUserEndpoint", "internal/ship/azuredevops_identity_test.go:TestADOAuthenticatedUserRefusesNobody", "internal/ship/azuredevops_identity_test.go:TestADOIdentityMatchesThreadAuthor", "internal/ship/azuredevops_threads_test.go:TestADOThreadAuthorUniqueName", "internal/cmd/pr_azuredevops_test.go:TestPRCommentsAzureDevOps", "internal/cmd/pr_azuredevops_test.go:TestPRReplyAzureDevOps"]
+  notes = "Exact org/collection connectionData paths, unique-name login, anonymous refusal, and id equality with the thread author across case; cmd drops dross's own reply while keeping a reviewer who copied the marker."
+
+[[criterion]]
+  id = "c-4"
+  status = "covered"
+  tests = ["internal/ship/azuredevops_prread_test.go:TestADOOpenPRsTargeting", "internal/ship/azuredevops_prread_test.go:TestADOOpenPRsTargetingFailsClosed", "internal/ship/azuredevops_prread_test.go:TestADOOpenPRsTargetingFullPage", "internal/cmd/milestone_dependents_test.go:TestGuardOpenPRsTargetingAzureDevOps"]
+  notes = "Query filter plus client re-check, full struct equality per dependent, every failed read (500/203/non-JSON/no value/id 0/full page) errors; the guard announces the skip on failure and refuses naming a found dependent."
+
+[[criterion]]
+  id = "c-5"
+  status = "covered"
+  tests = ["internal/ship/azuredevops_ci_test.go:TestADORollupFail", "internal/ship/azuredevops_ci_test.go:TestADORollupUnfinished", "internal/ship/azuredevops_ci_test.go:TestADORollupNotApplicable", "internal/ship/azuredevops_ci_test.go:TestADORollupNonCI", "internal/ship/azuredevops_ci_fetch_test.go:TestADOCIBuildsAtHeadOnly", "internal/ship/azuredevops_ci_fetch_test.go:TestADOCIBuildsQuery", "internal/ship/azuredevops_ci_fetch_test.go:TestADOCIStaleHead", "internal/ship/azuredevops_ci_fetch_test.go:TestADOStatusPolicyFailLink", "internal/cmd/ship_cimerge_test.go:TestShipCIExitCodes", "internal/cmd/ship_cimerge_test.go:TestShipCIAzureDevOpsFlow", "internal/cmd/ship_prompt_test.go:TestShipPromptAzureDevOpsCI", "internal/cmd/ship_prompt_test.go:TestShipPromptStaleHeadAsks", "internal/cmd/ship_prompt_test.go:TestShipPromptWatchesClassicPipelines"]
+  notes = "Rollup verdicts (pass/fail+link/pending/queued/none/ask) asserted per state, head-only builds with no definition/YAML filter (classic pipelines), stale head -> pending; exit codes per verdict at cmd; the ~10-min window and proceed/stop ask live in ship.md and are pinned by prompt tests (ci_merge_home lock)."
+
+[[criterion]]
+  id = "c-6"
+  status = "covered"
+  tests = ["internal/ship/azuredevops_merge_test.go:TestADOCompletePayload", "internal/ship/azuredevops_merge_test.go:TestADOCompletePinsHead", "internal/ship/azuredevops_merge_test.go:TestADOCompleteWaitsForCompleted", "internal/ship/azuredevops_merge_test.go:TestADOCompleteAbandonedWhileCompleting", "internal/ship/azuredevops_merge_test.go:TestADOCompletionBlockedByPolicy", "internal/ship/azuredevops_merge_test.go:TestADOCompletionRefusedNotBlocked", "internal/cmd/ship_cimerge_test.go:TestShipMergeAzureDevOpsPinsHead", "internal/cmd/ship_cimerge_test.go:TestShipMergeExitCodes", "internal/cmd/ship_prompt_test.go:TestShipPromptMergeGate"]
+  notes = "One PATCH with squash, deleteSourceBranch present and false, commitId == watched SHA, no bypass/auto-complete key at any depth, no DELETE or /refs request; merged only at completed; conflicts/failure/rejectedByPolicy/refused PATCH each error, never merged. t-20 closed the prior 0-hit gap: TestADOCompleteAbandonedWhileCompleting pins a PR abandoned mid-completion to an error naming abandoned (not ErrMergeBlocked), no MergeResult, stopping at that poll with 0 evaluation reads."
+
+[[criterion]]
+  id = "c-7"
+  status = "covered"
+  tests = ["internal/ship/ado_live_record_test.go:TestADOLiveRecordHonest", "internal/ship/ado_live_record_test.go:TestADOLiveRecordStepEvidence", "internal/ship/testdata/ado_live_smoke.toml"]
+  notes = "Committed record: posture live, 11/11 steps pass with evidence on the real ADO host, run_at 2026-11-02, api 7.1, statusless_thread_blocks = false consistent with adoThreadStatus ''. The 'committed record validates' subtest rejects a dishonest live record (failed/not-run step, loopback evidence, hollow leg)."
+
+[[criterion]]
+  id = "c-8"
+  status = "covered"
+  tests = ["internal/cmd/watch_test.go:TestWatchAzureDevOpsShipPRs", "internal/cmd/watch_test.go:TestWatchAzureDevOpsFailuresStayQuiet", "internal/ship/azuredevops_openprs_test.go:TestADOWatchChecksMatchShipCI", "internal/ship/azuredevops_openprs_test.go:TestADOOpenPRsNoGuessing", "internal/ship/azuredevops_openprs_test.go:TestADOOpenPRsRefusesIncomplete", "internal/ship/azuredevops_openprs_test.go:TestADOOpenPRsOneChecksReadFails", "internal/cmd/watch_prompt_test.go:TestWatchPromptAzureDevOps"]
+  notes = "Only non-fork phase PRs become ship PRs, Untriaged == 1 through a real ADO mock (own reply excluded), BotPRs present and empty, checks equal adoCIStatus across 9 fixtures; 500/203/full page/host refusal leave ship_prs absent, never empty."
+
+[[criterion]]
+  id = "c-9"
+  status = "covered"
+  tests = ["internal/cmd/review_prompt_test.go:TestReviewPromptAzureDevOpsDiff", "internal/ship/azuredevops_comment_test.go:TestPostAzureDevOpsThread"]
+  notes = "Exact three-dot git diff into review-diff.patch (two-dot rejected), base from dross changes show, non-empty guard in §1, findings via dross ship comment, no hand-built auth; the thread POST is a new top-level thread."
+
+[[criterion]]
+  id = "c-10"
+  status = "covered"
+  tests = ["internal/ship/bitbucket_ci_test.go:TestBitbucketCIVerdicts", "internal/ship/bitbucket_ci_test.go:TestBitbucketCIPaging", "internal/ship/bitbucket_ci_test.go:TestBitbucketCIHeadAndFailures", "internal/ship/cimerge_dispatch_test.go:TestCIMergeDispatchRoutes", "internal/cmd/ship_cimerge_test.go:TestShipCIExitCodes", "internal/cmd/ship_prompt_test.go:TestShipPromptAzureDevOpsCI"]
+  notes = "Whole-struct verdicts for SUCCESSFUL/FAILED+link/STOPPED+link/INPROGRESS/none, a fail on page 2 still fails, moved head -> pending with 0 status reads; dispatch routes Bitbucket; §5 shares the ADO polling section."
+
+[[criterion]]
+  id = "c-11"
+  status = "covered"
+  tests = ["internal/ship/bitbucket_merge_test.go:TestBitbucketMergePayload", "internal/ship/bitbucket_merge_test.go:TestBitbucketMergeAsync", "internal/ship/bitbucket_merge_test.go:TestBitbucketMergeLocationVetted", "internal/ship/bitbucket_merge_test.go:TestBitbucketMergeBlocked", "internal/ship/bitbucket_merge_test.go:TestBitbucketMergeRefusals", "internal/ship/cimerge_dispatch_test.go:TestCIMergeDispatchRoutes", "internal/cmd/ship_cimerge_test.go:TestShipMergeExitCodes"]
+  notes = "One POST with squash and close_source_branch present and false, 202 polled to SUCCESS+MERGED only via a vetted Location, any DELETE or refs/branches request fails the test; blocked/conflict/555/no-Location/task error each error, never merged."
+
+[[finding]]
+  severity = "NOTE"
+  text = "skipped README.md: no mutation adapter for .md"
+
+[[finding]]
+  severity = "NOTE"
+  text = "skipped assets/prompts/review.md: no mutation adapter for .md"
+
+[[finding]]
+  severity = "NOTE"
+  text = "skipped assets/prompts/ship.md: no mutation adapter for .md"
+
+[[finding]]
+  severity = "NOTE"
+  text = "skipped assets/prompts/watch.md: no mutation adapter for .md"
+
+[[finding]]
+  severity = "NOTE"
+  text = "skipped cmd/dross/testdata/cli_tree.txt: no mutation adapter for .txt"
+
+[[finding]]
+  severity = "NOTE"
+  text = "skipped docs/dross.1: no mutation adapter for .1"
+
+[[finding]]
+  severity = "NOTE"
+  text = "skipped internal/ship/testdata/ado_live_smoke.toml: no mutation adapter for .toml"
+
+[[finding]]
+  severity = "NOTE"
+  text = "Resolved since the prior partial verdict: c-1 weak (single-comment thread fixtures) closed by t-19 (TestADOThreadReplies, TestPRCommentsAzureDevOpsThreadReplies); c-6 0-hit abandoned-while-completing branch (azuredevops_merge.go) closed by t-20 (TestADOCompleteAbandonedWhileCompleting)."
+
+[[finding]]
+  severity = "NOTE"
+  text = "c-7: the committed live record validates as live, but no test requires posture = 'live'; an honest downgrade to mock-only would still validate. The run itself is self-reported by nature (verify_posture lock)."
+
+[[finding]]
+  severity = "NOTE"
+  text = "c-10/c-11: Bitbucket ship ci/merge non-pass verdicts reach the cmd layer only through the stubbed seam (TestShipCIExitCodes/TestShipMergeExitCodes); provider->dispatch wiring is asserted at package level (TestCIMergeDispatchRoutes)."
+
+[[finding]]
+  severity = "NOTE"
+  text = "All 43 in-scope survivors are NOT COVERED by construction and already accepted (22 in-hunk, 21 inherited): switch-case conditions/closure bodies under the gremlins attribution ceiling and package-level merge pacing defaults under const-initializer-arithmetic. Efficacy over the 434 reachable in-scope mutants = 1.00; 174 out-of-scope survivors filtered, all accepted; 0 unclassified anywhere."

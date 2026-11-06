@@ -4585,3 +4585,408 @@
   line = 171
   accepted_in = "review-comment-ingest"
   category = "gremlins-attribution-ceiling"
+
+[[accepted]]
+  key = "106de9896f658914"
+  file = "internal/project/azuredevops.go"
+  op = "CONDITIONALS_NEGATION"
+  text = "case name == adoServicesHost && len(base) != 1, // dev.azure.com/<org>, exactly"
+  line = 99
+  accepted_in = "azure-devops-provider"
+  category = "gremlins-attribution-ceiling"
+
+[[accepted]]
+  key = "0bcea2045a1135c1"
+  file = "internal/ship/azuredevops.go"
+  op = "CONDITIONALS_NEGATION"
+  text = "case status == http.StatusNonAuthoritativeInfo, status >= 300 && status < 400:"
+  line = 186
+  accepted_in = "azure-devops-provider"
+  category = "gremlins-attribution-ceiling"
+
+[[accepted]]
+  key = "3e689b080f36aa6b"
+  file = "internal/ship/azuredevops.go"
+  op = "CONDITIONALS_BOUNDARY"
+  text = "case status == http.StatusNonAuthoritativeInfo, status >= 300 && status < 400:"
+  line = 186
+  accepted_in = "azure-devops-provider"
+  category = "gremlins-attribution-ceiling"
+
+[[accepted]]
+  key = "f882740e3df87ce4"
+  file = "internal/ship/azuredevops.go"
+  op = "CONDITIONALS_BOUNDARY"
+  text = "case status >= 300:"
+  line = 188
+  accepted_in = "azure-devops-provider"
+  category = "gremlins-attribution-ceiling"
+
+[[accepted]]
+  key = "9d0c8343b4324a1b"
+  file = "internal/ship/azuredevops.go"
+  op = "CONDITIONALS_NEGATION"
+  text = "case status >= 300:"
+  line = 188
+  accepted_in = "azure-devops-provider"
+  category = "gremlins-attribution-ceiling"
+
+[[accepted]]
+  key = "2b7346dca5addb54"
+  file = "internal/ship/azuredevops_open.go"
+  op = "INCREMENT_DECREMENT"
+  text = "n++"
+  line = 122
+  reason = "Unreachable, not untested: utf16Len ranges over a Go string, and range decoding never yields a rune utf16.RuneLen rejects — an invalid UTF-8 sequence, including a UTF-8-encoded surrogate, decodes to utf8.RuneError (U+FFFD, one UTF-16 unit), and no decoded rune exceeds unicode.MaxRune. So RuneLen(r) > 0 for every r and the else-branch's n++ never runs; its coverage block is count 0 by construction and no test can kill the mutant. The live branch (1- and 2-unit runes) is pinned by TestOpenAzureDevOpsPRLongDescription; the else-branch is a defensive guard against RuneLen's documented -1, kept so the function stays correct if it is ever fed runes from another source."
+  accepted_in = "azure-devops-provider"
+
+[[accepted]]
+  key = "515f6423745cb441"
+  file = "internal/project/azuredevops.go"
+  op = "CONDITIONALS_BOUNDARY"
+  text = "orgHost && len(base) > 1, // <org>.visualstudio.com[/DefaultCollection]"
+  line = 109
+  accepted_in = "azure-devops-provider"
+  category = "gremlins-attribution-ceiling"
+
+[[accepted]]
+  key = "958486533dc6b939"
+  file = "internal/project/azuredevops.go"
+  op = "CONDITIONALS_NEGATION"
+  text = "orgHost && len(base) > 1, // <org>.visualstudio.com[/DefaultCollection]"
+  line = 109
+  accepted_in = "azure-devops-provider"
+  category = "gremlins-attribution-ceiling"
+
+[[accepted]]
+  key = "d58643dbb7fa5555"
+  file = "internal/project/azuredevops.go"
+  op = "CONDITIONALS_BOUNDARY"
+  text = "len(base) < depth:        // a Server always has a collection, /tfs/<coll> under /tfs"
+  line = 110
+  accepted_in = "azure-devops-provider"
+  category = "gremlins-attribution-ceiling"
+
+[[accepted]]
+  key = "d557da1b7480081d"
+  file = "internal/project/azuredevops.go"
+  op = "CONDITIONALS_NEGATION"
+  text = "len(base) < depth:        // a Server always has a collection, /tfs/<coll> under /tfs"
+  line = 110
+  accepted_in = "azure-devops-provider"
+  category = "gremlins-attribution-ceiling"
+
+[[accepted]]
+  key = "05c0e61226990aff"
+  file = "internal/project/azuredevops.go"
+  op = "CONDITIONALS_NEGATION"
+  text = "case visualStudioOrg(host) != \"\":"
+  line = 147
+  accepted_in = "azure-devops-provider"
+  category = "gremlins-attribution-ceiling"
+
+[[accepted]]
+  key = "f1475e972d8c7691"
+  file = "internal/project/azuredevops.go"
+  op = "CONDITIONALS_NEGATION"
+  text = "case host != adoServicesHost && strings.EqualFold(first, adoServerVDir):"
+  line = 152
+  accepted_in = "azure-devops-provider"
+  category = "gremlins-attribution-ceiling"
+
+[[accepted]]
+  key = "26176a1189c4d33f"
+  file = "internal/ship/azuredevops_ci.go"
+  op = "CONDITIONALS_NEGATION"
+  text = "case status == \"notapplicable\":"
+  line = 120
+  accepted_in = "azure-devops-ship-loop"
+  category = "gremlins-attribution-ceiling"
+
+[[accepted]]
+  key = "e7d9939fefad454a"
+  file = "internal/ship/azuredevops_ci.go"
+  op = "CONDITIONALS_NEGATION"
+  text = "case status == \"rejected\":"
+  line = 127
+  accepted_in = "azure-devops-ship-loop"
+  category = "gremlins-attribution-ceiling"
+
+[[accepted]]
+  key = "716c05be25b39dd1"
+  file = "internal/ship/azuredevops_ci.go"
+  op = "CONDITIONALS_NEGATION"
+  text = "case status == \"approved\":"
+  line = 129
+  accepted_in = "azure-devops-ship-loop"
+  category = "gremlins-attribution-ceiling"
+
+[[accepted]]
+  key = "b67e7e812cbec721"
+  file = "internal/ship/azuredevops_ci.go"
+  op = "CONDITIONALS_NEGATION"
+  text = "case status == \"running\":"
+  line = 131
+  accepted_in = "azure-devops-ship-loop"
+  category = "gremlins-attribution-ceiling"
+
+[[accepted]]
+  key = "06d9e1783b26b86a"
+  file = "internal/ship/azuredevops_ci.go"
+  op = "CONDITIONALS_NEGATION"
+  text = "case status == \"queued\":"
+  line = 133
+  accepted_in = "azure-devops-ship-loop"
+  category = "gremlins-attribution-ceiling"
+
+[[accepted]]
+  key = "170d9e4bf57784c1"
+  file = "internal/ship/azuredevops_ci.go"
+  op = "CONDITIONALS_NEGATION"
+  text = "case status == \"broken\":"
+  line = 135
+  accepted_in = "azure-devops-ship-loop"
+  category = "gremlins-attribution-ceiling"
+
+[[accepted]]
+  key = "e54b4b44936bd71e"
+  file = "internal/ship/bitbucket_ci.go"
+  op = "CONDITIONALS_NEGATION"
+  text = "case unknown != \"\":"
+  line = 120
+  accepted_in = "azure-devops-ship-loop"
+  category = "gremlins-attribution-ceiling"
+
+[[accepted]]
+  key = "73ab291d5b6edb4a"
+  file = "internal/ship/azuredevops_threads.go"
+  op = "CONDITIONALS_NEGATION"
+  text = "case ctx.RightFileStart != nil && ctx.RightFileStart.Line > 0:"
+  line = 83
+  accepted_in = "azure-devops-ship-loop"
+  category = "gremlins-attribution-ceiling"
+
+[[accepted]]
+  key = "9afaf9d090bcf8a7"
+  file = "internal/ship/azuredevops_threads.go"
+  op = "CONDITIONALS_BOUNDARY"
+  text = "case ctx.RightFileStart != nil && ctx.RightFileStart.Line > 0:"
+  line = 83
+  accepted_in = "azure-devops-ship-loop"
+  category = "gremlins-attribution-ceiling"
+
+[[accepted]]
+  key = "701012b406c4bc0b"
+  file = "internal/ship/azuredevops_threads.go"
+  op = "CONDITIONALS_NEGATION"
+  text = "case ctx.LeftFileStart != nil:"
+  line = 85
+  accepted_in = "azure-devops-ship-loop"
+  category = "gremlins-attribution-ceiling"
+
+[[accepted]]
+  key = "6ea08a6458f6d541"
+  file = "internal/ship/bitbucket_merge.go"
+  op = "CONDITIONALS_NEGATION"
+  text = "case status == http.StatusOK:"
+  line = 92
+  accepted_in = "azure-devops-ship-loop"
+  category = "gremlins-attribution-ceiling"
+
+[[accepted]]
+  key = "9d64940158c26039"
+  file = "internal/ship/bitbucket_merge.go"
+  op = "CONDITIONALS_NEGATION"
+  text = "case status == http.StatusAccepted:"
+  line = 98
+  accepted_in = "azure-devops-ship-loop"
+  category = "gremlins-attribution-ceiling"
+
+[[accepted]]
+  key = "086153579a5a3efc"
+  file = "internal/ship/bitbucket_merge.go"
+  op = "CONDITIONALS_NEGATION"
+  text = "case status == http.StatusBadRequest && bbMergeCheckRefusal(body):"
+  line = 107
+  accepted_in = "azure-devops-ship-loop"
+  category = "gremlins-attribution-ceiling"
+
+[[accepted]]
+  key = "37ae62c94711aae4"
+  file = "internal/ship/bitbucket_merge.go"
+  op = "CONDITIONALS_NEGATION"
+  text = "case loc.Scheme != base.Scheme || !strings.EqualFold(loc.Host, base.Host):"
+  line = 145
+  accepted_in = "azure-devops-ship-loop"
+  category = "gremlins-attribution-ceiling"
+
+[[accepted]]
+  key = "e1cfea523df417d2"
+  file = "internal/ship/bitbucket_merge.go"
+  op = "CONDITIONALS_NEGATION"
+  text = "case len(loc.Path) <= len(prefix) || !strings.EqualFold(loc.Path[:len(prefix)], prefix) || path.Clean(loc.Path) != loc.Path:"
+  line = 147
+  accepted_in = "azure-devops-ship-loop"
+  category = "gremlins-attribution-ceiling"
+
+[[accepted]]
+  key = "12f3eeb83a07006c"
+  file = "internal/ship/bitbucket_merge.go"
+  op = "CONDITIONALS_BOUNDARY"
+  text = "case len(loc.Path) <= len(prefix) || !strings.EqualFold(loc.Path[:len(prefix)], prefix) || path.Clean(loc.Path) != loc.Path:"
+  line = 147
+  accepted_in = "azure-devops-ship-loop"
+  category = "gremlins-attribution-ceiling"
+
+[[accepted]]
+  key = "478d02ccdbc13103"
+  file = "internal/ship/bitbucket_merge.go"
+  op = "ARITHMETIC_BASE"
+  text = "bbMergeInterval = 3 * time.Second"
+  line = 26
+  accepted_in = "azure-devops-ship-loop"
+  category = "const-initializer-arithmetic"
+
+[[accepted]]
+  key = "ca28c69bce33bfc7"
+  file = "internal/ship/bitbucket_merge.go"
+  op = "ARITHMETIC_BASE"
+  text = "bbMergeWait     = 90 * time.Second"
+  line = 27
+  accepted_in = "azure-devops-ship-loop"
+  category = "const-initializer-arithmetic"
+
+[[accepted]]
+  key = "e1bd1e29e3326c1e"
+  file = "internal/ship/azuredevops_merge.go"
+  op = "ARITHMETIC_BASE"
+  text = "adoMergeInterval = 3 * time.Second"
+  line = 24
+  accepted_in = "azure-devops-ship-loop"
+  category = "const-initializer-arithmetic"
+
+[[accepted]]
+  key = "a708f4b255367960"
+  file = "internal/ship/azuredevops_merge.go"
+  op = "ARITHMETIC_BASE"
+  text = "adoMergeWait     = 90 * time.Second"
+  line = 25
+  accepted_in = "azure-devops-ship-loop"
+  category = "const-initializer-arithmetic"
+
+[[accepted]]
+  key = "12c02272014fc238"
+  file = "internal/cmd/doctor_board_ado.go"
+  op = "CONDITIONALS_NEGATION"
+  text = "case err != nil:"
+  line = 136
+  reason = "gremlins switch-case attribution ceiling: go-cover gives a case condition no block, so gremlins marks it NOT COVERED although the arm runs — hand-applied in verify of azure-boards-backend (2026-11-04), the mutant is killed by TestDoctorADOFlagsMissingPath (404 is missing)"
+  accepted_in = "azure-boards-backend"
+
+[[accepted]]
+  key = "e4c241d6e7999ece"
+  file = "internal/forge/azureboards_meta.go"
+  op = "CONDITIONALS_NEGATION"
+  text = "case err == nil:"
+  line = 220
+  reason = "gremlins switch-case attribution ceiling: go-cover gives a case condition no block, so gremlins marks it NOT COVERED although the arm runs — hand-applied in verify of azure-boards-backend (2026-11-04), the mutant is killed by TestADOCheckPaths"
+  accepted_in = "azure-boards-backend"
+
+[[accepted]]
+  key = "6166fe9c9bc9de9b"
+  file = "internal/forge/azureboards_meta.go"
+  op = "CONDITIONALS_NEGATION"
+  text = "case errors.As(err, &status) && status.Status == http.StatusNotFound:"
+  line = 222
+  reason = "gremlins switch-case attribution ceiling: go-cover gives a case condition no block, so gremlins marks it NOT COVERED although the arm runs — hand-applied in verify of azure-boards-backend (2026-11-04), the mutant is killed by TestADOCheckPaths"
+  accepted_in = "azure-boards-backend"
+
+[[accepted]]
+  key = "22450877d01f1554"
+  file = "internal/forge/azureboards.go"
+  op = "CONDITIONALS_NEGATION"
+  text = "case host == adoServicesHost:"
+  line = 175
+  reason = "gremlins switch-case attribution ceiling: go-cover gives a case condition no block, so gremlins marks it NOT COVERED although the arm runs — hand-applied in verify of azure-boards-backend (2026-11-04), the mutant is killed by TestADOBoardBaseURLShapes"
+  accepted_in = "azure-boards-backend"
+
+[[accepted]]
+  key = "2a08f7fc29703264"
+  file = "internal/forge/azureboards.go"
+  op = "CONDITIONALS_NEGATION"
+  text = "case status == http.StatusNonAuthoritativeInfo, status >= 300 && status < 400:"
+  line = 306
+  reason = "gremlins switch-case attribution ceiling: go-cover gives a case condition no block, so gremlins marks it NOT COVERED although the arm runs — hand-applied in verify of azure-boards-backend (2026-11-04), the mutant is killed by TestADOCreateIssueType/task (== 203 and >= 300 negated) and TestADOCheckPaths (< 400 negated) — all three columns"
+  accepted_in = "azure-boards-backend"
+
+[[accepted]]
+  key = "8dea3499bcc7e483"
+  file = "internal/forge/azureboards.go"
+  op = "CONDITIONALS_NEGATION"
+  text = "case status >= 300:"
+  line = 308
+  reason = "gremlins switch-case attribution ceiling: go-cover gives a case condition no block, so gremlins marks it NOT COVERED although the arm runs — hand-applied in verify of azure-boards-backend (2026-11-04), the mutant is killed by TestADOCreateIssueType/task"
+  accepted_in = "azure-boards-backend"
+
+[[accepted]]
+  key = "9f6444c19f98e671"
+  file = "internal/forge/azureboards.go"
+  op = "CONDITIONALS_BOUNDARY"
+  text = "case status >= 300:"
+  line = 308
+  reason = "equivalent mutant: 'case status >= 300' → '> 300' differs only at HTTP 300, and the case above it (status >= 300 && status < 400) already takes every 300 — TestADOBoardStatusClassification pins a 300 as a sign-in error, never a status error — so this arm never sees one and no input can tell the two apart"
+  accepted_in = "azure-boards-backend"
+
+[[accepted]]
+  key = "f73d1cf954999c7d"
+  file = "internal/forge/azureboards.go"
+  op = "ARITHMETIC_BASE"
+  text = "hint = \" (check $\" + c.authEnv + \" — the PAT may be expired or lack the Work Items scope)\""
+  line = 316
+  reason = "not viable: the + operators on this line join strings, and string - string does not compile (go vet: operator - not defined on string), so no test can run this mutant; the 401-hint block it sits in is pinned by TestADOBoardStatusClassification's 401 case"
+  accepted_in = "azure-boards-backend"
+
+[[accepted]]
+  key = "5803748e5c9d5087"
+  file = "internal/ship/azuredevops_policy.go"
+  op = "CONDITIONALS_NEGATION"
+  text = "case s.refName == \"\":"
+  line = 254
+  reason = "gremlins switch-case attribution ceiling: go-cover gives a case condition no block, so gremlins marks it NOT COVERED although the arm runs — hand-applied in verify of azure-boards-backend (2026-11-04), the mutant is killed by TestADOArmRefusesForbiddenMergeCommit/allowNoFastForward_false"
+  accepted_in = "azure-boards-backend"
+
+[[accepted]]
+  key = "eed785a24175dc1e"
+  file = "internal/ship/azuredevops_automerge.go"
+  op = "CONDITIONALS_NEGATION"
+  text = "case now.status == \"completed\":"
+  line = 120
+  reason = "gremlins switch-case attribution ceiling: go-cover gives a case condition no block, so gremlins marks it NOT COVERED although the arm runs — hand-applied in verify of azure-boards-backend (2026-11-04), the mutant is killed by TestADOArmChoreAutoComplete/no_merge-strategy_policy"
+  accepted_in = "azure-boards-backend"
+
+[[accepted]]
+  key = "f2f8b0a4e2aea7ca"
+  file = "internal/ship/azuredevops_automerge.go"
+  op = "CONDITIONALS_NEGATION"
+  text = "case now.status == \"active\" && now.armedBy != \"\":"
+  line = 122
+  reason = "gremlins switch-case attribution ceiling: go-cover gives a case condition no block, so gremlins marks it NOT COVERED although the arm runs — hand-applied in verify of azure-boards-backend (2026-11-04), the mutant is killed by TestADOArmChoreAutoComplete/no_merge-strategy_policy (both the status and the armedBy column)"
+  accepted_in = "azure-boards-backend"
+
+[[accepted]]
+  key = "dc85fc9e5be5a3dd"
+  file = "internal/ship/azuredevops_automerge.go"
+  op = "CONDITIONALS_NEGATION"
+  text = "case now.status == \"active\":"
+  line = 124
+  reason = "gremlins switch-case attribution ceiling: go-cover gives a case condition no block, so gremlins marks it NOT COVERED although the arm runs — hand-applied in verify of azure-boards-backend (2026-11-04), the mutant is killed by TestADOArmOutcomeReadBack/active_and_not_armed"
+  accepted_in = "azure-boards-backend"
+
+[[accepted]]
+  key = "2984d281e2c141b0"
+  file = "internal/forge/azureboards.go"
+  op = "CONDITIONALS_BOUNDARY"
+  text = "case status == http.StatusNonAuthoritativeInfo, status >= 300 && status < 400:"
+  line = 306
+  reason = "gremlins switch-case attribution ceiling: go-cover gives a case condition no block, so gremlins marks it NOT COVERED although the arm runs — hand-applied in verify of azure-boards-backend (2026-11-05), both boundary columns are killed by TestADOBoardStatusClassification (>= 300 → > 300: a 300 is no longer a sign-in error; < 400 → <= 400: a 400 becomes one)"
+  accepted_in = "azure-boards-backend"

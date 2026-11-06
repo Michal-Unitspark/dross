@@ -130,8 +130,9 @@ func TestMilestoneModesForProvider(t *testing.T) {
 		t.Error("jira.Has(\"\") = false, want true (empty defaults to version)")
 	}
 
-	// milestone_mode does not apply to the REST forges or github.
-	for _, p := range []string{"gitlab", "forgejo", "gitea", "github", "", "sourcehut"} {
+	// milestone_mode does not apply to the REST forges, github, or
+	// azure-devops (a milestone is always an Epic there).
+	for _, p := range []string{"gitlab", "forgejo", "gitea", "github", "azure-devops", " Azure-DevOps ", "", "sourcehut"} {
 		if got := MilestoneModesFor(p); got != nil {
 			t.Errorf("MilestoneModesFor(%q) = %v, want nil", p, got.Values())
 		}
@@ -163,9 +164,9 @@ func TestSetListRendersPipeJoined(t *testing.T) {
 		set  Set
 		want string
 	}{
-		{"board", BoardProviders, "forgejo | gitea | gitlab | youtrack | jira | github"},
+		{"board", BoardProviders, "forgejo | gitea | gitlab | youtrack | jira | github | azure-devops"},
 		{"forgeREST", ForgeRESTProviders, "forgejo | gitea | gitlab"},
-		{"ship", ShipProviders, "github | forgejo | gitea | gitlab | bitbucket"},
+		{"ship", ShipProviders, "github | forgejo | gitea | gitlab | bitbucket | azure-devops"},
 		{"auth", AuthSchemes, "private-token | bearer | basic"},
 		{"milestone", MilestoneModes, "version | agile | epic"},
 	}

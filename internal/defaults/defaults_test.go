@@ -169,3 +169,35 @@ func TestTelemetryEnabledUnsetIsOn(t *testing.T) {
 		t.Error("unset and explicitly-off must not agree — unset is on")
 	}
 }
+
+// TestApplySkipsForeignProviderCredentials: a credential and reviewers saved
+// for one forge never seed onto a remote detected as another — that token
+// would be sent to the wrong host. Same-provider defaults, and an unknown host
+// that takes the defaults' provider, still seed in full.
+func TestApplySkipsForeignProviderCredentials(t *testing.T) {
+	github := Defaults{Remote: RemoteDefaults{Provider: "github", AuthEnv: "GITHUB_TOKEN", Reviewers: []string{"alice"}}}
+	ado := project.Remote{
+		URL: "https://dev.azure.com/o/p/_git/r", Provider: "azure-devops", APIBase: "https://dev.azure.com/o",
+	}
+
+	got := github.Apply(ado)
+	if got.AuthEnv != "" || got.Reviewers != nil {
+		t.Errorf("github defaults seeded an azure-devops remote: auth_env %q, reviewers %v", got.AuthEnv, got.Reviewers)
+	}
+	if got.Provider != "azure-devops" || got.APIBase != "https://dev.azure.com/o" {
+		t.Errorf("the detected remote was clobbered: %+v", got)
+	}
+
+	for _, saved := range []string{"azure-devops", " Azure-DevOps "} {
+		same := Defaults{Remote: RemoteDefaults{Provider: saved, AuthEnv: "AZURE_DEVOPS_EXT_PAT", Reviewers: []string{"bob"}}}
+		got := same.Apply(ado)
+		if got.AuthEnv != "AZURE_DEVOPS_EXT_PAT" || !reflect.DeepEqual(got.Reviewers, []string{"bob"}) {
+			t.Errorf("defaults saved for %q did not seed their own provider: %+v", saved, got)
+		}
+	}
+
+	unknown := github.Apply(project.Remote{URL: "https://forge.corp/me/p"})
+	if unknown.Provider != "github" || unknown.AuthEnv != "GITHUB_TOKEN" || !reflect.DeepEqual(unknown.Reviewers, []string{"alice"}) {
+		t.Errorf("an unknown host should take the defaults whole: %+v", unknown)
+	}
+}

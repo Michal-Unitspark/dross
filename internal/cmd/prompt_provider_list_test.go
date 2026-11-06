@@ -88,3 +88,57 @@ func TestPromptProviderListsMatchShipProviders(t *testing.T) {
 		}
 	}
 }
+
+// TestPromptsTeachAzureDevOps: the writer prompts carry what an Azure DevOps
+// remote needs that autodetect cannot settle, each on the bullet that sets it —
+// the url shapes, api_base as the org URL, the private default, the locked
+// auth_env default, the Server api_version values — and tell a Server user to
+// keep [remote].url in https form, since the host allowlist derives from it and
+// an ssh://host:22 url would refuse the https api_base.
+func TestPromptsTeachAzureDevOps(t *testing.T) {
+	bullets := map[string][]string{
+		"url":         {"https://dev.azure.com/<org>/<project>/_git/<repo>", "https://<org>.visualstudio.com/<project>/_git/<repo>"},
+		"public":      {"Default no for self-hosted forges and for azure-devops"},
+		"api_base":    {"https://dev.azure.com/<org>", "https://<org>.visualstudio.com", "https://<host>/tfs/<Collection>"},
+		"auth_env":    {"AZURE_DEVOPS_EXT_PAT"},
+		"api_version": {"remote.api_version", "2019 → `5.0`", "2020 → `6.0`", "2022 → `7.0`"},
+	}
+	for _, file := range []string{"init.md", "onboard.md"} {
+		raw, err := os.ReadFile(filepath.Join(repoRootFromTest(t), "assets", "prompts", file))
+		if err != nil {
+			t.Fatalf("read %s: %v", file, err)
+		}
+		lines := strings.Split(string(raw), "\n")
+
+		for field, wants := range bullets {
+			label := "- **" + field + "** —"
+			bullet := ""
+			for _, line := range lines {
+				if strings.HasPrefix(strings.ToLower(strings.TrimSpace(line)), label) {
+					bullet = line
+					break
+				}
+			}
+			if bullet == "" {
+				t.Errorf("%s has no %s bullet", file, field)
+				continue
+			}
+			for _, want := range wants {
+				if !strings.Contains(bullet, want) {
+					t.Errorf("%s: the %s bullet does not carry %s: %q", file, field, want, bullet)
+				}
+			}
+		}
+
+		server := false
+		for _, line := range lines {
+			if strings.Contains(line, "Azure DevOps Server") && strings.Contains(line, "[remote].url") &&
+				strings.Contains(line, "https://<host>/tfs/") && strings.Contains(line, "ssh://<host>:22") {
+				server = true
+			}
+		}
+		if !server {
+			t.Errorf("%s does not tell an Azure DevOps Server user to write [remote].url in https form rather than ssh://<host>:22", file)
+		}
+	}
+}

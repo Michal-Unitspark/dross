@@ -13,6 +13,7 @@ import (
 
 	"github.com/BurntSushi/toml"
 
+	"github.com/Rivil/dross/internal/configenum"
 	"github.com/Rivil/dross/internal/project"
 )
 
@@ -57,7 +58,16 @@ type RemoteDefaults struct {
 // Apply seeds the non-empty fields of d.Remote into r, overwriting r's
 // zero values only. Fields already set on r are preserved (e.g. URL +
 // Provider from DetectRemote).
+//
+// auth_env and reviewers name one forge's credential and people. When r
+// already names a provider and the defaults were saved for a different one,
+// they belong to that other forge — a saved GITHUB_TOKEN seeded onto an Azure
+// DevOps repo would be sent to Azure DevOps — so they are not seeded. With no
+// detected provider (an unknown host) the defaults' provider seeds too, and
+// its credential with it.
 func (d Defaults) Apply(r project.Remote) project.Remote {
+	foreign := r.Provider != "" && d.Remote.Provider != "" &&
+		configenum.Normalize(r.Provider) != configenum.Normalize(d.Remote.Provider)
 	if r.Provider == "" {
 		r.Provider = d.Remote.Provider
 	}
@@ -67,10 +77,10 @@ func (d Defaults) Apply(r project.Remote) project.Remote {
 	if !r.LogAPI && d.Remote.LogAPI {
 		r.LogAPI = true
 	}
-	if r.AuthEnv == "" {
+	if r.AuthEnv == "" && !foreign {
 		r.AuthEnv = d.Remote.AuthEnv
 	}
-	if len(r.Reviewers) == 0 && len(d.Remote.Reviewers) > 0 {
+	if len(r.Reviewers) == 0 && len(d.Remote.Reviewers) > 0 && !foreign {
 		r.Reviewers = append([]string(nil), d.Remote.Reviewers...)
 	}
 	return r

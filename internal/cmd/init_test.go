@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/Rivil/dross/internal/architecture"
+	"github.com/Rivil/dross/internal/defaults"
 	"github.com/Rivil/dross/internal/project"
 )
 
@@ -162,5 +163,61 @@ func TestInitEnsuresHooksIdempotent(t *testing.T) {
 	}
 	if n := countIn(readHookCommands(t, settings, "PostToolUse"), GateRecordHook); n != 1 {
 		t.Errorf("want exactly 1 dross PostToolUse %q entry after two inits, got %d", GateRecordHook, n)
+	}
+}
+
+// TestInitDetectsAzureRemote: an ssh v3 Azure DevOps origin initialises to the
+// canonical https url, the org api_base and no public flag — and a saved
+// GitHub defaults.toml contributes neither its token variable nor its
+// reviewers.
+func TestInitDetectsAzureRemote(t *testing.T) {
+	home := t.TempDir()
+	t.Setenv("HOME", home)
+	saved := &defaults.Defaults{Remote: defaults.RemoteDefaults{
+		Provider: "github", APIBase: "https://api.github.com", AuthEnv: "GITHUB_TOKEN", Reviewers: []string{"alice"},
+	}}
+	if err := saved.SaveFile(filepath.Join(home, ".claude", "dross", defaults.File)); err != nil {
+		t.Fatal(err)
+	}
+	dir := t.TempDir()
+	gitInit(t, dir, "git@ssh.dev.azure.com:v3/o/p/r")
+	chdir(t, dir)
+	if err := runCmd(t, Init()); err != nil {
+		t.Fatalf("init: %v", err)
+	}
+
+	p := loadInitedProject(t, dir)
+	if p.Remote.URL != "https://dev.azure.com/o/p/_git/r" || p.Remote.Provider != "azure-devops" || p.Remote.APIBase != "https://dev.azure.com/o" {
+		t.Errorf("[remote] = %+v, want the canonical url, azure-devops and the org api_base", p.Remote)
+	}
+	body := mustRead(t, filepath.Join(dir, ".dross", "project.toml"))
+	_, remote, _ := strings.Cut(body, "[remote]")
+	if end := strings.Index(remote, "\n["); end >= 0 {
+		remote = remote[:end]
+	}
+	if remote == "" || strings.Contains(remote, "public") {
+		t.Errorf("an azure-devops [remote] should leave public absent (false):\n%s", body)
+	}
+	if strings.Contains(body, "GITHUB_TOKEN") || strings.Contains(body, "alice") {
+		t.Errorf("the saved GitHub defaults seeded the azure-devops remote:\n%s", body)
+	}
+}
+
+// TestInitNeverPersistsOriginPAT: an https origin carrying a PAT in its
+// userinfo initialises to a project.toml with no trace of it.
+func TestInitNeverPersistsOriginPAT(t *testing.T) {
+	t.Setenv("HOME", t.TempDir())
+	dir := t.TempDir()
+	gitInit(t, dir, "https://o:PATVALUE@dev.azure.com/o/p/_git/r")
+	chdir(t, dir)
+	if err := runCmd(t, Init()); err != nil {
+		t.Fatalf("init: %v", err)
+	}
+	body := mustRead(t, filepath.Join(dir, ".dross", "project.toml"))
+	if strings.Contains(body, "PATVALUE") {
+		t.Errorf("the origin's PAT reached project.toml:\n%s", body)
+	}
+	if !strings.Contains(body, `url = "https://dev.azure.com/o/p/_git/r"`) {
+		t.Errorf("want the canonical url without userinfo:\n%s", body)
 	}
 }

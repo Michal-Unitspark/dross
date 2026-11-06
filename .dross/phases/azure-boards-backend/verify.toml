@@ -1,0 +1,139 @@
+[verify]
+  phase = "azure-boards-backend"
+  generated_at = 2026-11-05T14:54:29.597100585Z
+  verdict = "pass"
+  finalized = true
+  finalized_at = 2026-11-06T07:01:16.318775382Z
+  measured_commit = "fa322eb13bc6174d66c24cb6092051310139e5c0"
+  measured_tree = "bca129fe968e147b607288fb49a7a0bfd13e8696"
+
+[summary]
+  mutation_status = "measured"
+  measured_on = "local"
+  mutation_score = 0.9570707070707071
+  mutants_killed = 1137
+  mutants_survived = 51
+  mutants_not_covered = 51
+  mutants_no_block = 49
+  mutants_test_gap = 2
+  mutants_in_scope = 1188
+  unclassified_in_scope = 0
+  criteria_total = 10
+  criteria_covered = 10
+  criteria_uncovered = 0
+
+  [[summary.leg]]
+    language = "go"
+    tool = "gremlins"
+    killed = 1137
+    survived = 51
+    timeout = 0
+    in_scope = 1188
+    score = 0.9570707070707071
+    file_count = 63
+    measured_on = "local"
+    whole_file = ["internal/boardsync/azureboards_backlog_test.go — adapter-lacks-range-runner", "internal/boardsync/azureboards_finalize_test.go — adapter-lacks-range-runner", "internal/boardsync/azureboards_hierarchy_test.go — adapter-lacks-range-runner", "internal/boardsync/azureboards_state_sync_test.go — adapter-lacks-range-runner", "internal/boardsync/board_lifecycle_divergence_test.go — adapter-lacks-range-runner", "internal/boardsync/ctx.go — adapter-lacks-range-runner", "internal/boardsync/finalize.go — adapter-lacks-range-runner", "internal/boardsync/milestone.go — adapter-lacks-range-runner", "internal/boardsync/phase.go — adapter-lacks-range-runner", "internal/boardsync/task.go — adapter-lacks-range-runner", "internal/cmd/ado_board_fake_test.go — adapter-lacks-range-runner", "internal/cmd/basebranch.go — adapter-lacks-range-runner", "internal/cmd/basebranch_ado_test.go — adapter-lacks-range-runner", "internal/cmd/baseprotect.go — adapter-lacks-range-runner", "internal/cmd/chorepr.go — adapter-lacks-range-runner", "internal/cmd/doctor.go — adapter-lacks-range-runner", "internal/cmd/doctor_board_ado.go — adapter-lacks-range-runner", "internal/cmd/doctor_board_ado_test.go — adapter-lacks-range-runner", "internal/cmd/doctor_test.go — adapter-lacks-range-runner", "internal/cmd/enum_divergence_test.go — adapter-lacks-range-runner", "internal/cmd/friction_window_test.go — adapter-lacks-range-runner", "internal/cmd/hermetic_env_test.go — adapter-lacks-range-runner", "internal/cmd/issue_ado_test.go — adapter-lacks-range-runner", "internal/cmd/milestone.go — adapter-lacks-range-runner", "internal/cmd/milestone_protected_ado_test.go — adapter-lacks-range-runner", "internal/cmd/options_docs_test.go — adapter-lacks-range-runner", "internal/cmd/phase_complete_board_ado_test.go — adapter-lacks-range-runner", "internal/cmd/project.go — adapter-lacks-range-runner", "internal/cmd/project_enum_test.go — adapter-lacks-range-runner", "internal/cmd/project_test.go — adapter-lacks-range-runner", "internal/cmd/protected_base_ado_test.go — adapter-lacks-range-runner", "internal/cmd/validate_enum_test.go — adapter-lacks-range-runner", "internal/configenum/configenum.go — adapter-lacks-range-runner", "internal/configenum/configenum_test.go — adapter-lacks-range-runner", "internal/diag/combinations.go — adapter-lacks-range-runner", "internal/diag/diag_test.go — adapter-lacks-range-runner", "internal/forge/ado_boards_live_record_test.go — adapter-lacks-range-runner", "internal/forge/azureboards.go — adapter-lacks-range-runner", "internal/forge/azureboards_items.go — adapter-lacks-range-runner", "internal/forge/azureboards_items_test.go — adapter-lacks-range-runner", "internal/forge/azureboards_links.go — adapter-lacks-range-runner", "internal/forge/azureboards_links_test.go — adapter-lacks-range-runner", "internal/forge/azureboards_meta.go — adapter-lacks-range-runner", "internal/forge/azureboards_meta_test.go — adapter-lacks-range-runner", "internal/forge/azureboards_state.go — adapter-lacks-range-runner", "internal/forge/azureboards_state_test.go — adapter-lacks-range-runner", "internal/forge/azureboards_test.go — adapter-lacks-range-runner", "internal/forge/forge.go — adapter-lacks-range-runner", "internal/forge/secretscan_test.go — adapter-lacks-range-runner", "internal/forge/state_map_test.go — adapter-lacks-range-runner", "internal/liverecord/liverecord.go — adapter-lacks-range-runner", "internal/liverecord/liverecord_test.go — adapter-lacks-range-runner", "internal/project/project.go — adapter-lacks-range-runner", "internal/redact/redact_test.go — adapter-lacks-range-runner", "internal/secretscan/sinks.go — adapter-lacks-range-runner", "internal/secretscan/sinks_test.go — adapter-lacks-range-runner", "internal/ship/ado_live_record_test.go — adapter-lacks-range-runner", "internal/ship/automerge.go — adapter-lacks-range-runner", "internal/ship/azuredevops_automerge.go — adapter-lacks-range-runner", "internal/ship/azuredevops_automerge_test.go — adapter-lacks-range-runner", "internal/ship/azuredevops_policy.go — adapter-lacks-range-runner", "internal/ship/azuredevops_policy_test.go — adapter-lacks-range-runner", "internal/ship/hostguard_test.go — adapter-lacks-range-runner"]
+
+[[criterion]]
+  id = "c-1"
+  status = "covered"
+  tests = ["internal/cmd/enum_divergence_test.go:TestNewBoardBuildsAzureBoards", "internal/cmd/issue_ado_test.go:TestEveryBoardCommandUsesAzureBoards", "internal/cmd/doctor_board_ado_test.go:TestDoctorADOBoardNamesMissingFields", "internal/cmd/doctor_board_ado_test.go:TestDoctorADORefusedHostSkipsToken", "internal/cmd/doctor_board_ado_test.go:TestDoctorADOBoardURLForms", "internal/forge/azureboards_test.go:TestADOBoardBaseURLShapes", "internal/cmd/doctor_board_ado_test.go:TestDoctorADOBoardKeyValues", "internal/forge/azureboards_test.go:TestADOBoardStatusClassification"]
+  notes = "Dispatch type-asserted for every spelling; six board commands hit only the ADO fake; each missing field gets its own ✗; refused host reads the token env 0 times; Services, legacy and Server URLs accepted. t-22 pins doRaw's sign-in range (300 and 399 sign-in, 400 a status error) and runs the 401/403/404 hints and the 500-byte cap; both line-306 BOUNDARY mutants were hand-applied and killed by it."
+
+[[criterion]]
+  id = "c-2"
+  status = "covered"
+  tests = ["internal/boardsync/azureboards_hierarchy_test.go:TestADOSyncBuildsHierarchy", "internal/boardsync/azureboards_hierarchy_test.go:TestADOResyncUpdatesInPlace", "internal/forge/azureboards_items_test.go:TestADOEnsureMilestoneEpic", "internal/forge/azureboards_links_test.go:TestADOLinkParent", "internal/forge/azureboards_items_test.go:TestADOCreateIssueParentEpic"]
+  notes = "Exact Epic/requirement/Task creates per process with exact Hierarchy-Reverse relations; with board.json empty a re-run makes no POST and no relation op. The forge and boardsync fakes ignore WIQL text, so find-by-tag rests on the exact tag post-filter (NOTE)."
+
+[[criterion]]
+  id = "c-3"
+  status = "covered"
+  tests = ["internal/boardsync/azureboards_state_sync_test.go:TestADOSyncStateByProcess", "internal/forge/azureboards_state_test.go:TestADODefaultStateResolution", "internal/forge/azureboards_state_test.go:TestADOSetStateOverride", "internal/forge/azureboards_state_test.go:TestADOSetStateUnreachable"]
+  notes = "Agile/Scrum/Basic exact PATCH sequences end to end (Scrum PBI Committed, Task In Progress); state_map override wins; an unreachable state warns once per item with zero writes and nil error. t-27 narrows the skip to a TF401320 rule error: TestADOSetStateUnreachable now requires a non-rule 400 (unknown field, malformed patch) to error naming 'work item 42' with no warning, and a TF401320 placed past byte 600 to still warn — so the check reads the whole body, not the 500-byte message. Every boardsync/cmd fake that refuses a state write answers TF401320, so no existing test went vacuous."
+
+[[criterion]]
+  id = "c-4"
+  status = "covered"
+  tests = ["internal/boardsync/azureboards_state_sync_test.go:TestADOPhaseCloseReadBack", "internal/cmd/issue_ado_test.go:TestIssueCloseADOReadBack", "internal/boardsync/azureboards_finalize_test.go:TestADOFinalizeReportsRefusedTaskClose", "internal/boardsync/azureboards_finalize_test.go:TestADOFinalizeReportsRefusedPhaseClose", "internal/forge/azureboards_state_test.go:TestADOCloseIssueAsVerifies"]
+  notes = "phase --close and task close are proven on a 200 that did not take, with no '(closed)'. Finalize is now proven for both cards: a refused task card, and (t-24) a phase card reading back Committed, synced or created at finalize, errors naming 'phase 10:', narrates NOT closed, never prints '(closed)', and still leaves both tasks Done."
+
+[[criterion]]
+  id = "c-5"
+  status = "covered"
+  tests = ["internal/cmd/issue_ado_test.go:TestIssuePullADOEnvelope", "internal/forge/azureboards_items_test.go:TestADOListIssuesLabelMatch", "internal/forge/azureboards_items_test.go:TestADOListIssuesFilters", "internal/forge/azureboards_items_test.go:TestADOListIssuesFailures", "internal/forge/azureboards_items_test.go:TestADOListIssuesStateClosed", "internal/forge/azureboards_items_test.go:TestADOListIssuesTagCaseInsensitive"]
+  notes = "Real `issue pull --labels bug,enhancement --json` through a WIQL-evaluating fake: exact keys, mirrored and linked items absent, a WIQL 503 gives a non-null error with an empty list. t-23 pins the closed arm to exactly the Completed items [33 34] (the line-361 NEGATION survivor is now killed) and the case-insensitive whole-tag match on a project with no Bug type."
+
+[[criterion]]
+  id = "c-6"
+  status = "covered"
+  tests = ["internal/boardsync/azureboards_backlog_test.go:TestADOBacklogRelatesRoutedItem", "internal/forge/azureboards_links_test.go:TestADOLinkIssuesRelated", "internal/boardsync/azureboards_backlog_test.go:TestADOReapUndoRestoresPriorState", "internal/forge/azureboards_state_test.go:TestADOSetStateRawLiteral"]
+  notes = "Exactly one Related PATCH, and zero relation ops on re-sync; undo restores the exact prior state and tags (guarded against vacuity); a restore that reads back wrong errors naming the item."
+
+[[criterion]]
+  id = "c-7"
+  status = "covered"
+  tests = ["internal/boardsync/azureboards_finalize_test.go:TestADOFinalizeTasksThenPhase", "internal/cmd/phase_complete_board_ado_test.go:TestCompleteFinalizesADOBoard", "internal/boardsync/azureboards_finalize_test.go:TestADOFinalizeRerunOnlyReads"]
+  notes = "Real `phase complete`: every task item reaches Done before the phase item's first Done PATCH; the second run's writesSince(mark) is empty and board.json is byte-identical."
+
+[[criterion]]
+  id = "c-8"
+  status = "covered"
+  tests = ["internal/forge/ado_boards_live_record_test.go:TestADOBoardsLiveRecordHonest", "internal/forge/ado_boards_live_record_test.go:TestADOBoardsLiveRecordStepEvidence", "internal/liverecord/liverecord_test.go:TestValidatePostures", "internal/liverecord/liverecord_test.go:TestValidateRulesHoldWithoutAPass"]
+  notes = "The committed live record (Basic process, items 421-424) must validate as Live through the shared liverecord.Validate that ship's record also uses; about 30 hollowed-step fixtures are each refused by their own step; loopback and httptest evidence is refused as live."
+
+[[criterion]]
+  id = "c-9"
+  status = "covered"
+  tests = ["internal/forge/azureboards_items_test.go:TestADOCreateIssueClassification", "internal/boardsync/azureboards_state_sync_test.go:TestConfigCarriesADOFields", "internal/cmd/doctor_board_ado_test.go:TestDoctorADOFlagsMissingPath", "internal/cmd/doctor_board_ado_test.go:TestDoctorADOFlagsMissingIterationPath"]
+  notes = "Area and iteration paths ride every Epic/requirement/Task create, and unset sends neither field. Doctor's missing-path ✗ is tested for both keys: t-25 probes an iteration-only config against Iterations/ (404 ✗ naming iteration_path, 200 ✓) and both paths one probe each, pinning the probe guard and the iteration row."
+
+[[criterion]]
+  id = "c-10"
+  status = "covered"
+  tests = ["internal/ship/azuredevops_policy_test.go:TestADOBranchProtectionScopes", "internal/ship/azuredevops_policy_test.go:TestADOBranchProtectionReadOnly", "internal/cmd/protected_base_ado_test.go:TestProtectedADOBaseShipThenComplete", "internal/cmd/basebranch_ado_test.go:TestProtectedADOBaseRoutesThroughChorePR", "internal/cmd/basebranch_ado_test.go:TestUnprotectedADOBasePushesDirectly", "internal/cmd/milestone_protected_ado_test.go:TestADOMilestoneCompleteWaitsForOpenChorePR", "internal/ship/azuredevops_automerge_test.go:TestADOArmChoreAutoComplete", "internal/ship/azuredevops_automerge_test.go:TestADOArmRefusesForbiddenMergeCommit"]
+  notes = "18 policy-scope cases plus a GET-only guard; ship and phase complete open a chore PR and the hook is never offered main; unprotected pushes directly; noFastForward is armed and bypassPolicy never sent. t-26 closes the carried FLAG: the milestone wait must read exactly [milestone/v1.8]'s policies (reflect.DeepEqual, not len), a Prefix spelled refs/heads/Milestone/ protects milestone/v1.8, and a Prefix equal to the whole ref covers it (pins the >= guard at azuredevops_policy.go:257)."
+
+[[finding]]
+  severity = "NOTE"
+  text = "skipped ARCHITECTURE.md: no mutation adapter for .md"
+
+[[finding]]
+  severity = "NOTE"
+  text = "skipped assets/prompts/options.md: no mutation adapter for .md"
+
+[[finding]]
+  severity = "NOTE"
+  text = "skipped internal/cmd/testdata/pathfence_scan/not_paths.txt: no mutation adapter for .txt"
+
+[[finding]]
+  severity = "NOTE"
+  text = "skipped internal/forge/testdata/ado_boards_live_smoke.toml: no mutation adapter for .toml"
+
+[[finding]]
+  severity = "NOTE"
+  text = "Carried FLAGs closed this run: c-10 by t-26 (exact milestone/v1.8 policy read; case-insensitive and whole-ref Prefix scope cases) and c-3 by t-27 (SetState skips only a TF401320 400; any other 400 errors naming the item). Both re-read against the committed diff; the mutation leg is green over them."
+
+[[finding]]
+  severity = "NOTE"
+  text = "Survivor drain this run: nothing to drain — all 51 in-scope survivors carry an accepted disposition (49 go-cover no-block switch-case ceiling, plus the two azureboards.go BOUNDARY mutants). t-27 shifted azureboards.go by 3 lines; the acceptances followed their identity keys from :306 to :309 (key 2984d281e2c141b0). 0 unclassified in scope; 268 out-of-scope survivors are all accepted."
+
+[[finding]]
+  severity = "NOTE"
+  text = "mutants_test_gap = 2 is the same classifier misplacement as last run: it counts the two azureboards.go:309 (was :306) BOUNDARY mutants, which sit on a switch-case line go-cover gives no block, and which were hand-applied and killed by TestADOBoardStatusClassification. Efficacy over everything truly reachable is 1.00."
+
+[[finding]]
+  severity = "NOTE"
+  text = "The forge and boardsync test fakes ignore WIQL text and return every id; find-by-tag is proven through the client's exact tag post-filter, and end to end only through the cmd fake's WIQL evaluator."
+
+[[finding]]
+  severity = "NOTE"
+  text = "forge.NewAzureBoards has no Getenv seam, so host-before-token ordering is pinned at the doctor layer (TestDoctorADORefusedHostSkipsToken), not the constructor."
+
+[[finding]]
+  severity = "NOTE"
+  text = "Live record: the phase item's close (423 Done) appears only in evidence text; the typed fields prove the task close. Ship's committed-record subtest does not assert posture == live, unlike the Boards one."
+
+[[finding]]
+  severity = "NOTE"
+  text = "Solo review: 26 of 26 reviewed tasks passed, no BLOCKING findings. t-26 passed in 1 round (NOTE only); t-27 in 2 rounds — its round-1 FLAG (no test proves the check reads the whole body) is answered in the committed diff by the past-the-cap subtest, which the round-2 NOTE confirms. t-21 (live smoke) ran in pair mode with no reviewer. No failed tasks."

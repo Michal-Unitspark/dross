@@ -6,6 +6,8 @@ import (
 	"reflect"
 	"strings"
 	"testing"
+
+	"github.com/Rivil/dross/internal/hostallow"
 )
 
 func TestRemoteRoundTrip(t *testing.T) {
@@ -84,9 +86,25 @@ func TestDetectRemote(t *testing.T) {
 			wantAPIBase:  "https://codeberg.org/api/v1",
 		},
 		{
+			name:         "gitlab group named _git keeps its own url",
+			input:        "https://gitlab.com/g/_git/r.git",
+			wantURL:      "https://gitlab.com/g/_git/r",
+			wantProvider: "gitlab",
+			wantPublic:   true,
+			wantAPIBase:  "https://gitlab.com/api/v4",
+		},
+		{
 			name:         "gitlab.com → gitlab, derives /api/v4",
 			input:        "https://gitlab.com/o/r",
 			wantURL:      "https://gitlab.com/o/r",
+			wantProvider: "gitlab",
+			wantPublic:   true,
+			wantAPIBase:  "https://gitlab.com/api/v4",
+		},
+		{
+			name:         "encoded segment stays single-encoded",
+			input:        "https://gitlab.com/o/My%20Repo",
+			wantURL:      "https://gitlab.com/o/My%20Repo",
 			wantProvider: "gitlab",
 			wantPublic:   true,
 			wantAPIBase:  "https://gitlab.com/api/v4",
@@ -98,6 +116,94 @@ func TestDetectRemote(t *testing.T) {
 			wantProvider: "bitbucket",
 			wantPublic:   true,
 			wantAPIBase:  "https://api.bitbucket.org/2.0",
+		},
+		{
+			name:         "azure devops https",
+			input:        "https://dev.azure.com/o/p/_git/r",
+			wantURL:      "https://dev.azure.com/o/p/_git/r",
+			wantProvider: "azure-devops",
+			wantPublic:   false,
+			wantAPIBase:  "https://dev.azure.com/o",
+		},
+		{
+			name:         "azure devops https with user@",
+			input:        "https://o@dev.azure.com/o/p/_git/r",
+			wantURL:      "https://dev.azure.com/o/p/_git/r",
+			wantProvider: "azure-devops",
+			wantPublic:   false,
+			wantAPIBase:  "https://dev.azure.com/o",
+		},
+		{
+			name:         "azure devops ssh v3",
+			input:        "git@ssh.dev.azure.com:v3/o/p/r",
+			wantURL:      "https://dev.azure.com/o/p/_git/r",
+			wantProvider: "azure-devops",
+			wantPublic:   false,
+			wantAPIBase:  "https://dev.azure.com/o",
+		},
+		{
+			name:         "azure devops legacy https",
+			input:        "https://o.visualstudio.com/p/_git/r",
+			wantURL:      "https://o.visualstudio.com/p/_git/r",
+			wantProvider: "azure-devops",
+			wantPublic:   false,
+			wantAPIBase:  "https://o.visualstudio.com",
+		},
+		{
+			name:         "azure devops legacy vs-ssh",
+			input:        "o@vs-ssh.visualstudio.com:v3/o/p/r",
+			wantURL:      "https://o.visualstudio.com/p/_git/r",
+			wantProvider: "azure-devops",
+			wantPublic:   false,
+			wantAPIBase:  "https://o.visualstudio.com",
+		},
+		{
+			name:         "azure devops legacy DefaultCollection keeps its base",
+			input:        "https://o.visualstudio.com/DefaultCollection/p/_git/r",
+			wantURL:      "https://o.visualstudio.com/DefaultCollection/p/_git/r",
+			wantProvider: "azure-devops",
+			wantPublic:   false,
+			wantAPIBase:  "https://o.visualstudio.com/DefaultCollection",
+		},
+		{
+			name:         "azure devops percent-encoded names stay single-encoded",
+			input:        "https://dev.azure.com/o/My%20Project/_git/My%20Repo.git",
+			wantURL:      "https://dev.azure.com/o/My%20Project/_git/My%20Repo",
+			wantProvider: "azure-devops",
+			wantPublic:   false,
+			wantAPIBase:  "https://dev.azure.com/o",
+		},
+		{
+			name:         "azure devops host but not a repo — not claimed",
+			input:        "https://dev.azure.com/o",
+			wantURL:      "https://dev.azure.com/o",
+			wantProvider: "",
+			wantPublic:   false,
+			wantAPIBase:  "",
+		},
+		{
+			name:         "azure devops server https — url only, provider empty",
+			input:        "https://tfs.corp/tfs/Coll/P/_git/R",
+			wantURL:      "https://tfs.corp/tfs/Coll/P/_git/R",
+			wantProvider: "",
+			wantPublic:   false,
+			wantAPIBase:  "",
+		},
+		{
+			name:         "azure devops server ssh drops the ssh port",
+			input:        "ssh://tfs.corp:22/tfs/Coll/P/_git/R",
+			wantURL:      "https://tfs.corp/tfs/Coll/P/_git/R",
+			wantProvider: "",
+			wantPublic:   false,
+			wantAPIBase:  "",
+		},
+		{
+			name:         "azure devops server https keeps its web port",
+			input:        "https://tfs.corp:8443/tfs/Coll/P/_git/R",
+			wantURL:      "https://tfs.corp:8443/tfs/Coll/P/_git/R",
+			wantProvider: "",
+			wantPublic:   false,
+			wantAPIBase:  "",
 		},
 		{
 			name:         "self-hosted unknown host — URL filled, provider empty",
@@ -169,5 +275,40 @@ func TestDetectRemoteDropsUserinfo(t *testing.T) {
 		if s := fmt.Sprintf("%+v", r); strings.Contains(s, "CANARY") || strings.Contains(s, "TOK") {
 			t.Errorf("%s: the userinfo reached the detected remote: %s", raw, s)
 		}
+	}
+
+	// An Azure DevOps PAT is the password half of an https remote as often as
+	// not; the ADO route re-parses the raw remote and must cut it too.
+	for _, raw := range []string{
+		"https://CANARY-USER:CANARY-TOK@dev.azure.com/o/p/_git/r",
+		"https://CANARY-TOK@dev.azure.com/o/p/_git/r",
+		"https://CANARY-USER:CANARY-TOK@o.visualstudio.com/DefaultCollection/p/_git/r",
+		"https://CANARY-USER:CANARY-TOK@tfs.corp/tfs/Coll/p/_git/r",
+	} {
+		r := DetectRemote(raw)
+		if !strings.HasSuffix(r.URL, "/p/_git/r") {
+			t.Errorf("%s: URL = %q, want the canonical .../p/_git/r", raw, r.URL)
+		}
+		if s := fmt.Sprintf("%+v", r); strings.Contains(s, "CANARY") || strings.Contains(s, "TOK") {
+			t.Errorf("%s: the userinfo reached the detected remote: %s", raw, s)
+		}
+	}
+}
+
+// TestDetectRemoteServerSSHAllowsItsAPIBase: a Server cloned over ssh with an
+// explicit port must still write the web host, port-free — the host allowlist
+// derives from that url, so tfs.corp:22 would refuse the https collection
+// api_base the user sets by hand.
+func TestDetectRemoteServerSSHAllowsItsAPIBase(t *testing.T) {
+	r := DetectRemote("ssh://tfs.corp:22/tfs/Coll/P/_git/R")
+	if r.Provider != "" {
+		t.Errorf("Provider = %q; a Server host is never claimed outright", r.Provider)
+	}
+	if err := hostallow.Derive(r.URL, nil).Check("[remote].api_base", "https://tfs.corp/tfs/Coll"); err != nil {
+		t.Errorf("url %q does not allow its own collection api_base: %v", r.URL, err)
+	}
+	// The discriminator: the url as origin spelled it would refuse that base.
+	if err := hostallow.Derive("https://tfs.corp:22/tfs/Coll/P/_git/R", nil).Check("[remote].api_base", "https://tfs.corp/tfs/Coll"); err == nil {
+		t.Error("a :22 url allows https://tfs.corp — the check above proves nothing")
 	}
 }

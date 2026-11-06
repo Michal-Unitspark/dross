@@ -41,6 +41,8 @@ func GetPRStatus(opts OpenOpts) (PRStatus, error) {
 		return gitlabPRStatus(opts)
 	case "forgejo", "gitea":
 		return forgejoPRStatus(opts)
+	case "azure-devops":
+		return azureDevOpsPRStatus(opts)
 	default:
 		return PRStatus{}, fmt.Errorf("unsupported provider %q (expected %s)", opts.Provider, configenum.ShipProviders.List())
 	}

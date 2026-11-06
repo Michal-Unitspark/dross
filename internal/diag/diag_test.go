@@ -5,6 +5,8 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+
+	"github.com/Rivil/dross/internal/project"
 )
 
 // silent runs fn with os.Stdout swapped for a pipe and fails the test if a
@@ -108,10 +110,20 @@ func TestCombinationWarnings(t *testing.T) {
 		{"bitbucket", "basic", "me", ""},
 		{"github", "basic", "u", "no effect"},
 		{"sourcehut", "", "", "cannot open a PR"},
+		// azure-devops: Basic :PAT by default, Bearer on bearer; nothing else
+		// changes what is sent, and the bitbucket Basic warnings never apply.
+		{"azure-devops", "", "", ""},
+		{"azure-devops", "bearer", "", ""},
+		{"azure-devops", "private-token", "", "no effect"},
+		{"azure-devops", "basic", "", "no effect"},
+		{" Azure-DevOps ", "basic", "", "no effect"},
+		{"azure-devops", "", "me", "auth_user"},
 	}
 	for _, c := range cases {
 		var got []string
-		silent(t, func() { got = RemoteCombination(c.provider, c.scheme, c.user) })
+		silent(t, func() {
+			got = RemoteCombination(project.Remote{Provider: c.provider, AuthScheme: c.scheme, AuthUser: c.user})
+		})
 		if c.want == "" {
 			if len(got) != 0 {
 				t.Errorf("RemoteCombination(%q,%q,%q) = %v, want none", c.provider, c.scheme, c.user, got)
@@ -122,10 +134,17 @@ func TestCombinationWarnings(t *testing.T) {
 			t.Errorf("RemoteCombination(%q,%q,%q) = %v, want one warning mentioning %q", c.provider, c.scheme, c.user, got, c.want)
 		}
 	}
-	if w := BoardCombination("jira", "", ""); len(w) != 1 || !contains(w[0], "auth_user") {
+	// basic on azure-devops is a no-op, not a missing user: neither bitbucket
+	// warning may ride along with the no-effect one.
+	for _, w := range RemoteCombination(project.Remote{Provider: "azure-devops", AuthScheme: "basic"}) {
+		if contains(w, "auth_user is not set") || contains(w, "sends no Basic credential") {
+			t.Errorf("azure-devops basic carries a Basic user:token warning: %q", w)
+		}
+	}
+	if w := BoardCombination("jira", "", "", ""); len(w) != 1 || !contains(w[0], "auth_user") {
 		t.Errorf("jira without auth_user: %v", w)
 	}
-	if w := BoardCombination("youtrack", "epic", "u"); len(w) != 0 {
+	if w := BoardCombination("youtrack", "epic", "u", ""); len(w) != 0 {
 		t.Errorf("youtrack epic mode warned: %v", w)
 	}
 	if got := SortedStateMapKeys(map[string]string{"b": "2", "a": "1", "c": "3"}); len(got) != 3 || got[0] != "a" || got[2] != "c" {
@@ -165,4 +184,81 @@ func indexOf(s, sub string) int {
 		}
 	}
 	return -1
+}
+
+// TestRemoteCombinationAzureBaseMismatch: a Server's api_base must be the
+// collection its url names. One level short is flagged, naming the right
+// base; spelling differences the server ignores are not.
+func TestRemoteCombinationAzureBaseMismatch(t *testing.T) {
+	ado := func(apiBase string) []string {
+		var got []string
+		silent(t, func() {
+			got = RemoteCombination(project.Remote{
+				Provider: "azure-devops", URL: "https://tfs/tfs/C/P/_git/R", APIBase: apiBase,
+			})
+		})
+		return got
+	}
+	if got := ado("https://tfs/tfs"); len(got) != 1 || !contains(got[0], "https://tfs/tfs/C") {
+		t.Errorf("api_base one level short of the collection: %v, want one warning naming https://tfs/tfs/C", got)
+	}
+	// http is the host allowlist's refusal to make, not a collection mismatch.
+	for _, same := range []string{"https://tfs/tfs/C", "https://tfs/tfs/C/", "https://TFS/tfs/c", "http://tfs/tfs/C", ""} {
+		if got := ado(same); len(got) != 0 {
+			t.Errorf("api_base %q: %v, want none", same, got)
+		}
+	}
+	// Services derives its own org base; only a Server's is checked here.
+	var got []string
+	silent(t, func() {
+		got = RemoteCombination(project.Remote{
+			Provider: "azure-devops", URL: "https://o.visualstudio.com/p/_git/r", APIBase: "https://dev.azure.com/o",
+		})
+	})
+	if len(got) != 0 {
+		t.Errorf("a Services url with the dev.azure.com org base: %v, want none", got)
+	}
+}
+
+// TestBoardCombinationADO: an azure-devops board warns, once per key, about
+// every key it never reads; [board].auth_scheme warns on any board that is
+// not azure-devops; nothing else changes for the other backends.
+func TestBoardCombinationADO(t *testing.T) {
+	for _, c := range []struct {
+		name                     string
+		mode, user, scheme, want string
+	}{
+		{"private-token scheme", "", "", "private-token", "[board].auth_scheme = private-token"},
+		{"basic scheme", "", "", "basic", "[board].auth_scheme = basic"},
+		{"auth_user set", "", "me@corp.com", "", "[board].auth_user"},
+		{"milestone_mode agile", "agile", "", "", "[board].milestone_mode"},
+	} {
+		got := BoardCombination("azure-devops", c.mode, c.user, c.scheme)
+		if len(got) != 1 || !contains(got[0], c.want) || !contains(got[0], "azure-devops") {
+			t.Errorf("%s: BoardCombination = %v, want one azure-devops warning naming %q", c.name, got, c.want)
+		}
+	}
+	for _, scheme := range []string{"bearer", ""} {
+		if got := BoardCombination("azure-devops", "", "", scheme); len(got) != 0 {
+			t.Errorf("azure-devops with auth_scheme %q warned: %v", scheme, got)
+		}
+	}
+	if got := BoardCombination("Azure-DevOps", "epic", "u", "basic"); len(got) != 3 {
+		t.Errorf("every ineffective key at once = %v, want three warnings", got)
+	}
+
+	// auth_scheme is read by the azure-devops board alone.
+	for _, prov := range []string{"jira", "youtrack", "github"} {
+		user := ""
+		if prov == "jira" {
+			user = "me@corp.com" // keep Jira's own auth_user warning out of the count
+		}
+		got := BoardCombination(prov, "", user, "bearer")
+		if len(got) != 1 || !contains(got[0], "[board].auth_scheme") || !contains(got[0], "no effect") {
+			t.Errorf("%s with auth_scheme bearer = %v, want one no-effect warning", prov, got)
+		}
+		if got := BoardCombination(prov, "", user, ""); len(got) != 0 {
+			t.Errorf("%s without auth_scheme warned: %v", prov, got)
+		}
+	}
 }

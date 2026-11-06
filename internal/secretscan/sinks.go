@@ -130,6 +130,7 @@ func Validate(in []Transport) []error {
 
 var transports = []Transport{
 	// ---- forge: one doRaw per backend; every publish method funnels here --
+	{Package: "forge", Func: "AzureBoardsClient.doRaw", Screened: &Screened{Call: "ScanPayload"}},
 	{Package: "forge", Func: "Client.doRaw", Screened: &Screened{Call: "ScanPayload"}},
 	{Package: "forge", Func: "GitHubClient.doRaw", Screened: &Screened{Call: "ScanPayload"}},
 	{Package: "forge", Func: "JiraClient.doRaw", Screened: &Screened{Call: "ScanPayload"}},
@@ -139,6 +140,7 @@ var transports = []Transport{
 	{Package: "ship", Func: "jsonPost", Screened: &Screened{Call: "ScanPayload"}},
 	{Package: "ship", Func: "bbRequest", Screened: &Screened{Call: "ScanPayload"}},
 	{Package: "ship", Func: "gitlabReq", Screened: &Screened{Call: "ScanPayload"}},
+	{Package: "ship", Func: "adoRequest", Screened: &Screened{Call: "ScanPayload"}},
 	{Package: "ship", Func: "jsonGet", ReadOnly: &ReadOnly{
 		Why: "Forgejo/Gitea list-pulls lookup: method is the literal \"GET\" and the body is nil, so no composed text can travel in it",
 	}},

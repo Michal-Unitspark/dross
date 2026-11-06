@@ -213,3 +213,28 @@ func TestWatchShimMentionsPRs(t *testing.T) {
 		t.Errorf("README.md's `dross watch` row must read %q", watchDigestSummary)
 	}
 }
+
+// TestWatchPromptAzureDevOps (azure-devops-ship-loop c-8): the field bullets
+// say azure-devops lists ship PRs and that its bot_prs is always empty, while
+// absence still means the forge could not be queried; the information-only
+// rule no longer claims that no dross verb merges a PR, which `dross ship
+// merge` made false.
+func TestWatchPromptAzureDevOps(t *testing.T) {
+	bot, ships := watchPromptBullet(t, "bot_prs"), watchPromptBullet(t, "ship_prs")
+	for _, want := range []string{"azure-devops", "always []", "no bot flag", "absent when the forge could not be queried"} {
+		if !strings.Contains(bot, want) {
+			t.Errorf("the bot_prs bullet must say %q: %s", want, bot)
+		}
+	}
+	for _, want := range []string{"listed on github and on azure-devops", "absent when the forge could not be queried"} {
+		if !strings.Contains(ships, want) {
+			t.Errorf("the ship_prs bullet must say %q: %s", want, ships)
+		}
+	}
+	if strings.Contains(bot, "a provider other than github —") || strings.Contains(bot, "a provider other than github,") {
+		t.Errorf("the bot_prs bullet still reads every non-GitHub provider as unqueryable: %s", bot)
+	}
+	if strings.Contains(watchPromptContent(t), "no dross verb merges a pr") {
+		t.Error("watch.md still claims no dross verb merges a PR — dross ship merge does")
+	}
+}

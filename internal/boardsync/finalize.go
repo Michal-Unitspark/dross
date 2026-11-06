@@ -171,6 +171,15 @@ func finalizePlanTask(ctx *Ctx, phaseID, parent string, t phase.Task, warn *runW
 		// The link is recorded before the close, so a refused close does not
 		// cost the next run a label lookup.
 		ctx.Board.SetTask(phaseID, t.ID, iss.Key)
+		// A tracker with a real parent link (Azure Boards' Hierarchy-Reverse)
+		// gets the card under its phase card, as SyncTasks would have put it:
+		// a card created only at finalize is otherwise an orphan in every
+		// hierarchy view. A failure warns once and does not stop the close.
+		if pl, ok := ctx.Client.(forge.ParentLinker); ok && parent != "" {
+			if err := pl.LinkParent(parent, iss.Key); err != nil {
+				warn.once(&warn.noLink, "could not put task cards under %s (%v) — they carry the phase label", parent, err)
+			}
+		}
 		if err := closeNew(ctx, iss.Key, StatusTaskComplete, warn); err != nil {
 			return false, err
 		}

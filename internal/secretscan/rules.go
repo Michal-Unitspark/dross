@@ -64,6 +64,16 @@ var rules = []Rule{
 		needles: lits("glpat-"),
 	},
 	{
+		// A new-format Azure DevOps PAT: 84 alphanumerics with the fixed AZDO
+		// signature at positions 76-79. The signature sits mid-value, so it is the
+		// rule's fixed literal rather than a true prefix. An old 52-char PAT is
+		// bare base32 — too generic to match alone — and is left to key-context.
+		Name:    "azure-devops-pat",
+		Regex:   regexp.MustCompile(`\b([A-Za-z0-9]{76}AZDO[A-Za-z0-9]{4})\b`),
+		Prefix:  "AZDO",
+		needles: lits("AZDO"),
+	},
+	{
 		Name:    "atlassian-token",
 		Regex:   regexp.MustCompile(`\b(ATATT[A-Za-z0-9_=-]{20,})`),
 		Prefix:  "ATATT",

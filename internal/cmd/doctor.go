@@ -72,6 +72,7 @@ func Doctor() *cobra.Command {
 			pinWarnings := 0
 			protectionWarnings := 0
 			hookWarnings := 0
+			boardProbeWarnings := 0
 
 			// --- Foundational files ---
 			//
@@ -118,11 +119,11 @@ func Doctor() *cobra.Command {
 				Printf("  ⚠ project.toml has [remote].url = %s but git has no origin — push to remote, or remove the config\n", p.Remote.URL)
 				issues++
 			case gitURL != "" && p.Remote.URL == "":
-				Printf("  ✗ git origin = %s but project.toml has no [remote] — run /dross-onboard or set manually\n", gitURL)
+				Printf("  ✗ git origin = %s but project.toml has no [remote] — run /dross-onboard or set manually\n", originForDisplay(gitURL))
 				issues++
 			default:
 				if !sameRemoteURL(gitURL, p.Remote.URL) {
-					Printf("  ⚠ git origin (%s) does not match [remote].url (%s)\n", gitURL, p.Remote.URL)
+					Printf("  ⚠ git origin (%s) does not match [remote].url (%s)\n", originForDisplay(gitURL), p.Remote.URL)
 					issues++
 				} else {
 					Printf("  ✓ git origin matches [remote].url (%s)\n", p.Remote.URL)
@@ -146,7 +147,7 @@ func Doctor() *cobra.Command {
 				issues++
 			}
 
-			warnings = append(warnings, diag.RemoteCombination(p.Remote.Provider, p.Remote.AuthScheme, p.Remote.AuthUser)...)
+			warnings = append(warnings, diag.RemoteCombination(p.Remote)...)
 
 			Print("")
 
@@ -170,27 +171,38 @@ func Doctor() *cobra.Command {
 					boardIssues++
 				}
 
-				if b.AuthEnv == "" {
-					Print("  ✗ [board].auth_env is not set (board ops read the token from this env var)")
-					boardIssues++
-				} else if v := os.Getenv(b.AuthEnv); v == "" {
-					Printf("  ✗ [board].auth_env = %s but $%s is not set in this shell\n", b.AuthEnv, b.AuthEnv)
-					boardIssues++
-				}
-
-				// base_url is optional only where the backend has an address to
-				// fall back on (github → https://api.github.com). Optional is
-				// not unvalidated: a value that *is* set is still parsed, so a
-				// malformed github base_url fails rather than being ignored.
-				switch {
-				case b.BaseURL == "":
-					if configenum.BoardRequiresBaseURL(b.Provider) {
-						Printf("  ✗ [board].base_url is not set (the %s backend has no default API address)\n", b.Provider)
+				if isADOBoard(b.Provider) {
+					// Its own arm (doctor_board_ado.go): the host is checked
+					// against the allowlist before $auth_env is read, and
+					// project, api_version, auth_scheme and any configured
+					// area / iteration path are checked too.
+					ado := checkADOBoard(p, root, repoDir)
+					boardIssues += ado.issues
+					boardProbeWarnings += ado.warnings
+				} else {
+					if b.AuthEnv == "" {
+						Print("  ✗ [board].auth_env is not set (board ops read the token from this env var)")
+						boardIssues++
+					} else if v := os.Getenv(b.AuthEnv); v == "" {
+						Printf("  ✗ [board].auth_env = %s but $%s is not set in this shell\n", b.AuthEnv, b.AuthEnv)
 						boardIssues++
 					}
-				case !looksLikeBoardURL(b.BaseURL):
-					Printf("  ✗ [board].base_url = %q is not a valid URL (expected http(s)://host)\n", b.BaseURL)
-					boardIssues++
+
+					// base_url is optional only where the backend has an
+					// address to fall back on (github → https://api.github.com).
+					// Optional is not unvalidated: a value that *is* set is
+					// still parsed, so a malformed github base_url fails rather
+					// than being ignored.
+					switch {
+					case b.BaseURL == "":
+						if configenum.BoardRequiresBaseURL(b.Provider) {
+							Printf("  ✗ [board].base_url is not set (the %s backend has no default API address)\n", b.Provider)
+							boardIssues++
+						}
+					case !looksLikeBoardURL(b.BaseURL):
+						Printf("  ✗ [board].base_url = %q is not a valid URL (expected http(s)://host)\n", b.BaseURL)
+						boardIssues++
+					}
 				}
 
 				// Empty milestone_mode defaults to version in code; the Set
@@ -219,7 +231,7 @@ func Doctor() *cobra.Command {
 					}
 				}
 
-				warnings = append(warnings, diag.BoardCombination(b.Provider, b.MilestoneMode, b.AuthUser)...)
+				warnings = append(warnings, diag.BoardCombination(b.Provider, b.MilestoneMode, b.AuthUser, b.AuthScheme)...)
 
 				if boardIssues == 0 {
 					if b.BaseURL == "" {
@@ -609,7 +621,7 @@ func Doctor() *cobra.Command {
 				Print("")
 			}
 
-			return finalizeDoctor(issues, len(warnings)+redProofWarnings+duplicateSlugWarnings+backfillResidueWarnings+pinWarnings+protectionWarnings+hookWarnings)
+			return finalizeDoctor(issues, len(warnings)+redProofWarnings+duplicateSlugWarnings+backfillResidueWarnings+pinWarnings+protectionWarnings+hookWarnings+boardProbeWarnings)
 		},
 	}
 }
@@ -1042,10 +1054,42 @@ func drossLinguistAttrPresent(repoDir string) (bool, error) {
 // sameRemoteURL compares two git remote forms loosely — strips trailing
 // .git and compares hostname + path. Avoids false-positives from "the
 // same remote in https vs ssh form".
+//
+// An Azure Repos remote has more spellings than that — ssh v3 drops _git, a
+// Server's ssh url carries the daemon's port, names are case-insensitive — so
+// when either side parses as one, both are compared by their canonical url,
+// host kept. A side that parses against one that does not is a mismatch: a
+// url without _git names no repo, however close it reads.
 func sameRemoteURL(a, b string) bool {
+	adoA, okA := project.ParseAzureDevOpsRemote(a)
+	adoB, okB := project.ParseAzureDevOpsRemote(b)
+	if okA || okB {
+		return okA && okB && strings.EqualFold(adoA.URL, adoB.URL)
+	}
 	hA, pA := parseGitForCompare(a)
 	hB, pB := parseGitForCompare(b)
 	return hA == hB && pA == pB
+}
+
+// originForDisplay cuts the user[:password]@ off a URL-form git origin before
+// doctor prints it: an https origin often carries a PAT there, and doctor's
+// output lands in terminals, CI logs and bug reports. The cut runs to the
+// authority's last @, so a password holding an @ goes with it. An scp-form
+// origin (git@host:path) is printed as-is — its user is an ssh login name.
+func originForDisplay(raw string) string {
+	scheme, rest, ok := strings.Cut(strings.TrimSpace(raw), "://")
+	if !ok {
+		return raw
+	}
+	authority, tail, hasTail := strings.Cut(rest, "/")
+	if at := strings.LastIndex(authority, "@"); at >= 0 {
+		authority = authority[at+1:]
+	}
+	out := scheme + "://" + authority
+	if hasTail {
+		out += "/" + tail
+	}
+	return out
 }
 
 func parseGitForCompare(raw string) (host, path string) {

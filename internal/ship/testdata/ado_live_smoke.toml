@@ -1,0 +1,152 @@
+# Live Azure DevOps smoke — the record for azure-devops-ship-loop c-7.
+#
+# This file is the runbook and the record in one. The mocked httptest suite is
+# the per-criterion bar (verify_posture); this run is recorded beside it and
+# never substitutes for it, nor it for this. TestADOLiveRecordHonest and
+# TestADOLiveRecordStepEvidence (ado_live_record_test.go) validate whatever is
+# written here: mock-verified is never reported as live-verified.
+#
+# posture is one of:
+#   mock-only — nothing has run live: every step is not-run.
+#   partial   — a live run happened, and at least one step is not-run or fail.
+#   live      — every step passed live, each with its evidence.
+#
+# Prerequisites — set these up by hand before step 1:
+#   1. A scratch Azure DevOps repo, cloned, with `dross init` run in it so
+#      [remote] points at the org/collection (api_base, auth_env holding a PAT).
+#   2. A pipeline — YAML (azure-pipelines.yml) or a classic pipeline — that
+#      triggers on phase/* branches, plus an agent that can run it: a hosted
+#      parallelism grant or a self-hosted agent. A pipeline with no runnable
+#      agent never leaves queued, and the ci step cannot pass.
+#   3. A phase on phase/<id> with a /dross-verify pass, so `dross ship` will
+#      open its PR.
+#   4. A comment-resolution policy (Comment requirements) set by hand on the
+#      phase's base branch. dross never sets a branch policy; the hand-set one
+#      is what the comment-policy step probes.
+#   5. Before the listing step: an inline comment posted by hand on the PR, on
+#      a file and line of its diff, so the listing has one to show.
+#   6. Before the merge step: every reviewer thread resolved, so the
+#      comment-resolution policy does not block completion.
+#   7. Drive the run from a Claude Code session whose working directory is the
+#      scratch repo (`/add-dir` it, then `cd` there). The respond step's reply
+#      approval is recorded against the session's own repo, so a session
+#      rooted elsewhere records it where `dross pr reply --post` never looks.
+#
+# Fill in after the run: run_at (RFC 3339), api_base and api_version exactly as
+# [remote] had them, and phase. Never put an httptest, localhost or 127.0.0.1
+# address anywhere here — that is mock evidence, and the validator rejects it.
+#
+# Run of 2026-11-02 (dross 1.8.2.0, pair mode): a scratch repo "Scratch project"
+# in project "Scratch project" on the legacy jrpridhamservices.visualstudio.com
+# host, cloned over vs-ssh.visualstudio.com, hosted ubuntu-latest agent, PAT in
+# AZURE_DEVOPS_EXT_PAT. [remote] left api_version unset, so every call used the
+# 7.1 default; that default is what api_version records. Evidence beyond what
+# dross printed (thread ids, build URLs, policy evaluations) was read with
+# read-only REST GETs against the same host.
+
+posture = "live"
+run_at = "2026-11-02T09:02:04Z"
+phase = "shout-greeting"
+api_base = "https://jrpridhamservices.visualstudio.com"
+api_version = "7.1"
+
+# Set by the comment-policy step, from the PR's Comment requirements
+# evaluation right after `dross ship comment` posted a statusless thread:
+# true when that thread kept the policy from approving. If true, adoThreadStatus
+# (azuredevops_comment.go) must become "closed" in the same commit.
+statusless_thread_blocks = false
+
+# Steps, in order. result is not-run | pass | fail. evidence is what the step
+# printed, verbatim, naming an ADO URL or id; the typed fields under a step are
+# what the validator checks before it accepts a pass.
+
+[[step]]
+  key = "open"
+  # `dross ship <id>` opens the PR.
+  result = "pass"
+  evidence = "dross ship shout-greeting --auto: Pushed phase/shout-greeting to origin / PR opened: https://jrpridhamservices.visualstudio.com/Scratch%20project/_git/Scratch%20project/pullrequest/38 (#38) / Pushed PR record to phase/shout-greeting"
+  pr_url = "https://jrpridhamservices.visualstudio.com/Scratch%20project/_git/Scratch%20project/pullrequest/38"
+
+[[step]]
+  key = "dedupe"
+  # Re-run `dross ship <id>`: it finds the open PR instead of opening another.
+  # A plain re-run answers from changes.json ("PR #N already open") and never
+  # asks the provider. To reach the provider lookup this step proves, clear the
+  # recorded "pr" from the phase's changes.json first — the window where ship
+  # opened the PR and died before recording it.
+  result = "pass"
+  evidence = "with changes.json's pr cleared, dross ship shout-greeting --auto: found open PR #38 for phase/shout-greeting — recording it rather than opening a second / PR #38 already open — pushing the pending record. A REST read of PRs from refs/heads/phase/shout-greeting (any status) then listed PR #38 alone."
+
+[[step]]
+  key = "comment"
+  # `dross ship comment --pr <n> --body-file <f>` posts a new thread.
+  result = "pass"
+  evidence = "dross ship comment --pr 38 --body-file <f>: Posted comment to PR #38 — thread #89, https://jrpridhamservices.visualstudio.com/Scratch%20project/_git/Scratch%20project/pullrequest/38?discussionId=89, created with no status (status absent on the thread GET)"
+
+[[step]]
+  key = "comment-policy"
+  # Read the PR's Comment requirements evaluation with the statusless thread
+  # still active, and set statusless_thread_blocks above.
+  result = "pass"
+  evidence = "PR #38 Comment requirements evaluation 6759b706-8528-45f2-95cf-b529ec81b075 (policy 6, blocking on refs/heads/main): approved, completed 2026-11-02T09:34:56.74Z, re-evaluated as the hand-posted threads #90 and #91 were resolved, with dross's statusless threads #89 and #92 still on the PR. Control: it went rejected at 09:19:08.74Z, 0.2s after the hand-posted active thread #90, and did not re-evaluate when #89 was posted at 09:03:41Z."
+
+[[step]]
+  key = "listing"
+  # `dross pr comments <n>` lists the conversation and the hand-posted inline
+  # comment.
+  result = "pass"
+  evidence = "dross pr comments 38: c8900001 · conversation (thread #89), c9000001 · conversation (thread #90), i9100001 · inline · shout.go:6 (thread #91) / PR #38 (phase/shout-greeting): 3 of 3 comments need a verdict"
+  inline_path = "shout.go"
+  inline_line = 6
+
+[[step]]
+  key = "head"
+  # PRHeadOf, through `dross pr comments` or `dross pr reply`.
+  result = "pass"
+  evidence = "PRHeadOf through dross pr comments 38: PR #38 (phase/shout-greeting), accepted by ParsePhaseHead, which refuses a cross-repo head; dross pr resolve 38 c9000001, which refuses a closed PR, recorded its verdict; PR #38 GET: status active, no forkSource"
+  head_ref = "phase/shout-greeting"
+  head_open = true
+  head_cross_repo = false
+
+[[step]]
+  key = "user"
+  # AuthenticatedUser: the credential's own identity.
+  result = "pass"
+  evidence = "AuthenticatedUser (connectionData at the collection base) id 29be652f-4869-456c-be18-65c7a51a37c8, the author id on dross's thread #89 and its reply thread #92; dross itself confirms the match by dropping #92 from the next listing (prtriage drops a ReplyMarker thread only when its author id equals AuthenticatedUser().ID)"
+  user_id = "29be652f-4869-456c-be18-65c7a51a37c8"
+  thread_author_id = "29be652f-4869-456c-be18-65c7a51a37c8"
+
+[[step]]
+  key = "respond"
+  # /dross-respond rejects a comment and `dross pr reply <n> --post` replies.
+  result = "pass"
+  evidence = "dross pr resolve 38 c9000001 --reject: c9000001 → reject; human-approved draft 7fb671ceffda0fc2e4f7f699acd8bf2eed3810c3f68134f2adb13a051268ff5c; dross pr reply 38 --post: posted the reply to PR #38 (c9000001) and marked them posted — thread #92, no status. Next dross pr comments 38: c8900001, i9100001 / 2 of 3 comments need a verdict — #92 not listed, and --all lists only #89, #90 (rejected), #91."
+  reply_body = "## /dross-respond — rejected review comments"
+  reply_dropped = true
+
+[[step]]
+  key = "ci"
+  # `dross ship ci <id>` until it reads a verdict.
+  result = "pass"
+  evidence = "dross ship ci shout-greeting at watched head 934c885: ci: pass (build #49). After the triage record moved the head to d362457: exit 3 ci: pending (queued) at 09:36:12, exit 3 ci: pending (running) at 09:36:32, exit 0 ci: pass at 09:36:53 and again right before the merge — build #50 succeeded at d362457"
+  ci_verdict = "ci: pass"
+  build_url = "https://jrpridhamservices.visualstudio.com/30f4dceb-7a5b-4310-a2c7-04e2b8f0c0dd/_build/results?buildId=50"
+
+[[step]]
+  key = "merge"
+  # `dross ship merge <id>`, then `git ls-remote origin phase/<id>`.
+  result = "pass"
+  evidence = "dross ship merge shout-greeting: merged: https://jrpridhamservices.visualstudio.com/Scratch%20project/_git/Scratch%20project/pullrequest/38 — PR #38 GET: status completed, mergeStatus succeeded, mergeStrategy squash, lastMergeSourceCommit d362457 (the watched head), squash commit 28f14f7 with the single parent 011cd68"
+  ls_remote = "d362457e209d4c424a1d7b67193d8f74f4defd73\trefs/heads/phase/shout-greeting"
+
+[[step]]
+  key = "merged-status"
+  # dross's merged-status read (GetPRStatus) after completion.
+  # Found by this run, outside the step: `dross phase complete` asks only
+  # GitHub whether the base refuses direct pushes, so on azure-devops it pushes
+  # its completion record straight to main, and any branch policy on main
+  # rejects that (TF402455). Filed as a deferred item; the read below precedes
+  # that push and is unaffected.
+  result = "pass"
+  evidence = "dross phase complete shout-greeting passed mergeGate on recorded PR #38: GetPRStatus answered merged on base main — its only other way through, git ancestry, refuses a squash merge, since d362457 is not an ancestor of 28f14f7 — then switched to main and fast-forwarded it to 28f14f7. It stopped afterwards at publish completion record: ! [remote rejected] main -> main (TF402455: Pushes to this branch are not permitted; you must use a pull request to update this branch.)"
+  merged_status = "merged"

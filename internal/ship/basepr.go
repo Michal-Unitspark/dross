@@ -26,8 +26,8 @@ type BasePR struct {
 
 // OpenPRsTargeting lists the open PRs whose base is `base`. It mirrors
 // GetPRStatus's provider dispatch: GitHub answers via the overridable
-// ghCommand seam, GitLab and Forgejo/Gitea answer via their REST APIs,
-// Bitbucket returns ErrBasePRLookupUnsupported, and an outright unknown
+// ghCommand seam, GitLab, Forgejo/Gitea and Azure DevOps answer via their REST
+// APIs, Bitbucket returns ErrBasePRLookupUnsupported, and an outright unknown
 // provider returns a plain error so a misconfiguration stays distinguishable
 // from a missing backend.
 //
@@ -41,6 +41,8 @@ func OpenPRsTargeting(opts OpenOpts, base string) ([]BasePR, error) {
 		return gitlabOpenMRsTargeting(opts, base)
 	case "forgejo", "gitea":
 		return forgejoOpenPRsTargeting(opts, base)
+	case "azure-devops":
+		return azureDevOpsOpenPRsTargeting(opts, base)
 	case "bitbucket":
 		return nil, ErrBasePRLookupUnsupported
 	default:

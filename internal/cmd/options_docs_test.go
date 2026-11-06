@@ -113,7 +113,8 @@ func TestOptionsCoversEveryProjectSection(t *testing.T) {
 func TestOptionsCoversTheProviderConditionalRemoteFields(t *testing.T) {
 	prompt := optionsPrompt(t)
 	for _, want := range []string{
-		"remote.auth_user", "remote.auth_scheme", "remote.project_id",
+		"remote.auth_user", "remote.auth_scheme", "remote.project_id", "remote.api_version",
+		"azure-devops",
 		"board.auth_user", "board.github_project", "board.milestone_mode",
 		"stack.profile",
 	} {
@@ -121,6 +122,86 @@ func TestOptionsCoversTheProviderConditionalRemoteFields(t *testing.T) {
 			t.Errorf("options.md does not mention %q", want)
 		}
 	}
+
+	// The azure-devops auth guidance follows the auth_scheme lock: Basic :PAT by
+	// default, bearer for Entra, private-token/basic ineffective, auth_user
+	// ignored. The api_version bullet carries its default and the Server caps.
+	for key, wants := range map[string][]string{
+		"remote.auth_scheme": {"azure-devops", "`bearer` sends an Entra ID token", "`private-token` and `basic` have no effect"},
+		"remote.auth_user":   {"azure-devops ignores it"},
+		"remote.api_version": {"azure-devops", "`7.1`", "`5.0`", "`6.0`", "`7.0`"},
+	} {
+		bullet := optionsBullet(prompt, key)
+		if bullet == "" {
+			t.Errorf("options.md has no `- `%s`` bullet", key)
+			continue
+		}
+		for _, want := range wants {
+			if !strings.Contains(bullet, want) {
+				t.Errorf("the %s bullet does not say %q: %s", key, want, bullet)
+			}
+		}
+	}
+}
+
+// TestOptionsCoversADOBoardFields: §12 documents the azure-devops board — the
+// provider value, the four keys that apply to it alone (each as its own bullet
+// carrying what makes it actionable), and the rule that [board] never inherits
+// from [remote], which is what a reader beside an Azure Repos remote gets
+// wrong first.
+func TestOptionsCoversADOBoardFields(t *testing.T) {
+	section := optionsSection(t, optionsPrompt(t), "## 12. Issue board")
+	if !strings.Contains(section, "github · azure-devops)") {
+		t.Errorf("§12 does not list azure-devops among the board.provider values:\n%s", section)
+	}
+	for key, wants := range map[string][]string{
+		"board.api_version":    {"`7.1`", "`5.0`", "`6.0`", "`7.0`"},
+		"board.auth_scheme":    {"`bearer`", "Entra ID", "empty user"},
+		"board.area_path":      {"backslash", "default area"},
+		"board.iteration_path": {"backslash", "default iteration"},
+	} {
+		bullet := optionsBullet(section, key)
+		if bullet == "" {
+			t.Errorf("§12 has no `- `%s`` bullet", key)
+			continue
+		}
+		for _, want := range wants {
+			if !strings.Contains(bullet, want) {
+				t.Errorf("the %s bullet does not say %q: %s", key, want, bullet)
+			}
+		}
+	}
+	if !strings.Contains(section, "`[board]` never inherits from `[remote]`") {
+		t.Errorf("§12 does not say [board] never inherits from [remote]:\n%s", section)
+	}
+	if !strings.Contains(section, "milestones are always Epics") {
+		t.Errorf("§12 does not say milestone_mode is ignored on azure-devops (milestones are Epics)")
+	}
+}
+
+// optionsSection returns options.md from the heading line up to the next `## `
+// heading, failing when the heading is missing.
+func optionsSection(t *testing.T, prompt, heading string) string {
+	t.Helper()
+	start := strings.Index(prompt, "\n"+heading+"\n")
+	if start < 0 {
+		t.Fatalf("options.md has no %q heading", heading)
+	}
+	rest := prompt[start+1:]
+	if end := strings.Index(rest[len(heading):], "\n## "); end >= 0 {
+		rest = rest[:len(heading)+end+1]
+	}
+	return rest
+}
+
+// optionsBullet returns the options.md bullet line that documents key.
+func optionsBullet(prompt, key string) string {
+	for _, line := range strings.Split(prompt, "\n") {
+		if strings.HasPrefix(line, "- `"+key+"` —") {
+			return line
+		}
+	}
+	return ""
 }
 
 // TestOptionsSaysMutationIsNotSettableThroughProjectSet.

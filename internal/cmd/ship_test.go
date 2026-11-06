@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"encoding/base64"
 	"encoding/json"
 	"errors"
 
@@ -18,6 +19,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"sync"
 	"testing"
 )
 
@@ -65,6 +67,23 @@ func TestBuildCommentOptsMapsGitLabFields(t *testing.T) {
 	got := buildCommentOpts(p, hostallow.Policy{})
 	if got.Provider != "gitlab" || got.AuthEnv != "GL_TOKEN" || got.AuthScheme != "bearer" || got.ProjectID != "42" {
 		t.Errorf("comment opts dropped a field: %+v", got)
+	}
+}
+
+// TestBuildOpenOptsCarriesAPIVersion and its comment twin pin the join between
+// [remote].api_version and the Azure DevOps transport: a dropped copy sends
+// 7.1 to a Server that caps at 6.0, and every call fails.
+func TestBuildOpenOptsCarriesAPIVersion(t *testing.T) {
+	p := &project.Project{Remote: project.Remote{APIVersion: "6.0"}}
+	if got := buildOpenOpts(p, hostallow.Policy{}); got.APIVersion != "6.0" {
+		t.Errorf("api_version not copied onto OpenOpts: %q", got.APIVersion)
+	}
+}
+
+func TestBuildCommentOptsCarriesAPIVersion(t *testing.T) {
+	p := &project.Project{Remote: project.Remote{APIVersion: "6.0"}}
+	if got := buildCommentOpts(p, hostallow.Policy{}); got.APIVersion != "6.0" {
+		t.Errorf("api_version not copied onto CommentOpts: %q", got.APIVersion)
 	}
 }
 
@@ -2182,5 +2201,247 @@ func TestShipPrintBodyShowsReviews(t *testing.T) {
 	})
 	if !strings.Contains(out, "## Reviewer findings") || !strings.Contains(out, "REVIEWER-SAW-THIS") {
 		t.Fatalf("--print-body omits the reviewer findings:\n%s", out)
+	}
+}
+
+// --- Azure DevOps end to end (azure-devops-provider c-2, c-4..c-7) ---
+
+const adoShipPAT = "ado-ship-pat"
+
+// adoShipCall is one request the mock Azure DevOps Server collection saw.
+type adoShipCall struct {
+	method, path string
+	apiVersion   []string
+	auth         []string
+}
+
+type adoShipRoute struct {
+	method, part string
+	status       int
+	body         string
+}
+
+type adoShipMock struct {
+	*httptest.Server
+	mu    sync.Mutex
+	calls []adoShipCall
+}
+
+func (m *adoShipMock) seen() []adoShipCall {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	return append([]adoShipCall(nil), m.calls...)
+}
+
+func (m *adoShipMock) count(method, part string) int {
+	n := 0
+	for _, c := range m.seen() {
+		if c.method == method && strings.Contains(c.path, part) {
+			n++
+		}
+	}
+	return n
+}
+
+// newADOShipMock answers each request from the first route whose method
+// matches and whose path contains part. Anything unrouted is a failure: the
+// flows below pin every request ship makes.
+func newADOShipMock(t *testing.T, routes ...adoShipRoute) *adoShipMock {
+	t.Helper()
+	m := &adoShipMock{}
+	m.Server = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		m.mu.Lock()
+		m.calls = append(m.calls, adoShipCall{r.Method, r.URL.EscapedPath(), r.URL.Query()["api-version"], r.Header.Values("Authorization")})
+		m.mu.Unlock()
+		for _, rt := range routes {
+			if r.Method == rt.method && strings.Contains(r.URL.EscapedPath(), rt.part) {
+				w.WriteHeader(rt.status)
+				_, _ = w.Write([]byte(rt.body))
+				return
+			}
+		}
+		t.Errorf("unexpected request: %s %s", r.Method, r.URL.EscapedPath())
+		w.WriteHeader(http.StatusNotFound)
+	}))
+	t.Cleanup(m.Close)
+	return m
+}
+
+// adoShipRemote writes a mock Server collection into [remote] through
+// `dross project set`, exactly as a user would — so a key the setter refuses
+// (an enum that lags ShipProviders, say) fails the flow here.
+func adoShipRemote(t *testing.T, m *adoShipMock, reviewers string) {
+	t.Helper()
+	t.Setenv("MOCK_ADO_PAT", adoShipPAT)
+	sets := [][]string{
+		{"set", "remote.provider", "azure-devops"},
+		{"set", "remote.url", m.URL + "/coll/P/_git/R"},
+		{"set", "remote.api_base", m.URL + "/coll"},
+		{"set", "remote.api_version", "6.0"},
+		{"set", "remote.auth_env", "MOCK_ADO_PAT"},
+		{"set", "remote.reviewers", reviewers},
+	}
+	if reviewers == "" {
+		sets[len(sets)-1] = []string{"set", "--unset", "remote.reviewers"}
+	}
+	for _, set := range sets {
+		if err := runCmd(t, Project(), set...); err != nil {
+			t.Fatalf("project %v: %v", set, err)
+		}
+	}
+}
+
+// adoShipFixture is shipFixture re-pointed at a mock Azure DevOps Server: the
+// head lookup is the real FindOpenPRByHead again, origin is a bare repo so the
+// push lands, and [remote] names the mock collection.
+func adoShipFixture(t *testing.T, reviewers string, routes ...adoShipRoute) (dir, remoteDir string, m *adoShipMock) {
+	t.Helper()
+	dir = shipFixture(t, "https://forge.example/me/p.git")
+	prev := ship.FindOpenPRByHeadFunc
+	ship.FindOpenPRByHeadFunc = ship.FindOpenPRByHead
+	t.Cleanup(func() { ship.FindOpenPRByHeadFunc = prev })
+
+	m = newADOShipMock(t, routes...)
+	remoteDir = t.TempDir()
+	mustGit(t, remoteDir, "init", "-q", "--bare")
+	mustGit(t, dir, "remote", "set-url", "origin", remoteDir)
+	adoShipRemote(t, m, reviewers)
+	gitCommit(t, dir, "test: point [remote] at the mock collection")
+	return dir, remoteDir, m
+}
+
+var (
+	adoShipNone    = adoShipRoute{"GET", "/pullrequests", 200, `{"count":0,"value":[]}`}
+	adoShipCreated = adoShipRoute{"POST", "/pullrequests", 201, `{"pullRequestId":42}`}
+)
+
+// TestShipAzureDevOpsFullFlow: a first ship asks for an open PR by source,
+// finds none, opens one — every call on the collection's repo endpoint, at
+// the configured api-version, with one Basic :PAT credential — and records it.
+func TestShipAzureDevOpsFullFlow(t *testing.T) {
+	dir, remoteDir, m := adoShipFixture(t, "", adoShipNone, adoShipCreated)
+	out := captureStdout(t, func() {
+		if err := runCmd(t, Ship()); err != nil {
+			t.Fatalf("ship: %v", err)
+		}
+	})
+
+	calls := m.seen()
+	if len(calls) != 2 || calls[0].method != "GET" || calls[1].method != "POST" {
+		t.Fatalf("want the lookup GET, then the create POST; got %+v", calls)
+	}
+	wantAuth := "Basic " + base64.StdEncoding.EncodeToString([]byte(":"+adoShipPAT))
+	for _, c := range calls {
+		if !strings.HasPrefix(c.path, "/coll/P/_apis/git/repositories/R/") {
+			t.Errorf("%s %s is not on the collection's repo endpoint", c.method, c.path)
+		}
+		if len(c.apiVersion) != 1 || c.apiVersion[0] != "6.0" {
+			t.Errorf("%s %s: api-version = %v, want [6.0]", c.method, c.path, c.apiVersion)
+		}
+		if len(c.auth) != 1 || c.auth[0] != wantAuth {
+			t.Errorf("%s %s: Authorization = %v, want exactly one Basic :PAT", c.method, c.path, c.auth)
+		}
+	}
+
+	opened := ""
+	for _, line := range strings.Split(out, "\n") {
+		if strings.Contains(line, "PR opened: ") {
+			opened = line
+		}
+	}
+	if !strings.HasSuffix(strings.TrimSpace(opened), "/coll/P/_git/R/pullrequest/42 (#42)") {
+		t.Errorf("want 'PR opened: .../_git/R/pullrequest/42 (#42)', got %q in:\n%s", opened, out)
+	}
+	if ch := loadChangesX(t, dir); ch.PR != 42 {
+		t.Errorf("changes.json pr = %d, want 42", ch.PR)
+	}
+	if pushed := originChangesX(t, remoteDir); pushed.PR != 42 {
+		t.Errorf("origin's changes.json pr = %d, want 42", pushed.PR)
+	}
+}
+
+// TestShipAzureDevOpsDedupeHit: an active PR from phase/x already exists, so
+// ship records it and opens nothing.
+func TestShipAzureDevOpsDedupeHit(t *testing.T) {
+	dir, _, m := adoShipFixture(t, "",
+		adoShipRoute{"GET", "/pullrequests", 200, `{"count":1,"value":[{"pullRequestId":17,"status":"active","sourceRefName":"refs/heads/phase/x"}]}`},
+		adoShipCreated)
+	out := captureStdout(t, func() {
+		if err := runCmd(t, Ship()); err != nil {
+			t.Fatalf("ship: %v", err)
+		}
+	})
+	if n := m.count("POST", "/pullrequests"); n != 0 {
+		t.Errorf("%d PR create(s) — the existing PR #17 was duplicated", n)
+	}
+	if !strings.Contains(out, "found open PR #17") {
+		t.Errorf("want 'found open PR #17' in:\n%s", out)
+	}
+	if ch := loadChangesX(t, dir); ch.PR != 17 {
+		t.Errorf("changes.json pr = %d, want 17", ch.PR)
+	}
+}
+
+// TestShipAzureDevOpsLookupFailureRefuses: a lookup that fails refuses before
+// opening — "could not check" read as "none" is the duplicate dedupe exists
+// to prevent.
+func TestShipAzureDevOpsLookupFailureRefuses(t *testing.T) {
+	dir, _, m := adoShipFixture(t, "",
+		adoShipRoute{"GET", "/pullrequests", 500, `{"message":"boom"}`},
+		adoShipCreated)
+	err := runCmd(t, Ship())
+	if err == nil {
+		t.Fatal("a failed lookup did not refuse")
+	}
+	if !strings.Contains(err.Error(), "could not check origin") || !strings.Contains(err.Error(), "dross ship x") {
+		t.Errorf("want 'could not check origin' naming `dross ship x`, got: %v", err)
+	}
+	if n := m.count("POST", "/pullrequests"); n != 0 {
+		t.Errorf("%d PR create(s) after a failed lookup", n)
+	}
+	if ch := loadChangesX(t, dir); ch.PR != 0 {
+		t.Errorf("changes.json pr = %d, want 0", ch.PR)
+	}
+}
+
+// TestShipAzureDevOpsReviewerFailureWarns: a reviewer the Identities API
+// cannot find is a warning on an opened PR, never a failed ship.
+func TestShipAzureDevOpsReviewerFailureWarns(t *testing.T) {
+	dir, _, m := adoShipFixture(t, "alice@example.com",
+		adoShipNone, adoShipCreated,
+		adoShipRoute{"GET", "/_apis/identities", 404, `{"message":"not found"}`})
+	out := captureStdout(t, func() {
+		if err := runCmd(t, Ship()); err != nil {
+			t.Fatalf("a reviewer lookup failure failed the ship: %v", err)
+		}
+	})
+	if n := m.count("GET", "/coll/_apis/identities"); n != 1 {
+		t.Errorf("identity lookups on the collection = %d, want 1", n)
+	}
+	if !strings.Contains(out, "Warning:") {
+		t.Errorf("want a Warning: line for the failed reviewer in:\n%s", out)
+	}
+	if ch := loadChangesX(t, dir); ch.PR != 42 {
+		t.Errorf("changes.json pr = %d, want 42", ch.PR)
+	}
+}
+
+// TestShipAzureDevOpsCommentPostsThread: `dross ship comment` on azure-devops
+// posts one new thread on the PR, on the collection's repo endpoint.
+func TestShipAzureDevOpsCommentPostsThread(t *testing.T) {
+	shipCoverInitProject(t)
+	m := newADOShipMock(t, adoShipRoute{"POST", "/threads", 200, `{"id":1}`})
+	adoShipRemote(t, m, "")
+	out := captureStdout(t, func() {
+		if err := runCmd(t, Ship(), "comment", "--pr", "7", "--body", "panel findings"); err != nil {
+			t.Fatalf("ship comment: %v", err)
+		}
+	})
+	calls := m.seen()
+	if len(calls) != 1 || calls[0].method != "POST" || calls[0].path != "/coll/P/_apis/git/repositories/R/pullRequests/7/threads" {
+		t.Errorf("want one POST .../pullRequests/7/threads, got %+v", calls)
+	}
+	if !strings.Contains(out, "Posted comment to PR #7") {
+		t.Errorf("want 'Posted comment to PR #7' in:\n%s", out)
 	}
 }

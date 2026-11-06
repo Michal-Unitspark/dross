@@ -11,6 +11,7 @@ import (
 	"path/filepath"
 	"reflect"
 	"strings"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -1014,5 +1015,204 @@ func TestWatchUntriagedNeverSteers(t *testing.T) {
 	}
 	if d.Suggested != quiet {
 		t.Errorf("suggested = %q with untriaged comments, %q without", d.Suggested, quiet)
+	}
+}
+
+// --- Azure DevOps ship PRs in the digest (azure-devops-ship-loop c-8) ---
+
+// adoWatchForge is an Azure DevOps Server collection holding active PRs: list
+// answers the PR list (status code and body), and phase PR #7's builds,
+// evaluations, threads and the PAT's identity answer as a reachable forge
+// does. hits counts every request.
+type adoWatchForge struct {
+	*httptest.Server
+	listCode int
+	list     string
+	hits     atomic.Int32
+}
+
+func newADOWatchForge(t *testing.T, sha string) *adoWatchForge {
+	t.Helper()
+	f := &adoWatchForge{listCode: http.StatusOK}
+	threads, _ := json.Marshal(map[string]any{"count": 2, "value": []map[string]any{
+		adoThreadJSON(1, nil, adoReviewer(1, "why is this unbounded?")),
+		adoThreadJSON(2, nil, adoCommentJSON(1, "text", strings.ToLower(adoSelfID), adoSelfLogin, prtriage.ReplyMarker+"\n\nNot acted on:\n", false)),
+	}})
+	f.Server = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		f.hits.Add(1)
+		p := strings.ToLower(r.URL.EscapedPath())
+		switch {
+		case r.Method != "GET":
+			t.Errorf("watch sent a %s: %s", r.Method, r.URL)
+			w.WriteHeader(http.StatusMethodNotAllowed)
+		case strings.HasSuffix(p, "/coll/p/_apis/git/repositories/r/pullrequests"):
+			w.WriteHeader(f.listCode)
+			_, _ = w.Write([]byte(f.list))
+		case strings.HasSuffix(p, "/coll/p/_apis/build/builds"):
+			_, _ = w.Write([]byte(adoCMBuilds(sha)))
+		case strings.HasSuffix(p, "/coll/p/_apis/policy/evaluations"):
+			_, _ = w.Write([]byte(adoCMApproved))
+		case strings.HasSuffix(p, "/coll/p/_apis/git/repositories/r/pullrequests/7/threads"):
+			_, _ = w.Write(threads)
+		case strings.HasSuffix(p, "/coll/_apis/connectiondata"):
+			_, _ = fmt.Fprintf(w, `{"authenticatedUser":{"id":%q,"properties":{"Account":{"$type":"System.String","$value":%q}}}}`, adoSelfID, adoSelfLogin)
+		default:
+			t.Errorf("unexpected request: %s %s", r.Method, r.URL)
+			w.WriteHeader(http.StatusNotFound)
+		}
+	}))
+	t.Cleanup(f.Close)
+	return f
+}
+
+// adoWatchPR is one active PR as ADO's list returns it; extra adds fields.
+func adoWatchPR(n int, head, sha, creator, extra string) string {
+	return fmt.Sprintf(`{"pullRequestId":%d,"title":"PR %d","status":"active","creationDate":"2026-10-30T10:00:00Z","sourceRefName":"refs/heads/%s","targetRefName":"refs/heads/main","createdBy":{"uniqueName":%q},"lastMergeSourceCommit":{"commitId":%q},"repository":{"id":%q,"project":{"id":%q}}%s}`,
+		n, n, head, creator, sha, adoCMRepoGUID, adoCMProjectGUID, extra)
+}
+
+func adoWatchList(prs ...string) string {
+	return fmt.Sprintf(`{"count":%d,"value":[%s]}`, len(prs), strings.Join(prs, ","))
+}
+
+// adoWatchRepo is prWatchRepo as a git repo on phase/x (planned here, no
+// triage record yet) whose [remote] is the Server collection at base.
+func adoWatchRepo(t *testing.T, base string) string {
+	t.Helper()
+	dir := prWatchRepo(t)
+	t.Setenv("MOCK_ADO_PAT", adoShipPAT)
+	mustRunSet(t, "remote.provider", "azure-devops")
+	mustRunSet(t, "remote.url", base+"/coll/P/_git/R")
+	mustRunSet(t, "remote.api_base", base+"/coll")
+	mustRunSet(t, "remote.api_version", "6.0")
+	mustRunSet(t, "remote.auth_env", "MOCK_ADO_PAT")
+	for _, args := range [][]string{
+		{"init", "-q", "-b", "main"}, {"config", "user.email", "t@example.com"}, {"config", "user.name", "T"},
+		{"config", "commit.gpgsign", "false"}, {"config", "gc.auto", "0"},
+	} {
+		mustGit(t, dir, args...)
+	}
+	gitCommit(t, dir, "base")
+	mustGit(t, dir, "checkout", "-q", "-b", "phase/x")
+	mustWrite(t, filepath.Join(dir, ".dross", "phases", "x", "plan.toml"), "[phase]\nid = \"x\"\n")
+	gitCommit(t, dir, "plan x")
+	return dir
+}
+
+// runWatchQuiet runs `dross watch --json`, returning stdout, stderr and the
+// error.
+func runWatchQuiet(t *testing.T) (out, errOut string, err error) {
+	t.Helper()
+	errOut = captureStderr(t, func() {
+		out = captureStdout(t, func() { err = runCmd(t, Watch(), "--json") })
+	})
+	return out, errOut, err
+}
+
+// TestWatchAzureDevOpsShipPRs: the phase/x PR is the one ship PR, its checks
+// rolled up from the build and evaluation at its head and its one reviewer
+// comment untriaged (dross's own reply is not counted); the fork phase/y PR
+// and the feature/z PR are not ship PRs, and a Build Service author is no
+// bot — ADO has no bot flag.
+func TestWatchAzureDevOpsShipPRs(t *testing.T) {
+	const sha = "0123456789abcdef0123456789abcdef01234567"
+	f := newADOWatchForge(t, sha)
+	adoWatchRepo(t, f.URL)
+	f.list = adoWatchList(
+		adoWatchPR(7, "phase/x", sha, adoSelfLogin, ""),
+		adoWatchPR(8, "phase/y", sha, "mallory@corp.example", `,"forkSource":{"name":"refs/heads/phase/y"}`),
+		adoWatchPR(9, "feature/z", sha, "Project Collection Build Service (coll)", ""),
+	)
+	d := runWatchJSON(t)
+	if d.BotPRs == nil || len(*d.BotPRs) != 0 {
+		t.Errorf("bot_prs = %v, want present and empty", d.BotPRs)
+	}
+	if d.ShipPRs == nil || len(*d.ShipPRs) != 1 {
+		t.Fatalf("ship_prs = %+v, want exactly the phase/x PR", d.ShipPRs)
+	}
+	s := (*d.ShipPRs)[0]
+	if s.Number != 7 || s.Head != "phase/x" || s.Checks != ship.ChecksPassing || s.Untriaged != 1 {
+		t.Errorf("ship PR = %+v, want #7 phase/x passing with 1 untriaged", s)
+	}
+	if !strings.HasSuffix(s.URL, "/coll/P/_git/R/pullrequest/7") {
+		t.Errorf("ship PR url = %q, want the browser URL", s.URL)
+	}
+}
+
+// TestWatchListerGetsFullOpts: the lister sees an ADO project's whole
+// [remote] — api_base, credential env, api_version and a host policy that
+// admits the collection — not just the provider and url.
+func TestWatchListerGetsFullOpts(t *testing.T) {
+	base := "https://ado.corp.example"
+	adoWatchRepo(t, base)
+	prev := ship.ListOpenPRsFunc
+	t.Cleanup(func() { ship.ListOpenPRsFunc = prev })
+	var got *ship.OpenOpts
+	ship.ListOpenPRsFunc = func(o ship.OpenOpts) ([]ship.OpenPRRecord, error) {
+		got = &o
+		return []ship.OpenPRRecord{}, nil
+	}
+	runWatchJSON(t)
+	if got == nil {
+		t.Fatal("the lister was never asked")
+	}
+	if got.Provider != "azure-devops" || got.URL != base+"/coll/P/_git/R" || got.APIBase != base+"/coll" ||
+		got.AuthEnv != "MOCK_ADO_PAT" || got.APIVersion != "6.0" {
+		t.Errorf("lister opts = %+v", *got)
+	}
+	if err := got.Hosts.Check("[remote].api_base", got.APIBase); err != nil {
+		t.Errorf("the host policy does not admit the collection: %v", err)
+	}
+}
+
+// TestWatchAzureDevOpsFailuresStayQuiet: a 500 on the PR list, a 203 sign-in
+// page, a full page and a host policy that will not resolve each leave both
+// PR fields absent, exit 0 and write nothing to stderr.
+func TestWatchAzureDevOpsFailuresStayQuiet(t *testing.T) {
+	const sha = "0123456789abcdef0123456789abcdef01234567"
+	f := newADOWatchForge(t, sha)
+	dir := adoWatchRepo(t, f.URL)
+	full := make([]string, 100)
+	for i := range full {
+		full[i] = adoWatchPR(100+i, "feature/f", sha, "dev@corp.example", "")
+	}
+	absent := func(name string) {
+		t.Helper()
+		out, errOut, err := runWatchQuiet(t)
+		if err != nil || errOut != "" {
+			t.Errorf("%s: err %v, stderr %q; want exit 0 and a silent stderr", name, err, errOut)
+		}
+		m := watchKeys(t, out)
+		for _, k := range []string{"bot_prs", "ship_prs"} {
+			if _, ok := m[k]; ok {
+				t.Errorf("%s: %s present:\n%s", name, k, out)
+			}
+		}
+	}
+	for _, tc := range []struct {
+		name string
+		code int
+		body string
+	}{
+		{"a 500", http.StatusInternalServerError, `{"message":"boom"}`},
+		{"a 203 sign-in page", http.StatusNonAuthoritativeInfo, "<html><title>Sign in</title></html>"},
+		{"a full page", http.StatusOK, adoWatchList(full...)},
+	} {
+		f.listCode, f.list = tc.code, tc.body
+		f.hits.Store(0)
+		absent(tc.name)
+		if f.hits.Load() == 0 {
+			t.Errorf("%s: the forge was never asked, so nothing was proven", tc.name)
+		}
+	}
+
+	// A tracked local.toml: the host policy refuses to read it.
+	mustWrite(t, filepath.Join(dir, ".dross", "local.toml"), "allow_hosts = \"\"\n")
+	mustGit(t, dir, "add", "-f", ".dross/local.toml")
+	f.listCode, f.list = http.StatusOK, adoWatchList(adoWatchPR(7, "phase/x", sha, adoSelfLogin, ""))
+	f.hits.Store(0)
+	absent("a host policy refusal")
+	if n := f.hits.Load(); n != 0 {
+		t.Errorf("a host policy refusal still reached the forge %d time(s)", n)
 	}
 }

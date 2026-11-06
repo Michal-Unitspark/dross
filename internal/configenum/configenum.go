@@ -72,7 +72,7 @@ func (s Set) List() string {
 // for (forge.NewBoard, falling through to forge.New for the REST forges).
 //
 // Empty is rejected: an unset [board].provider dispatches nowhere.
-var BoardProviders = newSet("", "forgejo", "gitea", "gitlab", "youtrack", "jira", "github")
+var BoardProviders = newSet("", "forgejo", "gitea", "gitlab", "youtrack", "jira", "github", "azure-devops")
 
 // ForgeRESTProviders is the subset of BoardProviders served by forge.New's
 // generic REST client. It is exported so forge.New's expected-provider message
@@ -85,7 +85,7 @@ var ForgeRESTProviders = newSet("", "forgejo", "gitea", "gitlab")
 // "none" is a sentinel meaning "this repo has no remote", handled at the call
 // sites, and is deliberately not a member: it names the absence of a backend,
 // not one of them.
-var ShipProviders = newSet("", "github", "forgejo", "gitea", "gitlab", "bitbucket")
+var ShipProviders = newSet("", "github", "forgejo", "gitea", "gitlab", "bitbucket", "azure-devops")
 
 // AuthSchemes is the set of [remote].auth_scheme credential selectors. Empty
 // defaults to private-token in code, so an unset scheme is valid.
@@ -163,7 +163,8 @@ var MilestoneModes = newSet("version", "version", "agile", "epic")
 
 // MilestoneModesFor returns the modes a given board provider actually accepts,
 // or nil when the provider maps milestones by some other means (the REST forges
-// and github use their own milestone objects and never read milestone_mode).
+// and github use their own milestone objects, and azure-devops always makes a
+// milestone an Epic — none of them reads milestone_mode).
 //
 // A nil result means "milestone_mode does not apply here", not "no mode is
 // valid" — callers checking a combination should skip the check when it is nil.

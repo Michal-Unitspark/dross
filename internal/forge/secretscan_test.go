@@ -1,8 +1,10 @@
 package forge
 
 import (
+	"encoding/json"
 	"errors"
 	"net/http"
+	"net/http/httptest"
 	"strings"
 	"sync/atomic"
 	"testing"
@@ -67,7 +69,63 @@ func allBackends() []backend {
 		{"github", "body", func(t *testing.T, h http.HandlerFunc) BoardClient { c, _ := newTestGitHubClient(t, "", h); return c }},
 		{"jira", "fields.description", func(t *testing.T, h http.HandlerFunc) BoardClient { c, _ := newTestJiraClient(t, h); return c }},
 		{"youtrack", "description", func(t *testing.T, h http.HandlerFunc) BoardClient { c, _ := newTestYTClient(t, h); return c }},
+		{"azure-devops", "System.Description", func(t *testing.T, h http.HandlerFunc) BoardClient {
+			srv, _ := adoBoardsServer(t, adoCountingHandler(h))
+			return newTestAzureBoards(t, srv, nil)
+		}},
 	}
+}
+
+// adoCountingHandler fronts a test handler for Azure Boards. The process
+// metadata a write needs first — the backlog configuration, a type's states —
+// is answered here, uncounted, so the counter sees exactly the work-item
+// traffic the other backends' counters see. Every work-item request goes to h
+// to be counted, and whatever issue h answers (its title and description or
+// body) is re-shaped into Azure Boards' own: a work item, a WIQL id list, or
+// a workitemsbatch page.
+func adoCountingHandler(h http.HandlerFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		p := strings.TrimPrefix(r.URL.EscapedPath(), adoProjectAPI)
+		switch {
+		case r.Method == http.MethodGet && p == "/work/backlogconfiguration":
+			_, _ = w.Write([]byte(backlogConfig("User Story")))
+			return
+		case r.Method == http.MethodGet && strings.HasPrefix(p, "/wit/workitemtypes"):
+			_, _ = w.Write([]byte(`{"value":[{"name":"New","category":"Proposed"}]}`))
+			return
+		}
+		rec := httptest.NewRecorder()
+		h(rec, r)
+		var answered map[string]any
+		_ = json.Unmarshal(rec.Body.Bytes(), &answered)
+		text := func(keys ...string) string {
+			for _, k := range keys {
+				if v, ok := answered[k].(string); ok {
+					return v
+				}
+			}
+			return ""
+		}
+		item, _ := json.Marshal(map[string]any{"id": 1, "rev": 1, "fields": map[string]string{
+			"System.WorkItemType": "User Story", "System.Title": text("title", "summary"),
+			"System.Description": text("description", "body"), "System.State": "New",
+		}})
+		switch {
+		case p == "/wit/wiql":
+			_, _ = w.Write([]byte(`{"workItems":[{"id":1}]}`))
+		case p == "/wit/workitemsbatch":
+			_, _ = w.Write([]byte(`{"count":1,"value":[` + string(item) + `]}`))
+		default:
+			_, _ = w.Write(item)
+		}
+	}
+}
+
+// numericKeys reports whether a backend's issue keys are bare numbers, so it
+// refuses "PROJ-1" before any request.
+func numericKeys(backend string) bool {
+	return backend == "forgejo" || backend == "github" || backend == "azure-devops"
 }
 
 // requireRefused asserts err carries a *secretscan.ErrHit naming rule and a
@@ -121,7 +179,7 @@ func TestUpdateIssueBodyPatchRefused(t *testing.T) {
 			cl := b.build(t, countingHandler(&c, `{"issues":[],"values":[]}`))
 			tok := synthAtlassianToken()
 			_, err := cl.UpdateIssue("PROJ-1", IssuePatch{Body: &tok})
-			if b.name == "forgejo" || b.name == "github" {
+			if numericKeys(b.name) {
 				// Numeric-key backends refuse a non-numeric key before any
 				// request; use a number so the screen is what refuses.
 				_, err = cl.UpdateIssue("1", IssuePatch{Body: &tok})
@@ -130,7 +188,7 @@ func TestUpdateIssueBodyPatchRefused(t *testing.T) {
 
 			labels := []string{"dross/phase"}
 			key := "PROJ-1"
-			if b.name == "forgejo" || b.name == "github" {
+			if numericKeys(b.name) {
 				key = "1"
 			}
 			_, _ = cl.UpdateIssue(key, IssuePatch{Labels: &labels})
@@ -185,7 +243,7 @@ func TestDoRawNilBodyIsUntouched(t *testing.T) {
 			var c counter
 			cl := b.build(t, countingHandler(&c, `{"number":1,"key":"PROJ-1","idReadable":"PROJ-1","title":"t","summary":"t","state":"open","fields":{"summary":"t"}}`))
 			key := "PROJ-1"
-			if b.name == "forgejo" || b.name == "github" {
+			if numericKeys(b.name) {
 				key = "1"
 			}
 			if _, err := cl.GetIssue(key); err != nil {
@@ -222,7 +280,7 @@ func TestGetAndListAreNotScreened(t *testing.T) {
 				_, _ = w.Write([]byte(getBody))
 			})
 			key := "PROJ-1"
-			if b.name == "forgejo" || b.name == "github" {
+			if numericKeys(b.name) {
 				key = "1"
 			}
 			got, err := cl.GetIssue(key)
@@ -231,6 +289,9 @@ func TestGetAndListAreNotScreened(t *testing.T) {
 			}
 			if got == nil {
 				t.Fatal("GetIssue returned nil issue")
+			}
+			if b.name == "azure-devops" && !strings.Contains(got.Body, tok) {
+				t.Errorf("GetIssue dropped the token-bearing description: %q", got.Body)
 			}
 			list, err := cl.ListIssues(IssueFilter{})
 			if err != nil {

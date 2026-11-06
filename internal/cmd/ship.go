@@ -40,7 +40,7 @@ func remotePolicy(root, repoDir string, p *project.Project) (hostallow.Policy, e
 
 // buildOpenOpts maps a project's [remote] config onto ship.OpenOpts. Extracted
 // from the inline ship literal so the provider / auth_user / auth_scheme /
-// project_id wiring is unit-testable — a dropped field (e.g. GitLab silently
+// project_id / api_version wiring is unit-testable — a dropped field (e.g. GitLab silently
 // using default auth or a derived project id even when the user overrode them,
 // or Bitbucket losing the user half of its Basic credential and 401ing on every
 // ship) is caught by ship_test.go.
@@ -54,6 +54,7 @@ func buildOpenOpts(p *project.Project, hosts hostallow.Policy) ship.OpenOpts {
 		AuthUser:   p.Remote.AuthUser,
 		AuthScheme: p.Remote.AuthScheme,
 		ProjectID:  p.Remote.ProjectID,
+		APIVersion: string(p.Remote.APIVersion),
 		Reviewers:  p.Remote.Reviewers,
 	}
 }
@@ -70,6 +71,7 @@ func buildCommentOpts(p *project.Project, hosts hostallow.Policy) ship.CommentOp
 		AuthUser:   p.Remote.AuthUser,
 		AuthScheme: p.Remote.AuthScheme,
 		ProjectID:  p.Remote.ProjectID,
+		APIVersion: string(p.Remote.APIVersion),
 	}
 }
 
@@ -604,6 +606,7 @@ func Ship() *cobra.Command {
 		"emit a single JSON object {url, number, result} on stdout and suppress human narration; composable with --auto for scripts and loops")
 	c.AddCommand(shipComment())
 	c.AddCommand(shipRecover())
+	c.AddCommand(shipCI(), shipMerge())
 	return c
 }
 

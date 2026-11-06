@@ -69,6 +69,14 @@ type Config struct {
 	AuthUser   string // jira: account email for HTTP Basic auth (email:token)
 	BoardID    string // github: Projects v2 board node id to add created issues to (empty = repo issues only)
 
+	// APIVersion is the azure-devops api-version every Boards call carries;
+	// empty = 7.1. AreaPath and IterationPath are the System.AreaPath and
+	// System.IterationPath every created work item gets; empty = the project's
+	// defaults. All three come from [board] alone, never from [remote].
+	APIVersion    string
+	AreaPath      string
+	IterationPath string
+
 	// Fields overrides the tracker-native field names sync writes to. Every
 	// entry is optional; an empty one falls back to the provider's own literal,
 	// so a zero-value Config behaves exactly as it did before this existed.
@@ -205,6 +213,19 @@ type IssueLinker interface {
 	LinkIssues(from, to string) error
 }
 
+// ParentLinker is the optional capability of putting one issue UNDER another
+// — a parent-child (hierarchy) link, as distinct from IssueLinker's peer
+// relation. It sits beside IssueLinker rather than on BoardClient for the same
+// reason: a tracker without a hierarchy (GitHub's REST issues) fails the
+// assertion instead of satisfying it with a lossy stub, and the caller keeps
+// whatever label carries the relationship.
+type ParentLinker interface {
+	// LinkParent makes parent the parent of child, replacing a different
+	// parent child already has. Idempotent: a child already under parent is
+	// left untouched.
+	LinkParent(parent, child string) error
+}
+
 // StateWriter is the optional capability of writing a LITERAL tracker state
 // onto an issue, bypassing the dross lifecycle state map.
 //
@@ -235,8 +256,9 @@ type StateWriter interface {
 
 // NewBoard returns the board client for the configured provider: the YouTrack
 // backend for provider=youtrack, the Jira backend for provider=jira, the GitHub
-// (repo-issues + Projects v2) backend for provider=github, otherwise the forge
-// REST Client (forgejo/gitea/gitlab). It is the single entry point board
+// (repo-issues + Projects v2) backend for provider=github, the Azure Boards
+// (work items) backend for provider=azure-devops, otherwise the forge REST
+// Client (forgejo/gitea/gitlab). It is the single entry point board
 // operations use to resolve a client from the [board] config.
 func NewBoard(cfg Config) (BoardClient, error) {
 	switch configenum.Normalize(cfg.Provider) {
@@ -246,6 +268,8 @@ func NewBoard(cfg Config) (BoardClient, error) {
 		return NewJira(cfg)
 	case "github":
 		return NewGitHubProjects(cfg)
+	case "azure-devops":
+		return NewAzureBoards(cfg)
 	}
 	return New(cfg)
 }

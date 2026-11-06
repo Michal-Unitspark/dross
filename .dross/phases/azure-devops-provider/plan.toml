@@ -1,0 +1,221 @@
+task_seq = 14
+[phase]
+  id = "azure-devops-provider"
+
+[[task]]
+  id = "t-1"
+  wave = 1
+  title = "Parse ADO remotes into canonical identity"
+  files = ["internal/project/azuredevops.go", "internal/project/azuredevops_test.go", "internal/project/remote.go", "internal/project/remote_test.go"]
+  description = """
+Exported ParseAzureDevOpsRemote(raw) -> {URL, APIBase, Base, Project, Repo, Services}, fed internally by
+parseGitRemote's taint-cleared (host, path); parseGitRemote moves to EscapedPath so %-encoded names survive.
+Host-aware one-segment rule per the amended repo_identity lock. Pure — no callers yet.
+"""
+  covers = ["c-1", "c-2"]
+  test_contract = ["if a Services form mis-canonicalizes, TestParseAzureDevOpsRemote fails: git@ssh.dev.azure.com:v3/o/p/r, ssh://git@ssh.dev.azure.com/v3/o/p/r, https://o@dev.azure.com/o/p/_git/r and .../r.git each give url https://dev.azure.com/o/p/_git/r and api_base https://dev.azure.com/o", "if userinfo leaks, the https://o:PAT@dev.azure.com/o/p/_git/r row fails when URL or APIBase contains PAT", "if the one-segment rule ignores an org-carrying host, TestParseAzureLegacyHostCarriesOrg fails: o.visualstudio.com/p/_git/r gives api_base https://o.visualstudio.com and project p; o.visualstudio.com/DefaultCollection/p/_git/r gives api_base https://o.visualstudio.com/DefaultCollection; o@vs-ssh.visualstudio.com:v3/o/p/r gives https://o.visualstudio.com/p/_git/r (never dev.azure.com)", "if percent-encoding is decoded or doubled, https://dev.azure.com/o/My%20Project/_git/My%20Repo stops round-tripping byte-identical (no raw space, no %2520), Project stops being 'My Project', or its ssh v3 twin diverges", "if Server depth or port handling breaks, rows fail: https://tfs.corp/tfs/DefaultCollection/P/_git/R gives api_base https://tfs.corp/tfs/DefaultCollection; host-root https://tfs.corp/Coll/P/_git/R gives https://tfs.corp/Coll; ssh://tfs.corp:22/... drops the port; :8443 is kept", "if the repo == project rule breaks, https://dev.azure.com/o/_git/r stops giving project r and repo r", "if malformed input half-parses, TestParseAzureRejects fails: no _git, _git last, an empty segment, a . or .. segment, dev.azure.com/_git/r and github.com/x/y each return ok=false", "if the host predicate is a substring match, TestAzureServicesHost fails: evil-visualstudio.com, visualstudio.com.evil.example and dev.azure.com.evil.example are all false", "if EscapedPath alters a non-ADO remote, the existing TestDetectRemote and TestDetectRemoteDropsUserinfo rows fail", "if the zero-segment legacy form breaks, https://o.visualstudio.com/_git/r stops giving project r, repo r and api_base https://o.visualstudio.com", "if EscapedPath changes non-ADO canonicalization unnoticed, a new TestDetectRemote row with an encoded segment fails: https://gitlab.com/o/My%20Repo must canonicalize keeping %20 single-encoded (no raw space, no %2520)"]
+  status = "done"
+
+[[task]]
+  id = "t-2"
+  wave = 1
+  title = "Add ADO PAT rule and known hosts"
+  files = ["internal/secretscan/rules.go", "internal/secretscan/secretscan_test.go", "internal/hostallow/hostallow.go", "internal/hostallow/hostallow_test.go"]
+  description = """
+New azure-devops-pat rule: 76 alnum + AZDO + 4 alnum, word-bounded, needle AZDO; fixtures built at runtime so
+the repo self-scan stays clean; randomLine gains its generator arm. hostallow saasDefaults gain dev.azure.com,
+vssps.dev.azure.com and *.visualstudio.com.
+"""
+  covers = ["c-9", "c-4"]
+  test_contract = [
+    "if the rule or its corpus row is missing, TestEveryRuleHasAHitCase fails (the row must give exactly one azure-devops-pat hit), TestRedactCoversEveryRule fails to redact it, and TestEveryRuleHasNeedles fails if AZDO is dropped",
+    "if randomLine has no azure-devops-pat arm, prefilterSeeds and TestReportNeverEchoesTheValue panic with 'no generator for rule' (both iterate Rules())",
+    "if the anchor is loose, AZDO at position 75 or 77, an 83- or 85-char run, and lowercase azdo each give zero hits",
+    "if a reference trips the rule, a benign row fails: <your-pat>, $AZURE_DEVOPS_EXT_PAT, auth_env = AZURE_DEVOPS_EXT_PAT and a bare 52-char [a-z2-7] string give zero hits, while token = <the same 52 chars> still gives exactly one key-context hit",
+    "if a sink stops screening, ScanPayload of {title: PAT} and {body: PAT} stops returning ErrHit, or Scan of a project.toml line holding the PAT stops hitting",
+    "if a host is missing or the wildcard is loose, TestADOBuiltinHosts fails: dev.azure.com, vssps.dev.azure.com, o.visualstudio.com and o.vssps.visualstudio.com are accepted; evil-visualstudio.com, visualstudio.com.attacker.example, bare visualstudio.com, x.dev.azure.com, o.visualstudio.com:8443 and http://dev.azure.com are refused with ErrRefused",
+  ]
+  status = "done"
+
+[[task]]
+  id = "t-3"
+  wave = 1
+  title = "Build ADO REST transport with single credential"
+  files = ["internal/ship/azuredevops.go", "internal/ship/azuredevops_test.go", "internal/ship/open.go", "internal/ship/comment.go", "internal/secretscan/sinks.go", "internal/ship/redact_test.go"]
+  description = "adoRequest is the only ADO HTTP entry: hostallow check before the token read, secretscan.ScanPayload before\nhttp.NewRequest, exactly one auth header, a validated api-version (default 7.1), FedAuthRedirect: Suppress, no\nredirect following, redact.Scrub on every body. OpenOpts/CommentOpts gain APIVersion. The sinks.go and\nscrubbingHelpers registrations are guard-forced into this task. Error/response structs stay function-local\n(no not_paths.txt rows).\n"
+  covers = ["c-4"]
+  test_contract = ["if a second or wrong credential leaks, TestAzureDevOpsAuthHeader fails: schemes empty, private-token and ' BASIC ' each send exactly one Authorization: Basic base64(':'+tok) and no PRIVATE-TOKEN; bearer sends Authorization: Bearer tok", "if the host check moves after the getenv, TestAzureDevOpsRefusesBeforeTokenRead fails: a policy derived from https://dev.azure.com/o/p/_git/r with an httptest api_base gives ErrRefused, 0 hits, neither token nor env name in the error, and still refuses with the env unset; TestNoGetenvOutsideHostguard fails if azuredevops.go calls os.Getenv", "if api-version is missing, duplicated or injectable, TestAzureDevOpsAPIVersionOnEveryCall fails: empty gives 7.1; 6.0 and 7.1-preview.1 pass through; a URL already carrying ?searchCriteria.status=active keeps exactly one api-version; 7.1&x=y, 7.1#, a blank and ../ error with 0 requests before the env read", "if a sign-in page reads as success, TestADOSignInIsAuthFailure fails: a 203 HTML page and a 302 are both auth errors, and the 302 target sees 0 requests", "if the scrub is dropped, a mirrorAuthServer 401/403 echoing the token and base64(':'+tok) leaks either value into the error; a body holding a ghp_ token is refused with 0 hits", "if adoRequest is unregistered, TestEveryOutboundSeamIsRegistered and TestScreenPrecedesRequestInEveryScreenedTransport (internal/cmd) and TestShipHelpersScrubAtSource fail naming adoRequest", "if names are double- or un-escaped, TestADORepoEndpointEscapesOnce fails: ('My Project', 'My Repo') gives My%20Project/_apis/git/repositories/My%20Repo, never %2520, and # and ? are escaped", "if config is empty, an empty api_base or auth_env errors naming [remote].api_base / [remote].auth_env with 0 requests", "if auth_user leaks into the credential, a TestAzureDevOpsAuthHeader row with AuthUser me stops sending exactly Authorization: Basic base64(':'+tok) (never base64('me:'+tok))"]
+  status = "done"
+
+[[task]]
+  id = "t-4"
+  wave = 2
+  title = "Open ADO PR with optional reviewers"
+  files = ["internal/ship/azuredevops_open.go", "internal/ship/azuredevops_open_test.go"]
+  description = """
+openAzureDevOpsPR POSTs .../{project}/_apis/git/repositories/{repo}/pullrequests, then one PUT .../reviewers/<id>
+{isRequired:false} per reviewer — a GUID as-is, else an Identities lookup at adoIdentityBase. Description capped
+at 4000 runes with a truncation note. Response structs stay function-local (no not_paths rows).
+"""
+  covers = ["c-5", "c-2"]
+  depends_on = ["t-1", "t-3"]
+  test_contract = [
+    "if the create body is wrong, TestOpenAzureDevOpsPRPayload fails: sourceRefName refs/heads/phase/x (an already-prefixed head is not doubled), targetRefName refs/heads/main, title with no Draft: prefix, description; Draft=true sends isDraft:true, Draft=false sends no isDraft key; no reviewers key in the create body",
+    "if the API url is recorded instead of the browser URL, TestOpenAzureDevOpsPRResultURL fails: pullRequestId 42 gives https://dev.azure.com/o/p/_git/r/pullrequest/42 with My%20Repo single-encoded; a missing pullRequestId and a 409 TF401179 each give (nil, err)",
+    "if Server addressing breaks, a /tfs/DefaultCollection remote stops posting to /tfs/DefaultCollection/P/_apis/git/repositories/R/pullrequests",
+    "if reviewer resolution is wrong, TestOpenAzureDevOpsPRReviewers fails: for [<GUID>, alice@corp.example] exactly one identities GET (searchFilter=General&filterValue=<escaped>), the GUID is never looked up, and two PUTs carry isRequired:false",
+    "if a reviewer failure turns fatal, TestOpenAzureDevOpsPRReviewerFailureNonFatal fails: identities 404/500, 0 matches, 2 matches (ambiguous, skipped) and a reviewer PUT 500 each return (result{Number:42}, err naming the reviewer but not the token) and the remaining reviewers are still added; a create 500 returns (nil, err)",
+    "if the identity host is wrong, TestAzureDevOpsIdentityBase fails: dev.azure.com/o and o.visualstudio.com map to https://vssps.dev.azure.com/o; https://tfs.corp/tfs/Coll maps to itself",
+    "if a long body is sent raw, TestOpenAzureDevOpsPRLongDescription fails: the sent description is at most 4000 runes, ends in a truncation note and does not split a multi-byte rune",
+  ]
+  status = "done"
+
+[[task]]
+  id = "t-5"
+  wave = 2
+  title = "Post ADO comment as non-blocking thread"
+  files = ["internal/ship/azuredevops_comment.go", "internal/ship/azuredevops_comment_test.go"]
+  description = "postAzureDevOpsComment POSTs .../pullRequests/<n>/threads with {comments:[{parentCommentId:0, content,\ncommentType:1}]} and no status. The thread status is one named const, so the locked closed fallback is a\none-line change. Payload/response structs stay function-local (no not_paths.txt rows; t-7 owns that file in wave 2).\n"
+  covers = ["c-7"]
+  depends_on = ["t-1", "t-3"]
+  test_contract = [
+    "if the endpoint or payload drifts, TestPostAzureDevOpsThread fails: PRNumber 7 posts to /{project}/_apis/git/repositories/{repo}/pullRequests/7/threads with api-version, comments[0].content equals Body, and the top level has no status key (status active fails)",
+    "if the body escapes the scanner, a body holding a glpat- or ghp_ token returns secretscan.ErrHit with 0 requests",
+    "if the error path leaks, TestPostAzureDevOpsCommentErrorRedacted (mirrorAuthServer 403) fails when the error contains the PAT or base64(':'+PAT); a 203 sign-in page errors and never reports posted",
+  ]
+  status = "done"
+
+[[task]]
+  id = "t-6"
+  wave = 2
+  title = "Read ADO PR status and dedupe by source"
+  files = ["internal/ship/azuredevops_pr.go", "internal/ship/azuredevops_pr_test.go", "internal/ship/headpr.go", "internal/ship/headpr_test.go"]
+  description = "azureDevOpsPRStatus: Merged only when status == completed; BaseRef = targetRefName minus refs/heads/.\nadoOpenPRBySource queries active PRs by sourceRefName and re-checks source, status and forkSource client-side.\nFindOpenPRByHead gains the azure-devops arm; the stale deferred-arm comment goes. Response structs stay\nfunction-local even where status and dedupe share a PR shape (no not_paths.txt rows; t-7 owns that file in wave 2).\n"
+  covers = ["c-6", "c-8", "c-2"]
+  depends_on = ["t-1", "t-3"]
+  test_contract = ["if abandoned or active reads as merged, TestAzureDevOpsPRStatusMapping fails: completed and Completed give Merged true; abandoned and active give false", "if an unknown status reads as not-merged, the test fails: an empty or missing status, a non-JSON body or a 404 returns an error, never PRStatus{} with nil; PRNumber 0 errors with 0 requests", "if refs/heads/ is not stripped or is stripped twice, refs/heads/release/x stops giving release/x, and a retargeted PR stops reporting its current targetRefName", "if the filter is misnamed or unescaped, TestFindOpenPRByHeadAzureDevOps fails: the mock asserts searchCriteria.sourceRefName == refs/heads/phase/x (a head with & or + round-trips) and searchCriteria.status == active; hit 17 gives {17, <canonical>/pullrequest/17}; an empty value list gives (nil, nil)", "if the server filter is trusted blindly, a mock that ignores the query and returns PRs from refs/heads/other, an abandoned phase/x and a forkSource phase/x stops giving (nil, nil)", "if a failed lookup reads as none or unsupported, the test fails: a 500, a 203 sign-in page and an unparseable body each return an error that is not errors.Is(ErrHeadPRLookupUnsupported)", "if Server addressing breaks for status, a /tfs/DefaultCollection remote stops reading /tfs/DefaultCollection/P/_apis/git/repositories/R/pullRequests/<n> with api-version", "if a package-level tagged PR struct lands in internal/ship, TestEveryPathShapedFieldIsDeclared goes red at this commit (structs stay function-local; not_paths.txt belongs to t-7)"]
+  status = "done"
+
+[[task]]
+  id = "t-7"
+  wave = 2
+  title = "Add remote.api_version and thread it to opts"
+  files = ["internal/project/project.go", "internal/project/project_test.go", "internal/cmd/testdata/pathfence_scan/not_paths.txt", "internal/cmd/project.go", "internal/cmd/project_test.go", "internal/cmd/ship.go", "internal/cmd/ship_test.go", "ARCHITECTURE.md"]
+  description = """
+Remote.APIVersion (toml + json tag api_version,omitempty), also decoding a bare TOML number (6.0 -> "6.0").
+readDotted/writeDotted arms, the not_paths ledger row, and buildOpenOpts/buildCommentOpts copying the field —
+guard-forced together (a settable key needs a reader; a new field needs its ledger row).
+"""
+  covers = ["c-2"]
+  depends_on = ["t-3"]
+  test_contract = [
+    "if the setter lands without the buildOpenOpts reader, TestNoSettableKeyIsInert fails naming remote.api_version",
+    "if the ledger row is missing, TestEveryPathShapedFieldIsDeclared fails (row: project.Remote.APIVersion api_version)",
+    "if the toml and json tags differ, TestTomlFieldsCarryMatchingJSONTags fails",
+    "if the set/get arm is missing, TestExpandedDottedPathsRoundTrip fails: set 6.0 then get returns 6.0, the saved line is api_version = \"6.0\" with every other line byte-identical, and an omitted field adds no line",
+    "if a hand-edited bare number breaks load, TestRemoteAPIVersionBareFloat fails: 5.0/6.0/7.1 decode to \"5.0\"/\"6.0\"/\"7.1\", \"7.1-preview.1\" stays verbatim, and api_version = true is a load error naming remote.api_version",
+    "if the copy is dropped, TestBuildOpenOptsCarriesAPIVersion or TestBuildCommentOptsCarriesAPIVersion fails: 6.0 reaches opts.APIVersion",
+  ]
+  status = "done"
+
+[[task]]
+  id = "t-8"
+  wave = 3
+  title = "Flip azure-devops into recognition and dispatch"
+  files = ["internal/configenum/configenum.go", "internal/configenum/configenum_test.go", "internal/project/remote.go", "internal/project/remote_test.go", "internal/ship/open.go", "internal/ship/comment.go", "internal/ship/merged.go", "internal/ship/azuredevops_dispatch_test.go", "assets/prompts/init.md", "assets/prompts/onboard.md"]
+  description = "One commit per locked guard_atomicity: ShipProviders and KnownHostProviders gain azure-devops (dev.azure.com,\nssh.dev.azure.com, vs-ssh.visualstudio.com); DetectRemote routes ADO remotes incl. *.visualstudio.com through\nt-1 with an api-base arm and Public=false, and routes Server-shaped _git remotes through t-1 for the url only\n(port dropped per canonical_host, Provider stays empty); the OpenPR/PostComment/GetPRStatus arms; the\nguard-forced provider bullets in init.md/onboard.md. Wiring only.\n"
+  covers = ["c-1", "c-4", "c-5", "c-7", "c-8"]
+  depends_on = ["t-1", "t-4", "t-5", "t-6"]
+  test_contract = ["if any site lags ShipProviders, TestShipDispatchMatchesShipProviders/{ship.OpenPR,ship.PostComment,ship.GetPRStatus}, TestRemoteAPIBaseMatchesShipProviders, TestRemoteWriterSubsetOfShipProviders, TestGuardsSeeNonEmptySets or TestDispatchUsesConfigenumNormalize fails naming it", "if ADO host recognition adds a tagged switch host ahead of DetectRemote's provider switch, providerSwitchIn reads the wrong switch and TestRemoteAPIBaseMatchesShipProviders fails", "if the writer lists lag, TestPromptProviderListsMatchShipProviders (init.md, onboard.md) and TestSetListRendersPipeJoined ('github | forgejo | gitea | gitlab | bitbucket | azure-devops') fail", "if autodetect writes the wrong fields, a TestDetectRemote ADO row fails: https, user@, ssh v3, legacy https and vs-ssh each give provider azure-devops, the canonical url, the org api_base and Public=false; a Server /tfs/Coll/P/_git/R row stays Provider empty; TestDetectRemoteDropsUserinfo gains https://me:<PAT>@dev.azure.com/...", "if an arm mis-routes, TestAzureDevOpsDispatchRoutes fails: with Provider ' Azure-DevOps ', OpenPR POSTs .../pullrequests, PostComment POSTs .../pullRequests/7/threads, GetPRStatus reads targetRefName, none returns unsupported provider, and an off-allowlist api_base gives ErrRefused with 0 hits", "if a deferred surface returns empty with a nil error, TestAzureDeferredSurfacesFailClosed fails: ListPRComments, PRHeadOf, AuthenticatedUser and OpenPRsTargeting each return an error for azure-devops", "if the flip breaks existing per-provider loops, TestBaseChoresLegacyTable and TestMilestoneHeadLegacyTable (ADO subtests, 0 probes) or TestNoSpawnOutputEscapes go red", "if a Server ssh origin keeps its port, a TestDetectRemote row fails: ssh://tfs.corp:22/tfs/Coll/P/_git/R must write url https://tfs.corp/tfs/Coll/P/_git/R with Provider still empty, so hostallow derives tfs.corp on 443 and a hand-set https://tfs.corp/tfs/Coll api_base is allowed"]
+  status = "done"
+
+[[task]]
+  id = "t-9"
+  wave = 4
+  title = "Diagnose ADO remotes in doctor"
+  files = ["internal/cmd/doctor.go", "internal/cmd/doctor_test.go", "internal/diag/combinations.go", "internal/diag/diag_test.go"]
+  description = "sameRemoteURL canonicalizes both sides through project.ParseAzureDevOpsRemote when either parses (host kept,\nnames case-insensitive). Both origin-printing lines (does-not-match and no-[remote]) strip userinfo.\nRemoteCombination gains an ADO arm: private-token/basic ineffective, stray auth_user flagged, bitbucket Basic\nwarnings suppressed, Server api_base vs url base checked.\n"
+  covers = ["c-3"]
+  depends_on = ["t-1", "t-8"]
+  test_contract = ["if equivalent forms read as mismatched, TestSameRemoteURL ADO rows fail: ssh v3 vs https, user@ vs bare, .git suffix, case-variant O/P/R, vs-ssh vs o.visualstudio.com https and Server ssh:22 vs https are true; a different repo, a different project and dev.azure.com/o vs o.visualstudio.com are false; github rows unchanged", "if doctor misreports end to end, TestDoctorAcceptsAzureDevOpsRemote fails: with origin git@ssh.dev.azure.com:v3/acme/proj/widget, init then doctor prints 'git origin matches [remote].url' and no 'cannot open a PR'; repointing origin to .../other prints 'does not match'; an azure-devops url without _git is an issue, never matches", "if a PAT in origin is echoed, TestDoctorMismatchStripsUserinfo fails: for origin https://o:SECRETPAT@dev.azure.com/o/p/_git/other the output does not contain SECRETPAT", "if a warning is wrong or missing, a TestCombinationWarnings ADO row fails: (empty, empty) and (bearer, empty) warn nothing; (private-token, empty) gives exactly one no-effect warning; (basic, empty) gives exactly the no-effect warning and NOT 'auth_user is not set' or 'sends no Basic credential'; (empty, me) gives one auth_user-ignored warning; bitbucket and gitlab rows unchanged", "if a Server api_base missing the collection goes unflagged, TestRemoteCombinationAzureBaseMismatch fails: url https://tfs/tfs/C/P/_git/R with api_base https://tfs/tfs warns and names https://tfs/tfs/C; a trailing-slash or case-only difference stays silent", "if equivalence is done with a provider switch in doctor.go, TestDoctorCarriesNoProviderLiterals fails", "if the no-[remote] branch echoes origin raw, a sibling TestDoctorMismatchStripsUserinfo row fails: with no [remote] and origin https://o:SECRETPAT@dev.azure.com/o/p/_git/r the output does not contain SECRETPAT"]
+  status = "done"
+
+[[task]]
+  id = "t-10"
+  wave = 4
+  title = "Prove ADO ship end to end through cmd"
+  files = ["internal/cmd/ship_test.go", "internal/ship/hostguard_test.go"]
+  description = """
+Cmd-level flows run the real FindOpenPRByHead, OpenPR and PostComment against an httptest Server-shaped ADO
+remote configured via dross project set; the hostguard tables gain ADO rows for every token-reading entry point.
+"""
+  covers = ["c-2", "c-4", "c-5", "c-6", "c-7"]
+  depends_on = ["t-7", "t-8"]
+  test_contract = [
+    "if wiring or addressing breaks, TestShipAzureDevOpsFullFlow fails: remote url srv/coll/P/_git/R, api_base srv/coll and api_version 6.0 all set via project set (an enumKeys refusal fails it); the GET precedes the POST; every path starts /coll/P/_apis/git/repositories/R with api-version=6.0 and one Basic :PAT header; stdout contains 'PR opened: .../_git/R/pullrequest/42 (#42)' and changes.json records pr 42",
+    "if dedupe falls through, TestShipAzureDevOpsDedupeHit fails: GET returns active PR 17, 0 POSTs, pr 17 recorded and 'found open PR #17' printed",
+    "if a failed lookup opens anyway, TestShipAzureDevOpsLookupFailureRefuses fails: GET 500 prints 'could not check origin' naming dross ship <id>, with 0 POSTs and pr still 0",
+    "if a reviewer failure fails the ship, identities 404 still exits 0, prints Warning: and records PR 42",
+    "if dross ship comment misroutes, TestShipAzureDevOpsCommentPostsThread fails: it POSTs .../pullRequests/<n>/threads",
+    "if any ADO entry point reads the token before the host check, its new TestShipRefusesOffAllowlistAPIBase row (open, comment, status, head lookup, identity lookup) sees fake-host hits; if the guard over-refuses, the new TestShipAllowsDerivedSelfHostedHost ADO Server row fails",
+  ]
+  status = "done"
+
+[[task]]
+  id = "t-11"
+  wave = 4
+  title = "Teach init and onboard prompts ADO defaults"
+  files = ["assets/prompts/init.md", "assets/prompts/onboard.md", "internal/cmd/prompt_provider_list_test.go"]
+  description = """
+Host-mapping prose (dev.azure.com / *.visualstudio.com -> azure-devops), api_base = the org URL, default auth_env
+AZURE_DEVOPS_EXT_PAT, public = false; Server remotes configured by hand incl. remote.api_version (2019 5.0 /
+2020 6.0 / 2022 7.0). Run make install afterwards (r-01).
+"""
+  covers = ["c-1"]
+  depends_on = ["t-7", "t-8"]
+  test_contract = ["if the prose or the locked default drifts, TestPromptsTeachAzureDevOps fails: init.md and onboard.md each contain dev.azure.com, visualstudio.com, remote.api_version, and AZURE_DEVOPS_EXT_PAT on the auth_env bullet", "if the provider bullet is disturbed, TestPromptProviderListsMatchShipProviders (green since t-8) fails", "if the Server url guidance drops out, TestPromptsTeachAzureDevOps fails unless init.md and onboard.md tell a Server user to write [remote].url in its https form (not ssh://host:22)"]
+  status = "done"
+
+[[task]]
+  id = "t-12"
+  wave = 1
+  title = "Document azure-devops and api_version in options"
+  files = ["assets/prompts/options.md", "internal/cmd/options_docs_test.go"]
+  description = """
+options.md lists azure-devops and covers ADO auth (Basic :PAT default, bearer for Entra, private-token/basic
+ineffective, auth_user ignored), remote.api_version (default 7.1 and the Server versions), and that http-only
+on-prem TFS stays refused by hostallow.
+"""
+  covers = ["c-1"]
+  test_contract = ["if options.md drops remote.api_version or azure-devops, TestOptionsCoversTheProviderConditionalRemoteFields (extended with both) fails", "if the auth guidance drifts from the auth_scheme lock, TestOptionsCoversTheProviderConditionalRemoteFields fails unless the azure-devops text names bearer, says private-token and basic have no effect, and says auth_user is ignored", "if the api_version guidance drifts, the same test fails unless options.md states the 7.1 default and the 5.0 / 6.0 / 7.0 Server versions next to remote.api_version"]
+  status = "done"
+
+[[task]]
+  id = "t-13"
+  wave = 4
+  title = "Seed ADO remotes without foreign credentials"
+  files = ["internal/defaults/defaults.go", "internal/defaults/defaults_test.go", "internal/cmd/init_test.go"]
+  description = """
+defaults.Apply skips auth_env and reviewers when the saved defaults' provider differs from a non-empty detected
+provider, so a saved GITHUB_TOKEN never rides onto an ADO repo; adds the init-level proof that an ADO remote
+autodetects.
+"""
+  covers = ["c-1", "c-4"]
+  depends_on = ["t-8"]
+  test_contract = [
+    "if a foreign auth_env or reviewer seeds through, TestApplySkipsForeignProviderCredentials fails: {github, GITHUB_TOKEN, [alice]} on a detected azure-devops remote gives AuthEnv empty and Reviewers nil; same-provider defaults still seed, and the TestApplyOnlyFillsZeroFields subtests stay green",
+    "if init persists the wrong remote, TestInitDetectsAzureRemote fails: with origin git@ssh.dev.azure.com:v3/o/p/r and a saved GitHub defaults.toml, project.toml holds url https://dev.azure.com/o/p/_git/r, provider azure-devops, api_base https://dev.azure.com/o, public absent and no GITHUB_TOKEN",
+    "if a userinfo token reaches project.toml, TestInitNeverPersistsOriginPAT fails: for origin https://o:PATVALUE@dev.azure.com/o/p/_git/r the file does not contain PATVALUE",
+  ]
+  status = "done"
+
+[[task]]
+  id = "t-14"
+  wave = 5
+  title = "Parse short Server and DefaultCollection forms"
+  files = ["internal/project/azuredevops.go", "internal/project/azuredevops_test.go"]
+  description = "Apply the amended repo_identity lock in ParseAzureDevOpsRemote: on a Server a leading /tfs segment pairs with the next as the collection base (host/tfs/Coll/_git/r -> base tfs/Coll, repo == project), and on <org>.visualstudio.com a lone DefaultCollection is the base, not a project (o.visualstudio.com/DefaultCollection/_git/r -> base DefaultCollection, repo == project). Existing long forms parse unchanged. Closes verify's c-2 FLAG."
+  covers = ["c-1", "c-2"]
+  test_contract = ["if a short /tfs/<Collection>/_git/<repo> remote (https or ssh://host:22) parses with base tfs or project <Collection>, TestParseAzureDevOpsServer fails", "if o.visualstudio.com/DefaultCollection/_git/r parses as project DefaultCollection with an empty base, TestParseAzureLegacyHostCarriesOrg fails", "if a bare /tfs with no collection parses, TestParseAzureRejects fails; if the long /tfs/DefaultCollection/P/_git/R, host-root Coll/P/_git/R or o.visualstudio.com/DefaultCollection/p/_git/r rows change, their existing rows fail"]
+  status = "done"
+  depends_on = ["t-1"]

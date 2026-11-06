@@ -1,6 +1,6 @@
 [project]
   name = "dross"
-  version = "1.7.26.4"
+  version = "1.8.3.1"
   description = "A leaner successor to GSD for working with Claude Code on real projects."
   created = "2026-06-19"
 
@@ -42,20 +42,12 @@
   squash_merge = true
 
 [remote]
-  url = "https://github.com/Rivil/dross"
+  url = "https://github.com/Michal-Unitspark/dross"
   provider = "github"
   public = true
   api_base = "https://api.github.com"
   log_api = true
   auth_env = "GITHUB_TOKEN"
-
-[board]
-  provider = "youtrack"
-  base_url = "https://issues.rivil.dev"
-  auth_env = "YOUTRACK_TOKEN"
-  project = "DRO"
-  enabled = true
-  milestone_mode = "epic"
 
 [paths]
 

@@ -15,7 +15,6 @@ import (
 	"github.com/Rivil/dross/internal/gitrun"
 	"github.com/Rivil/dross/internal/milestone"
 	"github.com/Rivil/dross/internal/project"
-	"github.com/Rivil/dross/internal/protect"
 	"github.com/Rivil/dross/internal/render"
 	"github.com/Rivil/dross/internal/ship"
 	"github.com/Rivil/dross/internal/state"
@@ -1015,11 +1014,12 @@ func appendUnique(list []string, value string) []string {
 // opening a phase PR (ship.go step 7); this is the same guarantee for the
 // milestone head, which never got it.
 //
-// With commits ahead on a GitHub remote it first asks whether origin's
-// milestone branch refuses direct pushes, routing as routeBaseChores does:
-// protected sends a .dross-only ahead set through a chore PR and refuses a
-// code commit, naming the phase-PR route; unknown pushes nothing and names
-// the reason. Unprotected, and every other forge, keep the policy below.
+// With commits ahead on a GitHub or Azure DevOps remote it first asks whether
+// origin's milestone branch refuses direct pushes (readBaseProtection),
+// routing as routeBaseChores does: protected sends a .dross-only ahead set
+// through a chore PR and refuses a code commit, naming the phase-PR route;
+// unknown pushes nothing and names the reason and the fix. Unprotected, and
+// every other forge, keep the policy below.
 //
 // Three no-ops, one refusal, one push:
 //   - no local refs/heads/<msBranch> — this machine only has origin's copy,
@@ -1096,15 +1096,16 @@ func routeMilestoneHead(repoDir, msBranch string) (milestoneHead, error) {
 
 // routeProtectedMilestone handles commits ahead on a milestone branch that
 // origin refuses direct pushes to. routed is false — and nothing happened —
-// off GitHub or when the branch is unprotected, leaving the caller's own
-// policy to run.
+// on a forge dross reads no protection from (anything but GitHub and Azure
+// DevOps) or when the branch is unprotected, leaving the caller's own policy
+// to run.
 func routeProtectedMilestone(repoDir, msBranch string, ahead []string) (c *chorePR, routed bool, err error) {
 	root := filepath.Join(repoDir, RootDirName)
 	p, err := project.Load(filepath.Join(root, project.File))
 	if err != nil {
 		return nil, true, err
 	}
-	if configenum.Normalize(p.Remote.Provider) != "github" {
+	if !protectionReadable(p.Remote.Provider) {
 		return nil, false, nil
 	}
 	hosts, err := remotePolicy(root, repoDir, p)
@@ -1112,12 +1113,12 @@ func routeProtectedMilestone(repoDir, msBranch string, ahead []string) (c *chore
 		return nil, true, err
 	}
 	opts := buildOpenOpts(p, hosts)
-	res := ship.BranchRulesFunc(opts, msBranch)
+	prot := readBaseProtection(p, opts, msBranch)
 	switch {
-	case !res.Known:
+	case !prot.Known:
 		return nil, true, fmt.Errorf("can't tell whether origin's %s refuses direct pushes (%s), so its %d local commit(s) were not pushed — "+
-			"fix: run `gh auth login`, or check [remote] in .dross/project.toml; then re-run", msBranch, res.Reason, len(ahead))
-	case !protect.RequiresPR(res.Rules):
+			"fix: %s; then re-run", msBranch, prot.Reason, len(ahead), prot.Fix)
+	case !prot.Protected:
 		return nil, false, nil
 	}
 	if f, sha, err := firstNonDross(repoDir, ahead); err != nil {
@@ -1141,16 +1142,17 @@ func routeProtectedMilestone(repoDir, msBranch string, ahead []string) (c *chore
 
 // waitForMilestoneChores refuses to open the integration PR while a chore PR
 // into the milestone branch is still open: this run's, or one an earlier run
-// left. Only a protected GitHub milestone branch can have one.
+// left. Only a protected milestone branch on a forge dross reads protection
+// from (GitHub, Azure DevOps) can have one.
 func waitForMilestoneChores(p *project.Project, opts ship.OpenOpts, msBranch, version string, head milestoneHead) error {
-	if configenum.Normalize(p.Remote.Provider) != "github" {
+	if !protectionReadable(p.Remote.Provider) {
 		return nil
 	}
-	waiting := 0
+	waiting, armed := 0, false
 	if c := head.ChorePR; c != nil && !c.Merged {
-		waiting = c.Number
+		waiting, armed = c.Number, c.AutoMerge
 	} else if c == nil {
-		if !protect.RequiresPR(ship.BranchRulesFunc(opts, msBranch).Rules) {
+		if !readBaseProtection(p, opts, msBranch).Protected {
 			return nil
 		}
 		open, err := ship.FindOpenPRByHeadFunc(opts, choreBranch(msBranch))
@@ -1165,6 +1167,20 @@ func waitForMilestoneChores(p *project.Project, opts ship.OpenOpts, msBranch, ve
 		return nil
 	}
 	return fmt.Errorf("chore PR %s into %s is still open, and the milestone PR would land without its .dross commits — "+
-		"merge it (it merges itself once allowed), then re-run `dross milestone complete %s`",
-		pullURL(p.Remote.URL, waiting), msBranch, version)
+		"%s, then re-run `dross milestone complete %s`",
+		pullURL(p.Remote.URL, waiting), msBranch, choreWaitHint(p.Remote.Provider, armed), version)
+}
+
+// choreWaitHint says how a waiting chore PR lands, in the forge's own words.
+// armed is true only for this run's PR with auto-merge / auto-complete set;
+// a PR this run could not arm, or one an earlier run left open, gets no
+// promise that it lands by itself. GitHub keeps its existing wording.
+func choreWaitHint(provider string, armed bool) string {
+	if configenum.Normalize(provider) != "azure-devops" {
+		return "merge it (it merges itself once allowed)"
+	}
+	if armed {
+		return "it completes itself once the branch policies pass (auto-complete is armed)"
+	}
+	return "complete it in Azure Repos (by hand, unless auto-complete is set on it)"
 }
