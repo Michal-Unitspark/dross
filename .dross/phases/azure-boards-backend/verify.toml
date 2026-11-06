@@ -1,11 +1,11 @@
 [verify]
   phase = "azure-boards-backend"
-  generated_at = 2026-11-05T10:58:32.769269997Z
-  verdict = "partial"
+  generated_at = 2026-11-05T14:54:29.597100585Z
+  verdict = "pass"
   finalized = true
-  finalized_at = 2026-11-05T14:27:33.474722683Z
-  measured_commit = "d9a77502fed76a7f3a80831bcf5030ffa3aa0884"
-  measured_tree = "db2fa81a806bd7270505b8a755abd1c519c845ae"
+  finalized_at = 2026-11-06T07:01:16.318775382Z
+  measured_commit = "fa322eb13bc6174d66c24cb6092051310139e5c0"
+  measured_tree = "bca129fe968e147b607288fb49a7a0bfd13e8696"
 
 [summary]
   mutation_status = "measured"
@@ -50,7 +50,7 @@
   id = "c-3"
   status = "covered"
   tests = ["internal/boardsync/azureboards_state_sync_test.go:TestADOSyncStateByProcess", "internal/forge/azureboards_state_test.go:TestADODefaultStateResolution", "internal/forge/azureboards_state_test.go:TestADOSetStateOverride", "internal/forge/azureboards_state_test.go:TestADOSetStateUnreachable"]
-  notes = "Agile/Scrum/Basic exact PATCH sequences end to end (Scrum PBI Committed, Task In Progress); state_map override wins; an unreachable state warns once per item with zero writes and nil error. Every-400-is-a-rule-rejection breadth stays FLAGged."
+  notes = "Agile/Scrum/Basic exact PATCH sequences end to end (Scrum PBI Committed, Task In Progress); state_map override wins; an unreachable state warns once per item with zero writes and nil error. t-27 narrows the skip to a TF401320 rule error: TestADOSetStateUnreachable now requires a non-rule 400 (unknown field, malformed patch) to error naming 'work item 42' with no warning, and a TF401320 placed past byte 600 to still warn — so the check reads the whole body, not the 500-byte message. Every boardsync/cmd fake that refuses a state write answers TF401320, so no existing test went vacuous."
 
 [[criterion]]
   id = "c-4"
@@ -91,8 +91,8 @@
 [[criterion]]
   id = "c-10"
   status = "covered"
-  tests = ["internal/ship/azuredevops_policy_test.go:TestADOBranchProtectionScopes", "internal/ship/azuredevops_policy_test.go:TestADOBranchProtectionReadOnly", "internal/cmd/protected_base_ado_test.go:TestProtectedADOBaseShipThenComplete", "internal/cmd/basebranch_ado_test.go:TestProtectedADOBaseRoutesThroughChorePR", "internal/cmd/basebranch_ado_test.go:TestUnprotectedADOBasePushesDirectly", "internal/ship/azuredevops_automerge_test.go:TestADOArmChoreAutoComplete", "internal/ship/azuredevops_automerge_test.go:TestADOArmRefusesForbiddenMergeCommit"]
-  notes = "16 policy-scope cases plus a GET-only guard; ship and phase complete open a chore PR and the hook is never offered main; unprotected pushes directly; noFastForward is armed and bypassPolicy never sent. The milestone-complete wait test's protection-read assertion and Prefix-scope case-insensitivity stay FLAGged."
+  tests = ["internal/ship/azuredevops_policy_test.go:TestADOBranchProtectionScopes", "internal/ship/azuredevops_policy_test.go:TestADOBranchProtectionReadOnly", "internal/cmd/protected_base_ado_test.go:TestProtectedADOBaseShipThenComplete", "internal/cmd/basebranch_ado_test.go:TestProtectedADOBaseRoutesThroughChorePR", "internal/cmd/basebranch_ado_test.go:TestUnprotectedADOBasePushesDirectly", "internal/cmd/milestone_protected_ado_test.go:TestADOMilestoneCompleteWaitsForOpenChorePR", "internal/ship/azuredevops_automerge_test.go:TestADOArmChoreAutoComplete", "internal/ship/azuredevops_automerge_test.go:TestADOArmRefusesForbiddenMergeCommit"]
+  notes = "18 policy-scope cases plus a GET-only guard; ship and phase complete open a chore PR and the hook is never offered main; unprotected pushes directly; noFastForward is armed and bypassPolicy never sent. t-26 closes the carried FLAG: the milestone wait must read exactly [milestone/v1.8]'s policies (reflect.DeepEqual, not len), a Prefix spelled refs/heads/Milestone/ protects milestone/v1.8, and a Prefix equal to the whole ref covers it (pins the >= guard at azuredevops_policy.go:257)."
 
 [[finding]]
   severity = "NOTE"
@@ -111,20 +111,16 @@
   text = "skipped internal/forge/testdata/ado_boards_live_smoke.toml: no mutation adapter for .toml"
 
 [[finding]]
-  severity = "FLAG"
-  text = "c-10: the milestone-complete chore-wait test checks only len(*asked) (milestone_protected_ado_test.go:190), so the wait path reading the wrong branch's protection would pass; and no TestADOBranchProtectionScopes case matches a Prefix scope case-insensitively (only Exact and repo id are case-tested, azuredevops_policy.go:257). Carried from the 2026-11-04 verify; no amend task took it."
-
-[[finding]]
-  severity = "FLAG"
-  text = "c-3: SetState treats every HTTP 400 on the state PATCH as a rule rejection and warns and skips (azureboards_state.go:121-126), wider than the spec's 'no reachable state'; only the TF401320 body is pinned, so a 400 for a malformed patch would be swallowed. Carried from the 2026-11-04 verify; no amend task took it."
+  severity = "NOTE"
+  text = "Carried FLAGs closed this run: c-10 by t-26 (exact milestone/v1.8 policy read; case-insensitive and whole-ref Prefix scope cases) and c-3 by t-27 (SetState skips only a TF401320 400; any other 400 errors naming the item). Both re-read against the committed diff; the mutation leg is green over them."
 
 [[finding]]
   severity = "NOTE"
-  text = "Survivor drain this run: azureboards.go:306 CONDITIONALS_BOUNDARY (x2, key 2984d281e2c141b0) accepted after hand-applying both columns in a scratch copy of HEAD; TestADOBoardStatusClassification fails on each and passes unmutated. azureboards_items.go:361 NEGATION is now killed by gremlins (TestADOListIssuesStateClosed). 0 unclassified in scope."
+  text = "Survivor drain this run: nothing to drain — all 51 in-scope survivors carry an accepted disposition (49 go-cover no-block switch-case ceiling, plus the two azureboards.go BOUNDARY mutants). t-27 shifted azureboards.go by 3 lines; the acceptances followed their identity keys from :306 to :309 (key 2984d281e2c141b0). 0 unclassified in scope; 268 out-of-scope survivors are all accepted."
 
 [[finding]]
   severity = "NOTE"
-  text = "mutants_test_gap = 2 is a classifier misplacement: it counts the two azureboards.go:306 BOUNDARY mutants, yet go-cover holds no block on line 306 (blocks end at 305.36 and resume at 307.3), the same switch-case ceiling as the 49 no-block ones. Efficacy over everything truly reachable is 1.00."
+  text = "mutants_test_gap = 2 is the same classifier misplacement as last run: it counts the two azureboards.go:309 (was :306) BOUNDARY mutants, which sit on a switch-case line go-cover gives no block, and which were hand-applied and killed by TestADOBoardStatusClassification. Efficacy over everything truly reachable is 1.00."
 
 [[finding]]
   severity = "NOTE"
@@ -140,4 +136,4 @@
 
 [[finding]]
   severity = "NOTE"
-  text = "Solo review: 24 of 24 reviewed tasks passed (t-18 in 3 rounds; amend tasks t-22..t-25 each in 1 round with NOTE-only findings, left), no BLOCKING findings. t-21 (live smoke) ran in pair mode with no reviewer. No failed tasks."
+  text = "Solo review: 26 of 26 reviewed tasks passed, no BLOCKING findings. t-26 passed in 1 round (NOTE only); t-27 in 2 rounds — its round-1 FLAG (no test proves the check reads the whole body) is answered in the committed diff by the past-the-cap subtest, which the round-2 NOTE confirms. t-21 (live smoke) ran in pair mode with no reviewer. No failed tasks."
