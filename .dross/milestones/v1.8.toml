@@ -3,7 +3,7 @@ phases = ["azure-devops-provider", "azure-devops-ship-loop", "azure-boards-backe
 [milestone]
   version = "v1.8"
   title = "1.8 Azure DevOps — ship and board sync reach a fifth forge"
-  status = "active"
+  status = "complete"
   started = "2026-10-28"
   base = "main"
 
