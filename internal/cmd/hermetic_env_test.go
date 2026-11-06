@@ -145,6 +145,12 @@ func stubBranchProtection() {
 	ship.AutoMergePRFunc = func(ship.OpenOpts, int, string) (ship.AutoMergeResult, error) {
 		return ship.AutoMergeResult{}, fmt.Errorf("%w: %v", ship.ErrAutoMergeUnavailable, errHermeticGH)
 	}
+	// The azure-devops branch-policy read answers like BranchRules: known,
+	// unprotected, so an ADO fixture keeps its direct push unless a test
+	// installs its own stub.
+	ship.ADOBranchProtectionFunc = func(ship.OpenOpts, string) ship.ADOProtection {
+		return ship.ADOProtection{Known: true}
+	}
 }
 
 // TestHermeticBranchProtection_NeverDials pins stubBranchProtection, so
@@ -162,6 +168,7 @@ func TestHermeticBranchProtection_NeverDials(t *testing.T) {
 		{"UpdateRulesetFunc", ship.UpdateRulesetFunc, ship.UpdateRuleset},
 		{"SetAllowAutoMergeFunc", ship.SetAllowAutoMergeFunc, ship.SetAllowAutoMerge},
 		{"AutoMergePRFunc", ship.AutoMergePRFunc, ship.AutoMergePR},
+		{"ADOBranchProtectionFunc", ship.ADOBranchProtectionFunc, ship.ADOBranchProtection},
 	} {
 		if reflect.ValueOf(tc.seam).Pointer() == reflect.ValueOf(tc.real).Pointer() {
 			t.Errorf("%s is still its gh implementation — TestMain must stub it", tc.name)
@@ -174,6 +181,10 @@ func TestHermeticBranchProtection_NeverDials(t *testing.T) {
 	opts := ship.OpenOpts{Provider: "github", URL: "https://github.com/Rivil/dross"}
 	if got := ship.BranchRulesFunc(opts, "main"); !got.Known || len(got.Rules) != 0 {
 		t.Errorf("stubbed BranchRules = %+v, want known with no rules (unprotected)", got)
+	}
+	ado := ship.OpenOpts{Provider: "azure-devops", URL: "https://dev.azure.com/o/p/_git/r"}
+	if got := ship.ADOBranchProtectionFunc(ado, "main"); !got.Known || got.Protected {
+		t.Errorf("stubbed ADOBranchProtection = %+v, want known and unprotected", got)
 	}
 	if got := ship.RepoMergeSettingsFunc(opts); got.Known {
 		t.Errorf("stubbed RepoMergeSettings = %+v, want unknown", got)

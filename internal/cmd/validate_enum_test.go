@@ -36,6 +36,8 @@ func forceEnumValue(t *testing.T, dir, key, value string) {
 		p.Remote.Provider = value
 	case "board.milestone_mode":
 		p.Board.MilestoneMode = value
+	case "board.auth_scheme":
+		p.Board.AuthScheme = value
 	default:
 		t.Fatalf("no forced-write arm for %q", key)
 	}
@@ -72,6 +74,7 @@ func TestValidateFailsOnOutOfSetEnum(t *testing.T) {
 		{"repo.commit_convention", "nonsense", []string{"conventional", "freeform"}},
 		{"remote.provider", "notaforge", []string{"github", "gitlab"}},
 		{"board.milestone_mode", "bogus", []string{"version", "agile", "epic"}},
+		{"board.auth_scheme", "token", []string{"private-token", "bearer", "basic"}},
 	} {
 		t.Run(tc.key, func(t *testing.T) {
 			dir := enumFixtureRepo(t)

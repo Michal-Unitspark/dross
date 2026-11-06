@@ -130,6 +130,7 @@ func Validate(in []Transport) []error {
 
 var transports = []Transport{
 	// ---- forge: one doRaw per backend; every publish method funnels here --
+	{Package: "forge", Func: "AzureBoardsClient.doRaw", Screened: &Screened{Call: "ScanPayload"}},
 	{Package: "forge", Func: "Client.doRaw", Screened: &Screened{Call: "ScanPayload"}},
 	{Package: "forge", Func: "GitHubClient.doRaw", Screened: &Screened{Call: "ScanPayload"}},
 	{Package: "forge", Func: "JiraClient.doRaw", Screened: &Screened{Call: "ScanPayload"}},

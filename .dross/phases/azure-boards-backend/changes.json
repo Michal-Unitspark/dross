@@ -1,0 +1,1688 @@
+{
+  "phase": "azure-boards-backend",
+  "pr": 3,
+  "base": "milestone/v1.8",
+  "base_commit": "1afe652b4b0a161ea82c1cc76b83cb21a26bfaf3",
+  "status": "shipped",
+  "tasks": {
+    "quick-1": {
+      "files": [
+        "internal/forge/azureboards_items.go",
+        "internal/forge/azureboards_items_test.go",
+        "internal/cmd/ado_board_fake_test.go",
+        "internal/cmd/issue_ado_test.go",
+        "internal/boardsync/azureboards_state_sync_test.go"
+      ],
+      "commit": "5456f0c",
+      "completed_at": "2026-11-04T13:40:38.904079629Z",
+      "notes": "quick: Azure Boards — replace, not merge, the tag set on update (live t-21: op add merges System.Tags; only replace replaces)"
+    },
+    "t-1": {
+      "files": [
+        "internal/project/project.go",
+        "internal/cmd/project.go",
+        "internal/cmd/project_test.go",
+        "internal/cmd/testdata/pathfence_scan/not_paths.txt",
+        "internal/cmd/project_enum_test.go",
+        "internal/cmd/validate_enum_test.go"
+      ],
+      "commit": "155f8ea",
+      "completed_at": "2026-11-03T13:51:48.165955725Z",
+      "landmarks": [
+        {
+          "feature": "board config",
+          "symbol": "project.Board",
+          "loc": "internal/project/project.go:286",
+          "what": "[board] gains ADO api_version, auth_scheme (AuthSchemes-gated), area_path, iteration_path; settable via project set, never inherited from [remote]"
+        }
+      ]
+    },
+    "t-10": {
+      "files": [
+        "internal/cmd/baseprotect.go",
+        "internal/cmd/basebranch.go",
+        "internal/cmd/chorepr.go",
+        "internal/cmd/basebranch_ado_test.go"
+      ],
+      "commit": "8136b95",
+      "completed_at": "2026-11-03T16:44:44.92286367Z",
+      "landmarks": [
+        {
+          "feature": "ado base chore routing",
+          "symbol": "readBaseProtection",
+          "loc": "internal/cmd/baseprotect.go:36",
+          "what": "one protection dispatch (github rules / ADO branch policies) that routeBaseChores routes on; ADO chore PRs narrate auto-complete; pullURL builds /pullrequest/\u003cn\u003e for /_git/ URLs"
+        }
+      ]
+    },
+    "t-11": {
+      "files": [
+        "internal/diag/combinations.go",
+        "internal/diag/diag_test.go",
+        "internal/cmd/doctor.go"
+      ],
+      "commit": "3d44133",
+      "completed_at": "2026-11-03T16:49:55.8816177Z",
+      "landmarks": [
+        {
+          "feature": "ado board key warnings",
+          "symbol": "azureBoardsCombination",
+          "loc": "internal/diag/combinations.go:126",
+          "what": "doctor warns on [board] keys azure-devops never reads (auth_scheme private-token/basic, auth_user, milestone_mode) and on auth_scheme for non-ADO boards"
+        }
+      ]
+    },
+    "t-12": {
+      "files": [
+        "internal/forge/azureboards_items.go",
+        "internal/forge/azureboards_items_test.go",
+        "internal/forge/secretscan_test.go"
+      ],
+      "commit": "d7cc0ec",
+      "completed_at": "2026-11-03T17:10:53.355406511Z",
+      "landmarks": [
+        {
+          "feature": "ado work items",
+          "symbol": "AzureBoardsClient.ListIssues",
+          "loc": "internal/forge/azureboards_items.go:311",
+          "what": "project-scoped WIQL (tag OR type per label) + exact post-filter + category state filter + workitemsbatch reads; CreateIssue/UpdateIssue JSON patches; EnsureMilestoneEpic by dross/milestone tag"
+        }
+      ]
+    },
+    "t-13": {
+      "files": [
+        "internal/forge/azureboards_state.go",
+        "internal/forge/azureboards_state_test.go",
+        "internal/forge/state_map_test.go",
+        "internal/boardsync/board_lifecycle_divergence_test.go"
+      ],
+      "commit": "4f9168e",
+      "completed_at": "2026-11-03T16:58:34.57554498Z",
+      "landmarks": [
+        {
+          "feature": "ado state resolution",
+          "symbol": "resolveADOState",
+          "loc": "internal/forge/azureboards_state.go:52",
+          "what": "lifecycle status -\u003e state category -\u003e first state of that category in type order (state_map overrides by name); SetState warn-and-skip, verified CloseIssueAs, literal SetStateRaw"
+        }
+      ]
+    },
+    "t-14": {
+      "files": [
+        "internal/cmd/milestone.go",
+        "internal/cmd/milestone_protected_ado_test.go",
+        "internal/cmd/protected_base_ado_test.go"
+      ],
+      "commit": "fd6151a",
+      "completed_at": "2026-11-03T17:21:03.548717735Z",
+      "landmarks": [
+        {
+          "feature": "ado milestone chore routing",
+          "symbol": "waitForMilestoneChores",
+          "loc": "internal/cmd/milestone.go:1147",
+          "what": "milestone chores and the integration-PR wait read protection through readBaseProtection (GitHub rules or ADO branch policies); ADO wait hint honest about auto-complete arming"
+        }
+      ]
+    },
+    "t-15": {
+      "files": [
+        "internal/forge/forge.go",
+        "internal/configenum/configenum.go",
+        "internal/configenum/configenum_test.go",
+        "internal/cmd/enum_divergence_test.go"
+      ],
+      "commit": "bfc7dc5",
+      "completed_at": "2026-11-03T17:33:32.134569339Z",
+      "landmarks": [
+        {
+          "feature": "ado board dispatch",
+          "symbol": "NewBoard",
+          "loc": "internal/forge/forge.go:263",
+          "what": "azure-devops in BoardProviders and routed to NewAzureBoards; milestone_mode n/a"
+        }
+      ]
+    },
+    "t-16": {
+      "files": [
+        "internal/boardsync/ctx.go",
+        "internal/boardsync/phase.go",
+        "internal/boardsync/task.go",
+        "internal/boardsync/azureboards_state_sync_test.go"
+      ],
+      "commit": "849caac",
+      "completed_at": "2026-11-03T17:46:13.383908453Z",
+      "landmarks": [
+        {
+          "feature": "ado state sync",
+          "symbol": "CloseIssue",
+          "loc": "internal/boardsync/phase.go:228",
+          "what": "AzureBoardsClient arms in SyncPhase/setBoardState (SetState + state_map) and CloseIssue (verified CloseIssueAs); Config carries api_version/area/iteration and ADO-only auth_scheme"
+        }
+      ]
+    },
+    "t-17": {
+      "files": [
+        "internal/boardsync/milestone.go",
+        "internal/boardsync/phase.go",
+        "internal/boardsync/task.go",
+        "internal/boardsync/azureboards_hierarchy_test.go"
+      ],
+      "commit": "2113d78",
+      "completed_at": "2026-11-03T17:58:30.105049424Z",
+      "landmarks": [
+        {
+          "feature": "ado hierarchy",
+          "symbol": "SyncTasks",
+          "loc": "internal/boardsync/task.go:54",
+          "what": "Epic via EnsureMilestoneEpic; phase item parented on create, re-parented on update (ADO only); tasks prefer ParentLinker over IssueLinker"
+        }
+      ]
+    },
+    "t-18": {
+      "files": [
+        "internal/boardsync/finalize.go",
+        "internal/boardsync/azureboards_backlog_test.go",
+        "internal/boardsync/azureboards_finalize_test.go"
+      ],
+      "commit": "e33fec8",
+      "completed_at": "2026-11-03T18:16:31.013675094Z",
+      "landmarks": [
+        {
+          "feature": "ado finalize parenting",
+          "symbol": "finalizePlanTask",
+          "loc": "internal/boardsync/finalize.go:156",
+          "what": "cards created at finalize are LinkParent'ed under the phase card; ADO proofs for backlog Related links, reap undo, finalize order and re-run"
+        }
+      ]
+    },
+    "t-19": {
+      "files": [
+        "internal/cmd/doctor.go",
+        "internal/cmd/doctor_board_ado.go",
+        "internal/cmd/doctor_board_ado_test.go",
+        "internal/cmd/friction_window_test.go",
+        "internal/cmd/doctor_test.go"
+      ],
+      "commit": "94f53cd",
+      "completed_at": "2026-11-03T18:31:41.8083657Z",
+      "landmarks": [
+        {
+          "feature": "ado doctor",
+          "symbol": "checkADOBoard",
+          "loc": "internal/cmd/doctor_board_ado.go:53",
+          "what": "azure-devops [board] arm: required fields, host allowlist before the token read, api_version/auth_scheme, area/iteration path probe"
+        }
+      ]
+    },
+    "t-2": {
+      "files": [
+        "internal/forge/forge.go",
+        "internal/forge/azureboards.go",
+        "internal/forge/azureboards_test.go",
+        "internal/secretscan/sinks.go"
+      ],
+      "commit": "3d930bc",
+      "completed_at": "2026-11-03T14:04:11.857768548Z",
+      "landmarks": [
+        {
+          "feature": "azure boards transport",
+          "symbol": "forge.NewAzureBoards",
+          "loc": "internal/forge/azureboards.go:79",
+          "what": "ADO Boards client: named-field checks, hostallow then CheckADOBaseURL before Getenv; screened doRaw with one api-version, Basic :PAT or Bearer, no redirects, scrubbed bodies"
+        }
+      ]
+    },
+    "t-20": {
+      "files": [
+        "internal/cmd/ado_board_fake_test.go",
+        "internal/cmd/issue_ado_test.go",
+        "internal/cmd/phase_complete_board_ado_test.go",
+        "internal/cmd/doctor_board_ado_test.go"
+      ],
+      "commit": "2a0a4cd",
+      "completed_at": "2026-11-03T18:51:28.446512104Z",
+      "landmarks": [
+        {
+          "feature": "ado command proofs",
+          "symbol": "adoFake.answer",
+          "loc": "internal/cmd/ado_board_fake_test.go:147",
+          "what": "stateful Azure Boards fake that refuses what ADO refuses; pull, close read-back, phase complete and every board verb proven through cobra"
+        }
+      ]
+    },
+    "t-21": {
+      "files": [
+        "internal/forge/testdata/ado_boards_live_smoke.toml",
+        "internal/forge/ado_boards_live_record_test.go"
+      ],
+      "commit": "d8c79b9",
+      "completed_at": "2026-11-04T13:50:11.269336605Z",
+      "landmarks": [
+        {
+          "feature": "azure boards live smoke",
+          "symbol": "TestADOBoardsLiveRecordHonest",
+          "loc": "internal/forge/ado_boards_live_record_test.go:327",
+          "what": "live Boards run on a Basic-process scratch project recorded as posture live — create, transition, close, parent-link and pull read back over REST"
+        }
+      ]
+    },
+    "t-22": {
+      "files": [
+        "internal/forge/azureboards_test.go"
+      ],
+      "commit": "0ab0a20",
+      "completed_at": "2026-11-05T07:09:29.866379028Z",
+      "landmarks": [
+        {
+          "feature": "azure boards transport",
+          "symbol": "TestADOBoardStatusClassification",
+          "loc": "internal/forge/azureboards_test.go:352",
+          "what": "pins doRaw's 203/300-399 sign-in range, the 400 status error, per-status hints and the 500-byte body cap"
+        }
+      ]
+    },
+    "t-23": {
+      "files": [
+        "internal/forge/azureboards_items_test.go"
+      ],
+      "commit": "d78404c",
+      "completed_at": "2026-11-05T07:13:57.683067182Z",
+      "landmarks": [
+        {
+          "feature": "azure boards inbound pull",
+          "symbol": "TestADOListIssuesStateClosed",
+          "loc": "internal/forge/azureboards_items_test.go:609",
+          "what": "pins ListIssues state closed to Completed-category items only and the case-insensitive whole-tag label match"
+        }
+      ]
+    },
+    "t-24": {
+      "files": [
+        "internal/boardsync/azureboards_finalize_test.go"
+      ],
+      "commit": "544cf28",
+      "completed_at": "2026-11-05T07:19:00.461064063Z",
+      "landmarks": [
+        {
+          "feature": "azure boards phase finalize",
+          "symbol": "TestADOFinalizeReportsRefusedPhaseClose",
+          "loc": "internal/boardsync/azureboards_finalize_test.go:227",
+          "what": "pins a refused phase-card close at finalize as an error naming the card and NOT closed narration on both the synced and created arms"
+        }
+      ]
+    },
+    "t-25": {
+      "files": [
+        "internal/cmd/doctor_board_ado_test.go"
+      ],
+      "commit": "f834448",
+      "completed_at": "2026-11-05T07:23:29.942571983Z",
+      "landmarks": [
+        {
+          "feature": "azure boards doctor checks",
+          "symbol": "TestDoctorADOFlagsMissingIterationPath",
+          "loc": "internal/cmd/doctor_board_ado_test.go:310",
+          "what": "pins doctor probing an iteration_path alone against the Iterations tree, ✗ on 404 and ✓ on 200, one probe per configured path"
+        }
+      ]
+    },
+    "t-26": {
+      "files": [
+        "internal/cmd/milestone_protected_ado_test.go",
+        "internal/ship/azuredevops_policy_test.go"
+      ],
+      "commit": "bf8791c",
+      "completed_at": "2026-11-05T14:45:43.527368206Z",
+      "landmarks": [
+        {
+          "feature": "ado milestone chore routing",
+          "symbol": "TestADOMilestoneCompleteWaitsForOpenChorePR",
+          "loc": "internal/cmd/milestone_protected_ado_test.go:171",
+          "what": "milestone chore wait reads only its own base's policies; Prefix scopes match case-insensitively and at full-ref length"
+        }
+      ]
+    },
+    "t-27": {
+      "files": [
+        "internal/forge/azureboards.go",
+        "internal/forge/azureboards_state.go",
+        "internal/forge/azureboards_state_test.go"
+      ],
+      "commit": "2c48396",
+      "completed_at": "2026-11-05T14:45:43.539655473Z",
+      "landmarks": [
+        {
+          "feature": "ado state resolution",
+          "symbol": "ruleRejection",
+          "loc": "internal/forge/azureboards_state.go:111",
+          "what": "SetState skips only a TF401320 rule-rejected 400 (read from the whole scrubbed body); any other 400 is an error naming the item"
+        }
+      ]
+    },
+    "t-3": {
+      "files": [
+        "assets/prompts/options.md",
+        "internal/cmd/options_docs_test.go"
+      ],
+      "commit": "6b2925b",
+      "completed_at": "2026-11-03T14:11:37.584532827Z",
+      "landmarks": [
+        {
+          "feature": "board config",
+          "symbol": "options §12 Issue board",
+          "loc": "assets/prompts/options.md:123",
+          "what": "documents azure-devops board keys (auth_scheme, api_version, area_path, iteration_path) and the no-[remote]-inheritance rule"
+        }
+      ]
+    },
+    "t-4": {
+      "files": [
+        "internal/liverecord/liverecord.go",
+        "internal/liverecord/liverecord_test.go",
+        "internal/ship/ado_live_record_test.go"
+      ],
+      "commit": "15b1f7d",
+      "completed_at": "2026-11-03T14:22:51.385752754Z",
+      "landmarks": [
+        {
+          "feature": "live smoke honesty",
+          "symbol": "liverecord.Validate",
+          "loc": "internal/liverecord/liverecord.go:114",
+          "what": "shared live-record rules: postures, loopback screen, exactly-once steps, RFC 3339 run_at + required fields, evidence naming ADO; per-record proofs plug in"
+        }
+      ]
+    },
+    "t-5": {
+      "files": [
+        "internal/ship/azuredevops_policy.go",
+        "internal/ship/azuredevops_policy_test.go",
+        "internal/ship/hostguard_test.go",
+        "internal/cmd/hermetic_env_test.go"
+      ],
+      "commit": "5d849e4",
+      "completed_at": "2026-11-03T14:35:59.898935381Z",
+      "landmarks": [
+        {
+          "feature": "ado branch protection",
+          "symbol": "ship.ADOBranchProtection",
+          "loc": "internal/ship/azuredevops_policy.go:79",
+          "what": "read-only ADO policy read: protected iff an enabled blocking policy scopes the branch (Exact/Prefix/DefaultBranch); unreadable or truncated is unknown"
+        }
+      ]
+    },
+    "t-6": {
+      "files": [
+        "internal/forge/azureboards_meta.go",
+        "internal/forge/azureboards_meta_test.go",
+        "internal/redact/redact_test.go"
+      ],
+      "commit": "0857104",
+      "completed_at": "2026-11-03T15:56:46.244702253Z",
+      "landmarks": [
+        {
+          "feature": "azure boards process metadata",
+          "symbol": "AzureBoardsClient.GetIssue",
+          "loc": "internal/forge/azureboards_meta.go:309",
+          "what": "cached reads of requirement type, type names, states by category, area/iteration PathExists; GetIssue closed/Resolved iff Completed category"
+        }
+      ]
+    },
+    "t-7": {
+      "files": [
+        "internal/forge/forge.go",
+        "internal/forge/azureboards_links.go",
+        "internal/forge/azureboards_links_test.go"
+      ],
+      "commit": "15293d0",
+      "completed_at": "2026-11-03T16:03:51.628381441Z",
+      "landmarks": [
+        {
+          "feature": "azure boards links",
+          "symbol": "AzureBoardsClient.LinkParent",
+          "loc": "internal/forge/azureboards_links.go:68",
+          "what": "ParentLinker: Hierarchy-Reverse on the child, replace-in-one rev-tested PATCH; LinkIssues adds Related; both read-first and idempotent"
+        }
+      ]
+    },
+    "t-8": {
+      "files": [
+        "internal/forge/testdata/ado_boards_live_smoke.toml",
+        "internal/forge/ado_boards_live_record_test.go"
+      ],
+      "commit": "b55c39e",
+      "completed_at": "2026-11-03T16:16:34.895592107Z",
+      "landmarks": [
+        {
+          "feature": "boards live-smoke record",
+          "symbol": "validateBoardsLiveRecord",
+          "loc": "internal/forge/ado_boards_live_record_test.go:269",
+          "what": "c-8 runbook template (mock-only) validated by liverecord.Validate plus per-step proofs for create/transition/close/parent-link/pull"
+        }
+      ]
+    },
+    "t-9": {
+      "files": [
+        "internal/ship/automerge.go",
+        "internal/ship/azuredevops_automerge.go",
+        "internal/ship/azuredevops_automerge_test.go",
+        "internal/ship/hostguard_test.go"
+      ],
+      "commit": "d4ecefe",
+      "completed_at": "2026-11-03T16:30:20.815300071Z",
+      "landmarks": [
+        {
+          "feature": "ado chore auto-complete",
+          "symbol": "adoArmAutoComplete",
+          "loc": "internal/ship/azuredevops_automerge.go:63",
+          "what": "merge-commit-only auto-complete arm on chore PRs: policy pre-check, connectionData identity, noFastForward, never bypassPolicy, outcome read back"
+        }
+      ]
+    }
+  },
+  "reviews": {
+    "t-1": {
+      "outcome": "pass",
+      "rounds": 1,
+      "findings": [
+        {
+          "round": 1,
+          "kind": "quality",
+          "severity": "FLAG",
+          "text": "Two files are changed but not in the task's files list: internal/cmd/inert_config_test.go (the four inertKeyReasons entries, which TestNoSettableKeyIsInert needs, and they are well argued) and ARCHITECTURE.md (line-ref refresh).",
+          "resolution": "non-blocking, left"
+        },
+        {
+          "round": 1,
+          "kind": "quality",
+          "severity": "FLAG",
+          "text": "ARCHITECTURE.md refreshes the project/project.go refs (Save :538, saveLossless :553) but leaves the enumKeys bullet saying 'five dotted keys' (now six) and pointing at internal/cmd/project.go:325 / :339. This diff moved enumKeys to :335 and checkEnumValue to :350.",
+          "resolution": "non-blocking, left"
+        },
+        {
+          "round": 1,
+          "kind": "quality",
+          "severity": "FLAG",
+          "text": "In TestBoardADOKeysAbsentSaveByteIdentical, the Load-then-Save byte-identical half cannot catch a missing omitempty: Save diffs the loaded value against an identical value, so a zero field yields no op either way. Only the fresh-document half actually guards the 'zero value leaks into the file' contract.",
+          "resolution": "non-blocking, left"
+        },
+        {
+          "round": 1,
+          "kind": "quality",
+          "severity": "NOTE",
+          "criterion": "c-1",
+          "text": "board.auth_scheme is gated on the full configenum.AuthSchemes set, so private-token and basic are accepted even though the locked board_config allows only the PAT-via-Basic default or bearer. The task says to check against AuthSchemes, and doctor's combination check is assigned to t-11.",
+          "resolution": "non-blocking, left"
+        },
+        {
+          "round": 1,
+          "kind": "quality",
+          "severity": "NOTE",
+          "criterion": "c-1",
+          "text": "TestBoardDoesNotInheritRemote only shows that the loader and readDotted don't inherit, which holds trivially today. The real inheritance risk is boardsync.Config, which lands in t-16.",
+          "resolution": "non-blocking, left"
+        },
+        {
+          "round": 1,
+          "kind": "quality",
+          "severity": "NOTE",
+          "text": "assets/prompts/options.md does not cover the four new board.* keys yet, while its own text says to stop on any `dross project show` field it does not cover. No test enforces per-key coverage; this is presumably owned by a sibling docs task.",
+          "resolution": "non-blocking, left"
+        }
+      ]
+    },
+    "t-10": {
+      "outcome": "pass",
+      "rounds": 2,
+      "findings": [
+        {
+          "round": 1,
+          "kind": "quality",
+          "severity": "FLAG",
+          "criterion": "c-10",
+          "text": "The 'milestone branch' subtest of TestProtectedADOBaseRoutesThroughChorePR ignores the branches stubADOProtection records, and the stub says protected for any branch. If readBaseProtection asked about the wrong branch (say main instead of milestone/v1.8), the ADO tests would still pass. Asserting *asked == [\"milestone/v1.8\"] would catch it.",
+          "resolution": "non-blocking, left"
+        },
+        {
+          "round": 1,
+          "kind": "quality",
+          "severity": "NOTE",
+          "text": "baseProtection.Checked is set but never read. routeBaseChores gates on protectionReadable(), which repeats readBaseProtection's provider switch. If the two drift apart the result is safe (the zero value reads as unknown and the push is refused), but one of them could go.",
+          "resolution": "non-blocking, left"
+        },
+        {
+          "round": 1,
+          "kind": "quality",
+          "severity": "NOTE",
+          "text": "When [remote].auth_env is empty, the ADO fix text says \"check the PAT in $\u003cunset\u003e ([remote].auth_env)\", which reads oddly. It is harmless, because resolveToken has no default env var.",
+          "resolution": "non-blocking, left"
+        },
+        {
+          "round": 1,
+          "kind": "quality",
+          "severity": "NOTE",
+          "text": "choreState (ship.go) still reports \"auto-merge\" in ship --json for an armed ADO chore PR. That is a stable enum value, and this task does not claim it.",
+          "resolution": "non-blocking, left"
+        },
+        {
+          "round": 2,
+          "kind": "quality",
+          "severity": "NOTE",
+          "criterion": "c-10",
+          "text": "readBaseProtection's azure-devops Fix always points at the PAT in [remote].auth_env, even when the unknown read came from a refused api_base host or a possibly truncated policy list; Reason carries the real cause, so the message is only partly misleading",
+          "resolution": "non-blocking, left"
+        },
+        {
+          "round": 2,
+          "kind": "quality",
+          "severity": "NOTE",
+          "text": "pullURL infers Azure Repos only from '/_git/', so an SSH-form ADO remote (git@ssh.dev.azure.com:v3/o/p/r) would still get a GitHub-shaped /pull/\u003cn\u003e link; fine while [remote].url is the https form",
+          "resolution": "non-blocking, left"
+        },
+        {
+          "round": 2,
+          "kind": "quality",
+          "severity": "NOTE",
+          "text": "choreState (ship --json) still reports \"auto-merge\" for an armed ADO chore PR; this task does not claim it, and only the human narration was in scope",
+          "resolution": "non-blocking, left"
+        }
+      ]
+    },
+    "t-11": {
+      "outcome": "pass",
+      "rounds": 1,
+      "findings": [
+        {
+          "round": 1,
+          "kind": "quality",
+          "severity": "FLAG",
+          "criterion": "c-1",
+          "text": "The doctor.go wiring has no doctor-level test: no doctor_test case sets board.auth_scheme. BoardCombination takes four plain string arguments in a row, so if the call site swapped b.AuthUser and b.AuthScheme, the diag tests would still pass.",
+          "resolution": "non-blocking, left"
+        },
+        {
+          "round": 1,
+          "kind": "quality",
+          "severity": "NOTE",
+          "text": "azureBoardsCombination warns on any non-empty milestone_mode, including a globally invalid one that doctor already hard-fails at the board section. The existing milestone check deliberately skips globally invalid modes, so this arm reports twice on a key it calls ignored.",
+          "resolution": "non-blocking, left"
+        },
+        {
+          "round": 1,
+          "kind": "quality",
+          "severity": "NOTE",
+          "text": "The non-ADO 'no effect' warning interpolates the provider after normalising it, so an empty provider renders as 'on a  board'. That case is already a hard failure, so it is cosmetic only.",
+          "resolution": "non-blocking, left"
+        }
+      ]
+    },
+    "t-12": {
+      "outcome": "pass",
+      "rounds": 1,
+      "findings": [
+        {
+          "round": 1,
+          "kind": "quality",
+          "severity": "FLAG",
+          "criterion": "c-5",
+          "text": "ListIssues with no labels (dross watch and an unlabelled issue pull both call it with State open only) runs a WIQL query with no state predicate. It reads every work item in the project, closed history included, and then filters by state category on the client. Past 20,000 items, ADO's WIQL limit (VS402337) makes every unlabelled pull fail with an error on large projects. That is reported correctly, never as zero, but the cost and the cap are worth addressing, for example by excluding the known Completed/Removed state names in WIQL or using $top with paging.",
+          "resolution": "non-blocking, left"
+        },
+        {
+          "round": 1,
+          "kind": "quality",
+          "severity": "NOTE",
+          "criterion": "c-5",
+          "text": "The '[System.TeamProject] = @project' and project-scoped path assertions (wiqlQueries) only exercise ListIssues. The EnsureMilestoneEpic WIQL is covered structurally, because it shares queryIDs and the mock server rejects any other path, but no test asserts it directly.",
+          "resolution": "non-blocking, left"
+        },
+        {
+          "round": 1,
+          "kind": "quality",
+          "severity": "NOTE",
+          "criterion": "c-5",
+          "text": "The contract wording says 'open omits Done and Removed'. The test uses Agile's 'Closed' state, which is in the Completed category. The filter works by category, so this is equivalent, but a Scrum/Basic 'Done' case is not exercised.",
+          "resolution": "non-blocking, left"
+        },
+        {
+          "round": 1,
+          "kind": "quality",
+          "severity": "NOTE",
+          "criterion": "c-2",
+          "text": "UpdateIssue with only a Milestone takes the no-op path straight to GetIssue, so the 'no relation op on update' loop in TestADOCreateIssueParentEpic currently sees no PATCH at all. It would still catch a regression that sent one.",
+          "resolution": "non-blocking, left"
+        }
+      ]
+    },
+    "t-13": {
+      "outcome": "pass",
+      "rounds": 1,
+      "findings": [
+        {
+          "round": 1,
+          "kind": "quality",
+          "severity": "FLAG",
+          "criterion": "c-3",
+          "text": "SetState treats every HTTP 400 on the state PATCH as a rule rejection to warn about and skip, not just TF401320. A 400 for any other reason, such as a malformed request, would be quietly skipped during sync. This matches what the description asks for, so it is recorded only.",
+          "resolution": "non-blocking, left"
+        },
+        {
+          "round": 1,
+          "kind": "quality",
+          "severity": "NOTE",
+          "criterion": "c-3",
+          "text": "In TestADOSetStateOverride 'an override beats the default', the in-progress-\u003eDoing row on Basic Issue gives the same result as the default, so that row cannot tell an ignored override from an honoured one. The planned-\u003eDoing row (default To Do) is the one that actually tests the override.",
+          "resolution": "non-blocking, left"
+        },
+        {
+          "round": 1,
+          "kind": "quality",
+          "severity": "NOTE",
+          "criterion": "c-4",
+          "text": "In TestADOCloseIssueAsVerifies 'a 200 that did not take', the read-back is Committed, not the Active the contract names, because the Scrum PBI fixture has no Active state. It tests the same failure (an InProgress-category read-back after a 200), and the error is checked for 'work item 42' and the written state 'Done'.",
+          "resolution": "non-blocking, left"
+        }
+      ]
+    },
+    "t-14": {
+      "outcome": "pass",
+      "rounds": 2,
+      "findings": [
+        {
+          "round": 1,
+          "kind": "quality",
+          "severity": "FLAG",
+          "criterion": "c-10",
+          "text": "choreWaitHint tells the user on azure-devops that auto-complete will complete the chore PR, but waitForMilestoneChores also fires when this run's chore PR is Manual (auto-complete could not be set). The narration printed just before (milestone.go:273) says 'complete it by hand', so the two messages contradict each other. The same happens for a PR an earlier run left open, where dross does not know whether auto-complete is armed. Consider checking head.ChorePR.Manual, or using neutral wording.",
+          "resolution": "non-blocking, left"
+        },
+        {
+          "round": 1,
+          "kind": "quality",
+          "severity": "NOTE",
+          "text": "Doc comments in internal/cmd/milestone.go are now out of date. routeMilestoneHead still says 'With commits ahead on a GitHub remote... Unprotected, and every other forge, keep the policy below', and routeProtectedMilestone still says routed is false 'off GitHub'. Both now cover Azure DevOps too.",
+          "resolution": "non-blocking, left"
+        },
+        {
+          "round": 1,
+          "kind": "quality",
+          "severity": "NOTE",
+          "text": "The azure-devops row of TestMilestoneHeadLegacyTable (milestone_protected_test.go) now passes only because TestMain's hermetic ADOBranchProtectionFunc stub answers known-and-unprotected. The test's comment 'only GitHub is ever asked about protection' no longer matches what the code does.",
+          "resolution": "non-blocking, left"
+        },
+        {
+          "round": 2,
+          "kind": "quality",
+          "severity": "FLAG",
+          "criterion": "c-10",
+          "text": "waitForMilestoneChores gates the open-chore-PR lookup on readBaseProtection(...).Protected, so when nothing is ahead and the ADO policy read is unknown (401, refused host, truncated list) it returns nil and lets the integration PR open even if an earlier run's chore PR into the milestone branch is still open. A read that failed is treated here as unprotected. GitHub already behaved this way; this change extends it to azure-devops.",
+          "resolution": "non-blocking, left"
+        },
+        {
+          "round": 2,
+          "kind": "quality",
+          "severity": "NOTE",
+          "text": "choreWaitHint keeps GitHub's 'merge it (it merges itself once allowed)' even when this run's PR could not be armed (Manual); only the azure-devops branch uses the armed flag. Pre-existing wording, deliberately preserved.",
+          "resolution": "non-blocking, left"
+        },
+        {
+          "round": 2,
+          "kind": "quality",
+          "severity": "NOTE",
+          "text": "The unchanged TestMilestoneHeadLegacyTable azure-devops row now reaches readBaseProtection and relies on TestMain's global ADOBranchProtectionFunc stub (known, unprotected) to keep today's push; that dependency is pinned by TestHermeticBranchProtection_NeverDials.",
+          "resolution": "non-blocking, left"
+        }
+      ]
+    },
+    "t-15": {
+      "outcome": "pass",
+      "rounds": 2,
+      "findings": [
+        {
+          "round": 1,
+          "kind": "quality",
+          "severity": "FLAG",
+          "criterion": "c-1",
+          "text": "No behavioural test shows NewBoard(\"azure-devops\") (or a padded spelling) builds *AzureBoardsClient; the only guard is the source scan in TestBoardDispatchMatchesBoardProviders, which checks that the case label exists but not that the branch calls NewAzureBoards. TestNewBoardNormalisesProvider in internal/forge/forge_test.go already checks the built type for jira and youtrack; an azure-devops row there would be cheap.",
+          "resolution": "non-blocking, left"
+        },
+        {
+          "round": 1,
+          "kind": "quality",
+          "severity": "NOTE",
+          "criterion": "c-1",
+          "text": "The description says this task adds var _ BoardClient = (*AzureBoardsClient)(nil), but the diff does not; the assertion already exists at HEAD in internal/forge/azureboards_items.go:39, so the compile-time test_contract line is still met.",
+          "resolution": "non-blocking, left"
+        },
+        {
+          "round": 1,
+          "kind": "quality",
+          "severity": "NOTE",
+          "text": "Two comments still list the old provider set: NewBoard's doc comment in internal/forge/forge.go (lines 257-261) does not mention azure-devops, and the Board.Provider field comment in internal/project/project.go:287 still reads 'forgejo | gitea | gitlab | youtrack | jira | github'.",
+          "resolution": "non-blocking, left"
+        },
+        {
+          "round": 2,
+          "kind": "quality",
+          "severity": "NOTE",
+          "criterion": "c-1",
+          "text": "The description says the task adds var _ BoardClient = (*AzureBoardsClient)(nil), but that line was already committed at internal/forge/azureboards_items.go:39. The compile-time guard in the test contract holds through existing code, not through this diff.",
+          "resolution": "non-blocking, left"
+        },
+        {
+          "round": 2,
+          "kind": "quality",
+          "severity": "NOTE",
+          "criterion": "c-1",
+          "text": "TestNewBoardBuildsAzureBoards goes beyond the case-label scan: it checks that plain, padded and mixed-case spellings of the provider build *forge.AzureBoardsClient. Its natural home would be next to TestNewBoardNormalisesProvider in internal/forge/forge_test.go, but keeping it in enum_divergence_test.go stays within the task's declared files.",
+          "resolution": "non-blocking, left"
+        }
+      ]
+    },
+    "t-16": {
+      "outcome": "pass",
+      "rounds": 2,
+      "findings": [
+        {
+          "round": 1,
+          "kind": "quality",
+          "severity": "FLAG",
+          "criterion": "c-4",
+          "text": "In TestADOPhaseCloseReadBack 'one refused task close strands no other', the check that work item 12's last state PATCH is Done passes from setBoardState's task-complete PATCH alone. CloseIssueAs then sees the item already Done and sends no write, so task 12 never gets a close PATCH as such. The test still fails if the loop stops at the first refusal, because t-2 would never be created. But it cannot tell whether t-2's close ran, and its message ('want its close to Done') describes the wrong PATCH.",
+          "resolution": "non-blocking, left"
+        },
+        {
+          "round": 1,
+          "kind": "quality",
+          "severity": "NOTE",
+          "text": "With --close, the ADO path now runs SetState and then CloseIssueAs, the same pattern as Jira and YouTrack. If the workflow keeps the item where it is, the item gets two identical System.State PATCHes. If state_map.complete names a state outside the Completed category, SetState writes it before CloseIssueAs refuses it. So the CloseIssue arm's comment ('refuses ... before writing') does not hold for the command as a whole, even though it still errors and prints no '(closed)'.",
+          "resolution": "non-blocking, left"
+        },
+        {
+          "round": 1,
+          "kind": "quality",
+          "severity": "NOTE",
+          "text": "The CloseIssue doc comment in phase.go now wraps as 'never a' / 'three-name allowlist' / 'of the flat boards' across three lines. The line it was folded into should be reflowed.",
+          "resolution": "non-blocking, left"
+        },
+        {
+          "round": 2,
+          "kind": "quality",
+          "severity": "NOTE",
+          "text": "azureboards_state_sync_test.go reads tr.calls (TestConfigCarriesADOFields) and writes tr.stick / tr.stickOnce / tr.items (TestADOPhaseCloseReadBack, TestBoardClientArmsRouteByType) without tr.mu, while the other helpers take the lock. It is safe because no request is in flight at those points, but taking the lock everywhere would be more consistent.",
+          "resolution": "non-blocking, left"
+        },
+        {
+          "round": 2,
+          "kind": "quality",
+          "severity": "NOTE",
+          "text": "The reflowed CloseIssue doc comment in phase.go leaves a short line ('// github.go's toIssue') in the middle of a sentence. Cosmetic only.",
+          "resolution": "non-blocking, left"
+        }
+      ]
+    },
+    "t-17": {
+      "outcome": "pass",
+      "rounds": 2,
+      "findings": [
+        {
+          "round": 1,
+          "kind": "quality",
+          "severity": "FLAG",
+          "criterion": "c-2",
+          "text": "phase.go re-parents whenever the client satisfies forge.ParentLinker, passing it milestoneID. What that number means differs by backend: on Jira it is a project version id, on the forges a milestone id. Only AzureBoardsClient implements ParentLinker today, so nothing is wrong yet. But a backend that adds ParentLinker later (Jira epics, GitLab) would quietly link phases under whatever issue has that number. Checking for *forge.AzureBoardsClient here, or having EnsureMilestoneLink say whether its id is a work item, would close that gap.",
+          "resolution": "non-blocking, left"
+        },
+        {
+          "round": 1,
+          "kind": "quality",
+          "severity": "NOTE",
+          "criterion": "c-4",
+          "text": "reap.go's classifyMilestoneMirrors uses CheckMilestoneClosable as its gate, so letting Azure Boards through also makes Azure Boards milestone Epics reapable. Those closes go through the verified CloseIssue, so the behaviour is consistent, but no test covers this path.",
+          "resolution": "non-blocking, left"
+        },
+        {
+          "round": 1,
+          "kind": "quality",
+          "severity": "NOTE",
+          "text": "TestLinkerOnlyBoardStillRelatesTasks checks the number of links and the parent end (PROJ-100), but not that the child end is a different task key each time.",
+          "resolution": "non-blocking, left"
+        },
+        {
+          "round": 1,
+          "kind": "quality",
+          "severity": "NOTE",
+          "text": "In SyncTasks, a task whose close is refused (TaskCloseError) hits continue before LinkParent, so it stays without a parent for that run. This ordering is older than this diff, and the next sync fixes it.",
+          "resolution": "non-blocking, left"
+        },
+        {
+          "round": 2,
+          "kind": "quality",
+          "severity": "NOTE",
+          "criterion": "c-2",
+          "text": "phase.go's warning when re-parenting the phase item fails (LinkParent error on the update edge) has no test; only the task-level link fault is exercised",
+          "resolution": "non-blocking, left"
+        },
+        {
+          "round": 2,
+          "kind": "quality",
+          "severity": "NOTE",
+          "criterion": "c-4",
+          "text": "CheckMilestoneClosable now returns nil for Azure Boards, so reap's classifyMilestoneMirrors (which uses the same gate) now treats ADO milestone Epics as reap candidates; this follows from 'an Epic is an issue' but is not tested here",
+          "resolution": "non-blocking, left"
+        },
+        {
+          "round": 2,
+          "kind": "quality",
+          "severity": "NOTE",
+          "text": "CheckMilestoneClosable's doc comment still says only YouTrack's epic mode stores an issue in the milestones slot; it now also covers Azure Boards",
+          "resolution": "non-blocking, left"
+        },
+        {
+          "round": 2,
+          "kind": "quality",
+          "severity": "NOTE",
+          "text": "the 'forgejo is still refused' check uses a faultBoard with Provider set to forgejo rather than a ForgejoClient; the refusal comes from the type switch, so it only proves that a non-YouTrack, non-ADO client is refused",
+          "resolution": "non-blocking, left"
+        },
+        {
+          "round": 2,
+          "kind": "quality",
+          "severity": "NOTE",
+          "text": "a phase whose milestone is removed from its spec keeps its old Epic parent, because the re-parent is gated on milestoneID \u003e 0; this task does not claim that case",
+          "resolution": "non-blocking, left"
+        }
+      ]
+    },
+    "t-18": {
+      "outcome": "pass",
+      "rounds": 3,
+      "findings": [
+        {
+          "round": 1,
+          "kind": "quality",
+          "severity": "FLAG",
+          "criterion": "c-6",
+          "text": "TestADOBacklogRelatesRoutedItem's re-run check counts only System.LinkTypes.Related PATCHes, while the test_contract says a second SyncBacklog sends zero relation PATCH; a repeated Hierarchy-Reverse or other relation write on the second sync would go unseen",
+          "resolution": "non-blocking, left"
+        },
+        {
+          "round": 1,
+          "kind": "quality",
+          "severity": "FLAG",
+          "criterion": "c-2",
+          "text": "the new LinkParent failure branch in finalizePlanTask (warn once via warn.noLink, close continues) has no test; nothing drives a refused parent link at finalize",
+          "resolution": "non-blocking, left"
+        },
+        {
+          "round": 1,
+          "kind": "quality",
+          "severity": "NOTE",
+          "criterion": "c-6",
+          "text": "on a refused restore, Undo's returned error names only counts; the id is named on stderr via reapFailure, which is what the test asserts. That behaviour predates this diff",
+          "resolution": "non-blocking, left"
+        },
+        {
+          "round": 1,
+          "kind": "quality",
+          "severity": "NOTE",
+          "criterion": "c-7",
+          "text": "TestADOFinalizeTasksThenPhase checks 'reads back Completed' against the mock store's state rather than a client read; FinalizePhase returning nil already implies CloseIssue's verified read-back, so this is adequate",
+          "resolution": "non-blocking, left"
+        },
+        {
+          "round": 2,
+          "kind": "quality",
+          "severity": "FLAG",
+          "criterion": "c-6",
+          "text": "TestADOReapUndoRestoresPriorState guards the state restore against vacuity (it fails if Apply left the state unchanged) but not the tag restore: it never checks that Apply actually rewrote dross/status:uat. relabelReapedCard only warns when it fails, so if the sweep stopped relabelling, the 'prior tags' assertion would pass without testing anything.",
+          "resolution": "non-blocking, left"
+        },
+        {
+          "round": 2,
+          "kind": "quality",
+          "severity": "NOTE",
+          "criterion": "c-2",
+          "text": "If a parent link is refused at finalize it is only warned about. A later FinalizePhase will not retry it, because the path for existing cards (finalizeCard) never sets a parent, so only a later SyncTasks repairs the orphan. The warning text does not promise a retry, so the behaviour is honest.",
+          "resolution": "non-blocking, left"
+        },
+        {
+          "round": 2,
+          "kind": "quality",
+          "severity": "NOTE",
+          "criterion": "c-6",
+          "text": "Undo's returned error gives only a count; the refused id appears on stderr, and that is where the refused-restore subtest checks for it. This matches the existing reap_undo design.",
+          "resolution": "non-blocking, left"
+        },
+        {
+          "round": 3,
+          "kind": "quality",
+          "severity": "FLAG",
+          "criterion": "c-2",
+          "text": "If LinkParent fails for a card created at finalize, the card is still closed and recorded in board.json. A later FinalizePhase resolves it by key and goes through finalizeCard, which never calls LinkParent, and once the phase is complete task sync is unlikely to run again. So the orphan is permanent, and the warning doesn't say a retry is coming (it doesn't claim one either).",
+          "resolution": "non-blocking, left"
+        },
+        {
+          "round": 3,
+          "kind": "quality",
+          "severity": "NOTE",
+          "criterion": "c-6",
+          "text": "For the refused restore, the contract says 'Undo errors naming that id', but Undo's returned error only gives a count ('1 of 2 card(s) could not be restored'). Id 21 is named on stderr, and that is what the test checks. This matches Undo's existing design, but the error value itself never names the item.",
+          "resolution": "non-blocking, left"
+        },
+        {
+          "round": 3,
+          "kind": "quality",
+          "severity": "NOTE",
+          "criterion": "c-7",
+          "text": "TestADOFinalizeTasksThenPhase checks 'reads back Completed' through the tracker's stored state (Done), not what the client read back. The client-side read-back check is covered separately by TestADOFinalizeReportsRefusedTaskClose.",
+          "resolution": "non-blocking, left"
+        }
+      ]
+    },
+    "t-19": {
+      "outcome": "pass",
+      "rounds": 2,
+      "findings": [
+        {
+          "round": 1,
+          "kind": "quality",
+          "severity": "FLAG",
+          "criterion": "c-1",
+          "text": "adoBoardAPIVersionShape in internal/cmd/doctor_board_ado.go is a third hand copy of the api-version regex (forge/azureboards.go, ship/azuredevops.go). Doctor matches the raw value while forge.NewAzureBoards trims whitespace first, so the two can disagree on the same config. Exporting forge's check would keep them in step.",
+          "resolution": "non-blocking, left"
+        },
+        {
+          "round": 1,
+          "kind": "quality",
+          "severity": "FLAG",
+          "criterion": "c-1",
+          "text": "TestDoctorADOBoardKeyValues 'warns' subtests assert strings.Contains(out, \"⚠\") over the whole doctor output, not the azure-devops combination warning text, so they pass vacuously if any other section prints a ⚠ and the t-11 warning disappears.",
+          "resolution": "non-blocking, left"
+        },
+        {
+          "round": 1,
+          "kind": "quality",
+          "severity": "FLAG",
+          "text": "The azure-devops cases of TestDoctorAcceptsEveryDispatchableBoardProvider and TestFrictionWindow_DoctorAcceptsWorkingProviders now build a valid ADO client with board.enabled=true, so reportStrandedMirrors dials the real https://dev.azure.com/acme with a fake PAT (30s client timeout). Previously the ADO case failed construction offline; noNetwork is available but not applied there.",
+          "resolution": "non-blocking, left"
+        },
+        {
+          "round": 1,
+          "kind": "quality",
+          "severity": "NOTE",
+          "criterion": "c-9",
+          "text": "The iteration_path arm of probeADOPaths is untested; the test_contract only names area_path, so this is a coverage observation only.",
+          "resolution": "non-blocking, left"
+        },
+        {
+          "round": 1,
+          "kind": "quality",
+          "severity": "NOTE",
+          "text": "isADOBoard lives in doctor_board_ado.go so doctor.go carries no \"azure-devops\" literal; the rationale is documented and that test's intent concerns remote comparison, not board dispatch.",
+          "resolution": "non-blocking, left"
+        },
+        {
+          "round": 2,
+          "kind": "quality",
+          "severity": "NOTE",
+          "criterion": "c-1",
+          "text": "adoBoardAPIVersionShape in doctor_board_ado.go is a hand copy of forge's unexported adoBoardsAPIVersionShape; the two match today, but if one changes without the other, doctor and the client will disagree about which api_version values are valid. Exporting a validator from forge would remove that risk.",
+          "resolution": "non-blocking, left"
+        },
+        {
+          "round": 2,
+          "kind": "quality",
+          "severity": "NOTE",
+          "criterion": "c-1",
+          "text": "TestDoctorADORefusedHostSkipsToken counts reads only through the adoDoctorGetenv seam. forge.NewAzureBoards, which the stranded-mirror check reaches through openBoard, calls os.Getenv directly, so this counter would not catch a later change there that reads the token before the host check. Today forge refuses the host before it reads the token.",
+          "resolution": "non-blocking, left"
+        },
+        {
+          "round": 2,
+          "kind": "quality",
+          "severity": "NOTE",
+          "criterion": "c-9",
+          "text": "No test runs the iteration_path arm of probeADOPaths. The test_contract only names area_path, and both arms share one loop, so the risk is low.",
+          "resolution": "non-blocking, left"
+        },
+        {
+          "round": 2,
+          "kind": "quality",
+          "severity": "NOTE",
+          "text": "isADOBoard keeps the \"azure-devops\" literal out of doctor.go, so TestDoctorCarriesNoProviderLiterals still passes while doctor.go now branches on [board].provider. That guard exists to stop branching on [remote].provider for remote comparison, so a board dispatch is a legitimate exception, but the guard no longer catches every provider branch in doctor.go.",
+          "resolution": "non-blocking, left"
+        }
+      ]
+    },
+    "t-2": {
+      "outcome": "pass",
+      "rounds": 1,
+      "findings": [
+        {
+          "round": 1,
+          "kind": "quality",
+          "severity": "FLAG",
+          "criterion": "c-1",
+          "text": "Task description orders the checks as base_url shape (CheckADOBaseURL) then hostallow; NewAzureBoards runs hostallow first, then CheckADOBaseURL. This is forced by the test_contract (bare https://attacker.example must yield hostallow.ErrRefused, which the shape check would otherwise pre-empt with a 'no collection' error), and both still precede os.Getenv, but the record's description should be amended to match.",
+          "resolution": "non-blocking, left"
+        },
+        {
+          "round": 1,
+          "kind": "quality",
+          "severity": "FLAG",
+          "criterion": "c-1",
+          "text": "TestNewAzureBoardsNamesMissingFields' empty/blank base_url cases cannot catch the explicit empty-base_url check being dropped: hostallow.Check is labelled \"[board].base_url\" and rejects an empty URL with an error naming it, so the subtest still passes. Asserting the 'needs [board].base_url' wording, or that the error does not wrap hostallow.ErrRefused, would make it discriminate.",
+          "resolution": "non-blocking, left"
+        },
+        {
+          "round": 1,
+          "kind": "quality",
+          "severity": "FLAG",
+          "text": "redact.Scrub inside doRaw is not independently tested: do() wraps the result in redact.Err, which also scrubs raw and base64 forms, so removing the doRaw scrub leaves TestADOBoardCredentialNeverLeaks green. The decoded-into-out path, where only the doRaw scrub protects, is not exercised.",
+          "resolution": "non-blocking, left"
+        },
+        {
+          "round": 1,
+          "kind": "quality",
+          "severity": "FLAG",
+          "text": "Undeclared files touched: internal/secretscan/sinks_test.go (registry counts 11-\u003e12, forge 4-\u003e5) and internal/cmd/testdata/pathfence_scan/not_paths.txt (adoPatchOp.Op/Path ledger rows). Both are required consequences of the declared changes and look correct.",
+          "resolution": "non-blocking, left"
+        },
+        {
+          "round": 1,
+          "kind": "quality",
+          "severity": "NOTE",
+          "text": "CheckADOBaseURL puts no upper bound on Server path depth, so https://\u003chost\u003e/\u003ccollection\u003e/\u003cproject\u003e is accepted while the Services form with a project is refused. This is reasonable given configurable Server virtual directories, but such a URL would 404 at request time rather than at doctor.",
+          "resolution": "non-blocking, left"
+        }
+      ]
+    },
+    "t-20": {
+      "outcome": "pass",
+      "rounds": 2,
+      "findings": [
+        {
+          "round": 1,
+          "kind": "quality",
+          "severity": "FLAG",
+          "criterion": "c-4",
+          "text": "TestIssueCloseADOReadBack's refuseState mode answers state writes with 400, so CloseIssueAs fails on its write-failure branch ('close work item N at \"Done\"') and the post-write read-back branch is never reached; a client that dropped the read-back would still pass. A fake mode that accepts the PATCH (200) but leaves System.State unchanged would actually prove the read-back.",
+          "resolution": "non-blocking, left"
+        },
+        {
+          "round": 1,
+          "kind": "quality",
+          "severity": "FLAG",
+          "text": "internal/cmd/doctor_board_ado_test.go is modified but not in the task's declared files (a behaviour-neutral rename of adoDoctorToken to adoDoctorPATEnv).",
+          "resolution": "non-blocking, left"
+        },
+        {
+          "round": 1,
+          "kind": "quality",
+          "severity": "FLAG",
+          "text": "The fake is lenient in two places where Azure DevOps is not: it returns relations on GET /wit/workitems/{id} and workitemsbatch whether or not $expand=relations was asked for, and it never checks the Authorization header. A regression that drops $expand=relations from getWorkItem/readItems, or drops auth, would still pass every command test on this fake.",
+          "resolution": "non-blocking, left"
+        },
+        {
+          "round": 1,
+          "kind": "quality",
+          "severity": "NOTE",
+          "criterion": "c-5",
+          "text": "The fake's CONTAINS matches whole tags (as the contract requires), but the client's matchesLabels comment says CONTAINS is a substring test, so the client's exact-tag post-filter is never exercised at command level. The live smoke should settle which reading of ADO is right.",
+          "resolution": "non-blocking, left"
+        },
+        {
+          "round": 2,
+          "kind": "quality",
+          "severity": "FLAG",
+          "text": "internal/cmd/doctor_board_ado_test.go is modified (adoDoctorToken renamed to adoDoctorPATEnv) but is not in the task's declared files; the rename is complete and harmless, but it is outside this task's scope.",
+          "resolution": "non-blocking, left"
+        },
+        {
+          "round": 2,
+          "kind": "quality",
+          "severity": "NOTE",
+          "criterion": "c-4",
+          "text": "adoCloseReadBack's final check that the item does not read Done always passes: in both fake modes the fake never records a state write. The error and '(closed)' checks are what carry the test.",
+          "resolution": "non-blocking, left"
+        },
+        {
+          "round": 2,
+          "kind": "quality",
+          "severity": "NOTE",
+          "text": "pointBoardAtADO sets MOCK_TOKEN to the literal \"secret\" instead of adoFakePAT, though the constant's comment says the two are tied; if one changes without the other, the fake answers 401.",
+          "resolution": "non-blocking, left"
+        },
+        {
+          "round": 2,
+          "kind": "quality",
+          "severity": "NOTE",
+          "text": "The fake reuses TF201036 for its self-link refusal as well as the second-parent refusal; the second-parent subtest targets a different item, so the shared code cannot hide a wrong refusal there.",
+          "resolution": "non-blocking, left"
+        }
+      ]
+    },
+    "t-22": {
+      "outcome": "pass",
+      "rounds": 1,
+      "findings": [
+        {
+          "round": 1,
+          "kind": "quality",
+          "severity": "NOTE",
+          "criterion": "c-1",
+          "text": "Changing the snippet cap from `len(snippet) \u003e 500` to `\u003e= 500` behaves the same, since slicing a 500-byte string to [:500] keeps all of it. No test can catch that change, and none is needed; the exact-500 case does catch the cap tightening to 499.",
+          "resolution": "non-blocking, left"
+        },
+        {
+          "round": 1,
+          "kind": "quality",
+          "severity": "NOTE",
+          "text": "The 404 hint and the no-hint 500 case go beyond what the record claims (300/400/401/403/truncation). They are extra coverage, not drift. The inner loop checking for other statuses' hints adds little, because the exact-format match already rules them out.",
+          "resolution": "non-blocking, left"
+        }
+      ]
+    },
+    "t-23": {
+      "outcome": "pass",
+      "rounds": 1,
+      "findings": [
+        {
+          "round": 1,
+          "kind": "quality",
+          "severity": "NOTE",
+          "criterion": "c-5",
+          "text": "TestADOListIssuesStateClosed runs with a Bug type present, so under label bug items 31/34 match by type and 30/32/33/35 by tag; the closed-only result [33 34] kills a negated closed arm in all three filter variants, and the no-label variant keeps that check from depending on label matching",
+          "resolution": "non-blocking, left"
+        },
+        {
+          "round": 1,
+          "kind": "quality",
+          "severity": "NOTE",
+          "criterion": "c-5",
+          "text": "TestADOListIssuesTagCaseInsensitive uses a project with no Bug type so only tags can match; the bugfix item also checks that a tag must match whole, not as a substring",
+          "resolution": "non-blocking, left"
+        }
+      ]
+    },
+    "t-24": {
+      "outcome": "pass",
+      "rounds": 1,
+      "findings": [
+        {
+          "round": 1,
+          "kind": "quality",
+          "severity": "NOTE",
+          "text": "test_contract says the phase card 'read back In Progress'; the test pins it to Committed, which is the InProgress-category state of the Scrum Product Backlog Item type, so it matches the category meaning rather than the literal state name",
+          "resolution": "non-blocking, left"
+        },
+        {
+          "round": 1,
+          "kind": "quality",
+          "severity": "NOTE",
+          "text": "the two subtests ('tasks' and 'none') cover both phase-close branches in FinalizePhase: finalizeCard for a synced card and closeNew for a card created at finalize",
+          "resolution": "non-blocking, left"
+        }
+      ]
+    },
+    "t-25": {
+      "outcome": "pass",
+      "rounds": 1,
+      "findings": [
+        {
+          "round": 1,
+          "kind": "quality",
+          "severity": "NOTE",
+          "criterion": "c-9",
+          "text": "the both-paths subtest compares the joined probe list \"Areas/Web, Iterations/Sprint 9\", so it also pins the area-before-iteration row order of probeADOPaths; reordering the rows would fail it although the contract is only one probe each",
+          "resolution": "non-blocking, left"
+        }
+      ]
+    },
+    "t-26": {
+      "outcome": "pass",
+      "rounds": 1,
+      "findings": [
+        {
+          "round": 1,
+          "kind": "quality",
+          "severity": "NOTE",
+          "criterion": "c-10",
+          "text": "The new exact-equality assertion also catches a duplicate policy read of milestone/v1.8 during the wait, which is stricter than the contract asks; current code makes exactly one read on this path (milestone.go:1155), so it holds.",
+          "resolution": "non-blocking, left"
+        }
+      ]
+    },
+    "t-27": {
+      "outcome": "pass",
+      "rounds": 2,
+      "findings": [
+        {
+          "round": 1,
+          "kind": "quality",
+          "severity": "FLAG",
+          "criterion": "c-3",
+          "text": "No test proves ruleRejection reads the full body rather than the capped message: both TF401320 and non-rule test bodies are under the 500-byte snippet cap, so switching the check to se.msg would still pass. A body with TF401320 placed past byte 500 would pin the reason adoStatusError.body was added.",
+          "resolution": "non-blocking, left"
+        },
+        {
+          "round": 1,
+          "kind": "quality",
+          "severity": "NOTE",
+          "text": "The body kept on adoStatusError is respBody, which has already been through redact.Scrub, so the transport decision on scrubbing every response body holds.",
+          "resolution": "non-blocking, left"
+        },
+        {
+          "round": 2,
+          "kind": "quality",
+          "severity": "NOTE",
+          "text": "adoStatusError.body stores the scrubbed respBody (not the raw bytes), so the new field keeps the transport rule that every response body is scrubbed; Error() still returns only the capped msg",
+          "resolution": "non-blocking, left"
+        },
+        {
+          "round": 2,
+          "kind": "quality",
+          "severity": "NOTE",
+          "text": "the past-the-cap subtest puts TF401320 after byte 600, so it would catch a regression that checks the 500-byte message instead of the body",
+          "resolution": "non-blocking, left"
+        }
+      ]
+    },
+    "t-3": {
+      "outcome": "pass",
+      "rounds": 1,
+      "findings": [
+        {
+          "round": 1,
+          "kind": "quality",
+          "severity": "FLAG",
+          "text": "Undeclared file internal/cmd/inert_config_test.go: the four board-key inertKeyReasons entries are dropped because the new options.md bullets satisfy promptReaderExists, not because a Go reader landed (no product code reads Board.AuthScheme/APIVersion/AreaPath/IterationPath yet). The removal is forced by the reverse check, but the inert guard no longer holds t-11/t-16 to land actual readers, which the t-1 comment relied on.",
+          "resolution": "non-blocking, left"
+        },
+        {
+          "round": 1,
+          "kind": "quality",
+          "severity": "NOTE",
+          "text": "Section 12 now documents behaviour later tasks deliver (doctor flagging milestone_mode/auth_user/missing paths, project-prefixing of area paths), so the settings prompt over-states what the build does until those tasks land and `make install` re-links it (r-01).",
+          "resolution": "non-blocking, left"
+        },
+        {
+          "round": 1,
+          "kind": "quality",
+          "severity": "NOTE",
+          "text": "The test scopes its checks to section 12 and to each key's own bullet, so the overlapping `7.1`/`bearer` wording in the remote.* bullets cannot satisfy it vacuously.",
+          "resolution": "non-blocking, left"
+        }
+      ]
+    },
+    "t-4": {
+      "outcome": "pass",
+      "rounds": 2,
+      "findings": [
+        {
+          "round": 1,
+          "kind": "quality",
+          "severity": "FLAG",
+          "criterion": "c-8",
+          "text": "TestValidatePostures' 'a step key twice' and 'a step key missing' cases change the live fixture, where the pass count (4 or 2 of 3) already rejects them. If the exactly-once check were weakened (e.g. seen[k] == 0), this test would stay green. Ship's 'every step exactly once' subtest still catches it with mock-only and partial fixtures, but the liverecord test alone does not.",
+          "resolution": "non-blocking, left"
+        },
+        {
+          "round": 1,
+          "kind": "quality",
+          "severity": "FLAG",
+          "criterion": "c-8",
+          "text": "'api_base on 127.0.0.1' and 'api_base on localhost' are also rejected because the create step's https://dev.azure.com evidence is not on the loopback host. 'evidence naming 127.0.0.1' is also rejected because an http:// URL never matches webURL and the text has no ADO id. So deleting Validate's opening api_base loopback screen leaves TestValidatePostures green. A mock-only fixture with a loopback api_base would pin it. Ship's api_base taint subtest has the same gap (pre-existing).",
+          "resolution": "non-blocking, left"
+        },
+        {
+          "round": 1,
+          "kind": "quality",
+          "severity": "NOTE",
+          "text": "The shared adoID regex adds 'work item N', so the ship record's evidence rule is slightly broader than before. No ship fixture changes verdict.",
+          "resolution": "non-blocking, left"
+        },
+        {
+          "round": 1,
+          "kind": "quality",
+          "severity": "NOTE",
+          "text": "liveStep.texts() already includes Evidence, and Validate also screens Evidence, so ship evidence goes through the loopback screen twice. Harmless.",
+          "resolution": "non-blocking, left"
+        },
+        {
+          "round": 2,
+          "kind": "quality",
+          "severity": "FLAG",
+          "criterion": "c-8",
+          "text": "Several TestValidatePostures cases are rejected by more than one rule, so they don't pin the rule they're named for. 'api_base on 127.0.0.1' and 'api_base on localhost' move api_base off step 0's evidence host, so the evidence rule rejects them too: removing the api_base loopback screen leaves TestValidatePostures green. 'evidence naming 127.0.0.1' fails EvidenceNamesADO on its own. 'a step key twice' and 'a step key missing' are also caught by the live pass count. Those rules are pinned only in TestValidateRulesHoldWithoutAPass, not in the test the contract names.",
+          "resolution": "non-blocking, left"
+        },
+        {
+          "round": 2,
+          "kind": "quality",
+          "severity": "NOTE",
+          "text": "The shared adoID regex adds 'work item N', so the ship record now accepts evidence like 'work item 41' as naming ADO when it didn't before. That is a small widening of the ship verdict, and no ship test covers it either way.",
+          "resolution": "non-blocking, left"
+        },
+        {
+          "round": 2,
+          "kind": "quality",
+          "severity": "NOTE",
+          "text": "ship's generic() passes s.texts(), which already includes Evidence, so Validate screens Evidence for loopback twice. It's harmless, but it doesn't match the Step.Texts doc comment ('every other free-text field').",
+          "resolution": "non-blocking, left"
+        }
+      ]
+    },
+    "t-5": {
+      "outcome": "pass",
+      "rounds": 2,
+      "findings": [
+        {
+          "round": 1,
+          "kind": "quality",
+          "severity": "FLAG",
+          "criterion": "c-10",
+          "text": "Truncation is detected only by len(value) \u003e= $top (1000). Azure DevOps signals a further page with the x-ms-continuationtoken response header, and adoRequest throws headers away. If the server caps the page below 1000, or pages on its own, a truncated list reads as complete and a protected branch can read as known-unprotected. The worst case is a direct push that gets rejected (TF402455), not a policy bypass.",
+          "resolution": "non-blocking, left"
+        },
+        {
+          "round": 1,
+          "kind": "quality",
+          "severity": "FLAG",
+          "text": "allowsMergeCommit only falls back to the legacy useSquashMerge field when allowNoFastForward is missing. A modern-form merge-strategy setting that lists only the allowed strategies, e.g. {\"allowSquash\": true} with no allowNoFastForward key, forbids merge commits in Azure DevOps, but here it reads as allowed=true. If any of allowSquash, allowRebase or allowRebaseMerge is present, a missing allowNoFastForward should mean false. This matters for t-9's auto-complete choice.",
+          "resolution": "non-blocking, left"
+        },
+        {
+          "round": 1,
+          "kind": "quality",
+          "severity": "NOTE",
+          "text": "TestADOBranchProtectionRefusesHostBeforeRead says Err is the policy refusal but only checks Err != nil, not errors.Is(got.Err, hostallow.ErrRefused). The new hostguard row does assert the refusal, so the gap is covered.",
+          "resolution": "non-blocking, left"
+        },
+        {
+          "round": 1,
+          "kind": "quality",
+          "severity": "NOTE",
+          "text": "isMergeStrategy also matches the type's displayName 'Require a merge strategy', but azuredevops_ci.go matches policy types by id only. The id match is what counts; the name fallback is harmless but inconsistent.",
+          "resolution": "non-blocking, left"
+        },
+        {
+          "round": 1,
+          "kind": "quality",
+          "severity": "NOTE",
+          "text": "In TestHermeticBranchProtection_NeverDials, the 'still its gh implementation' message now also covers ADOBranchProtectionFunc, whose real implementation is REST, not gh. Wording only.",
+          "resolution": "non-blocking, left"
+        },
+        {
+          "round": 2,
+          "kind": "quality",
+          "severity": "FLAG",
+          "criterion": "c-10",
+          "text": "The only truncation check in adoBranchPolicies is len(value) \u003e= $top. adoRequest throws away the response headers, so the x-ms-continuationtoken header that Azure DevOps' policy-configurations list uses for paging is never read. If the server returns a smaller page than $top while more entries remain, the list reads as complete and a branch whose policy is cut off reads as Known=true, unprotected. Filtering on the git-scoped endpoint by repositoryId/refName, or checking the continuation header, would close this.",
+          "resolution": "non-blocking, left"
+        },
+        {
+          "round": 2,
+          "kind": "quality",
+          "severity": "NOTE",
+          "text": "TestADOBranchProtectionReadOnly calls the scope, failure and merge-strategy tests again so its GET-only claim holds whatever -run selects. A full run therefore executes them twice, and adoPolicyMethods is a package-global that keeps growing across tests.",
+          "resolution": "non-blocking, left"
+        },
+        {
+          "round": 2,
+          "kind": "quality",
+          "severity": "NOTE",
+          "text": "The hostguard branch-policy row checks r.Err rather than r.Reason. The two are the same here because unknown() sets Reason to Err.Error(), so the 'reason without the host refusal' clause is covered by construction.",
+          "resolution": "non-blocking, left"
+        },
+        {
+          "round": 2,
+          "kind": "quality",
+          "severity": "NOTE",
+          "text": "adoMergeCommitAllowed has no production caller yet; per the record it is groundwork for t-9.",
+          "resolution": "non-blocking, left"
+        }
+      ]
+    },
+    "t-6": {
+      "outcome": "pass",
+      "rounds": 2,
+      "findings": [
+        {
+          "round": 1,
+          "kind": "quality",
+          "severity": "FLAG",
+          "text": "internal/forge/azureboards.go is modified (adoStatusError, the meta cache field, and a second decode-only scrub in doRaw that changes the marker in every decoded 200 body to the bare [redacted]) but is not in the task's declared files list",
+          "resolution": "non-blocking, left"
+        },
+        {
+          "round": 1,
+          "kind": "quality",
+          "severity": "FLAG",
+          "criterion": "c-3",
+          "text": "TypeNames and HasType (the 'type names' read in the description) have no test: no test checks the endpoint, the nil-value guard, the cache or case-insensitive matching, so a regression there would pass the suite",
+          "resolution": "non-blocking, left"
+        },
+        {
+          "round": 1,
+          "kind": "quality",
+          "severity": "FLAG",
+          "criterion": "c-9",
+          "text": "PathExists passes '.' and '..' segments through url.PathEscape unchanged (e.g. area_path `Web\\..` becomes .../Areas/Web/..); a server that normalizes dot segments answers for the parent node, so an invalid configured path reads as present. CheckADOBaseURL already refuses dot segments, so this is a gap compared with that",
+          "resolution": "non-blocking, left"
+        },
+        {
+          "round": 1,
+          "kind": "quality",
+          "severity": "FLAG",
+          "text": "the meta cache has no lock, so concurrent use of one AzureBoardsClient races on the states map; this is fine while sync is sequential and matches the other clients, none of which use a mutex",
+          "resolution": "non-blocking, left"
+        },
+        {
+          "round": 1,
+          "kind": "quality",
+          "severity": "NOTE",
+          "text": "full[len(c.project):] in PathExists assumes normalizeADOPath's EqualFold-matched prefix has the same byte length as c.project; a Unicode fold across byte widths (e.g. Kelvin sign vs 'k') could mis-slice or panic. Very unlikely in practice",
+          "resolution": "non-blocking, left"
+        },
+        {
+          "round": 1,
+          "kind": "quality",
+          "severity": "NOTE",
+          "criterion": "c-9",
+          "text": "PathExists reads every 404 as 'missing', including a 404 caused by a wrong [board].project, so doctor would blame the path rather than the project; this matches the test_contract",
+          "resolution": "non-blocking, left"
+        },
+        {
+          "round": 1,
+          "kind": "quality",
+          "severity": "NOTE",
+          "text": "the AzureBoardsClient redaction row still passes if only one of the two scrubs (doRaw's body scrub or do's redact.Err) is removed, because the other covers it; TestEveryForgeDoRedacts separately requires do to call redact",
+          "resolution": "non-blocking, left"
+        },
+        {
+          "round": 2,
+          "kind": "quality",
+          "severity": "FLAG",
+          "text": "internal/forge/azureboards.go is modified (meta cache field, adoStatusError type, split respBody/decodeBody scrub) but is not in the task's declared files list; the change is small and needed, but undeclared",
+          "resolution": "non-blocking, left"
+        },
+        {
+          "round": 2,
+          "kind": "quality",
+          "severity": "FLAG",
+          "criterion": "c-9",
+          "text": "PathExists cleans the path more than create does: it trims whitespace around each segment and skips empty ones, so `Fabrikam\\\\Web` or `Fabrikam\\ Web ` probes Areas/Web and reads present. The create still sends the stored path as written, so doctor can approve a path the work-item create would reject",
+          "resolution": "non-blocking, left"
+        },
+        {
+          "round": 2,
+          "kind": "quality",
+          "severity": "NOTE",
+          "criterion": "c-9",
+          "text": "PathExists reads every 404 as 'missing', so a wrong [board].project or base_url makes every configured path look missing rather than erroring; per the test_contract, but doctor's message may point at the wrong setting",
+          "resolution": "non-blocking, left"
+        },
+        {
+          "round": 2,
+          "kind": "quality",
+          "severity": "NOTE",
+          "text": "The AzureBoardsClient row of TestEveryForgeClientRedacts is covered twice: doRaw scrubs the body and do wraps the error in redact.Err. Removing only one still passes the row (TestEveryForgeDoRedacts guards the do wrap structurally); the end-to-end property the contract states is still asserted",
+          "resolution": "non-blocking, left"
+        },
+        {
+          "round": 2,
+          "kind": "quality",
+          "severity": "NOTE",
+          "text": "TestADOGetIssueMapping copies HasMarker's literal 'dross' comparison inline instead of calling boardsync.HasMarker; unavoidable (boardsync imports forge), and the exact Labels DeepEqual already pins it",
+          "resolution": "non-blocking, left"
+        },
+        {
+          "round": 2,
+          "kind": "quality",
+          "severity": "NOTE",
+          "text": "adoBodyText only turns \u003cbr\u003e variants into newlines and unescapes entities; other HTML that ADO's editor adds (\u003cdiv\u003e, \u003cp\u003e) stays in Body, which matters if a sibling task compares Body for drift",
+          "resolution": "non-blocking, left"
+        }
+      ]
+    },
+    "t-7": {
+      "outcome": "pass",
+      "rounds": 1,
+      "findings": [
+        {
+          "round": 1,
+          "kind": "quality",
+          "severity": "FLAG",
+          "criterion": "c-2",
+          "text": "The stale-revision test checks strings.Contains(err.Error(), \"9\"). That passes from the request path (/wit/workitems/9) or the echoed body {\"id\":9} whatever the wrapper says, so it can't fail if LinkParent stopped naming the child. Checking for \"work item 9\" would make it fail.",
+          "resolution": "non-blocking, left"
+        },
+        {
+          "round": 1,
+          "kind": "quality",
+          "severity": "NOTE",
+          "criterion": "c-6",
+          "text": "LinkIssues reads and then writes with no revision test. If someone adds the same link in between, Azure DevOps returns a duplicate-link error instead of the call doing nothing. Rare, and outside what the task covers.",
+          "resolution": "non-blocking, left"
+        }
+      ]
+    },
+    "t-8": {
+      "outcome": "pass",
+      "rounds": 2,
+      "findings": [
+        {
+          "round": 1,
+          "kind": "quality",
+          "severity": "FLAG",
+          "criterion": "c-8",
+          "text": "created()/createdIDs() take the create step's items regardless of its result, so a partial record whose create step is fail or not-run (its items never checked by boardsCreateProof) still anchors the transition/close/parent-link/pull proofs to unproven ids",
+          "resolution": "non-blocking, left"
+        },
+        {
+          "round": 1,
+          "kind": "quality",
+          "severity": "FLAG",
+          "criterion": "c-8",
+          "text": "Hollow cases only assert err != nil, never which step failed. 'create with a reused id' (task id 41) is also rejected by the transition/close proofs (42 is no longer a created id) and by parent-link, so deleting the distinct-id check in boardsCreateProof would not fail the test. Asserting the failing step key (e.g. the 'step create' prefix in the error) would make each case pin its own check",
+          "resolution": "non-blocking, left"
+        },
+        {
+          "round": 1,
+          "kind": "quality",
+          "severity": "NOTE",
+          "text": "The doc comment on created() names it 'boardsCreated', a leftover from a rename",
+          "resolution": "non-blocking, left"
+        },
+        {
+          "round": 1,
+          "kind": "quality",
+          "severity": "NOTE",
+          "text": "'bad run_at' sits in the map of blanked fields, so its failure message reads 'live without bad run_at was accepted'; cosmetic only",
+          "resolution": "non-blocking, left"
+        },
+        {
+          "round": 2,
+          "kind": "quality",
+          "severity": "FLAG",
+          "criterion": "c-8",
+          "text": "In the 'httptest evidence is mock evidence' subtest, the '127.0.0.1 evidence', 'loopback item url' and 'loopback api_base' cases would be rejected even without the loopback screen: http evidence names no ADO id, and the item-URL check refuses a host other than api_base's. The subtest also never checks why a record was refused. So nothing in this file pins the 127.x rule; only the localhost, [::1] and envelope cases do. liverecord_test.go does cover 127.0.0.1, so the gap is local to this file.",
+          "resolution": "non-blocking, left"
+        },
+        {
+          "round": 2,
+          "kind": "quality",
+          "severity": "NOTE",
+          "text": "In the runbook-prerequisites check, the phrases 'project' and 'process' are generic words that appear throughout the comments, so deleting the project = \"\u003cproject\u003e\" line from the [board] example would not fail the test. base_url and auth_env do pin the block.",
+          "resolution": "non-blocking, left"
+        },
+        {
+          "round": 2,
+          "kind": "quality",
+          "severity": "NOTE",
+          "text": "The runbook gives no command or API call for reading back relations in the parent-link step (\"Read the created items' relations\"); the operator has to work it out during the live run.",
+          "resolution": "non-blocking, left"
+        }
+      ]
+    },
+    "t-9": {
+      "outcome": "pass",
+      "rounds": 2,
+      "findings": [
+        {
+          "round": 1,
+          "kind": "quality",
+          "severity": "FLAG",
+          "criterion": "c-10",
+          "text": "adoArmAutoComplete returns a plain error (not ErrAutoMergeUnavailable) when the post-PATCH read-back shows the PR active but unarmed, or when the PR is abandoned; chorepr.go then fails with 'arming auto-merge failed' instead of marking the chore PR Manual, which sits uneasily with locked chore_pr_completion ('auto-complete cannot be set -\u003e PR stays open and dross says to complete it by hand'). It mirrors GitHub's autoMergeOutcome, and the test_contract only requires 'never AutoEnabled'.",
+          "resolution": "non-blocking, left"
+        },
+        {
+          "round": 1,
+          "kind": "quality",
+          "severity": "NOTE",
+          "text": "The pre-arm GET uses 'pullRequests/\u003cn\u003e' while the PATCH uses 'pullrequests/\u003cn\u003e'; harmless because Azure DevOps routes are case-insensitive and the mock lowercases the path, but inconsistent.",
+          "resolution": "non-blocking, left"
+        },
+        {
+          "round": 1,
+          "kind": "quality",
+          "severity": "NOTE",
+          "text": "In TestADOArmOutcomeReadBack the second assertion (got.AutoEnabled \u0026\u0026 tc.want != got) repeats the first check (got != tc.want) and adds nothing.",
+          "resolution": "non-blocking, left"
+        },
+        {
+          "round": 1,
+          "kind": "quality",
+          "severity": "NOTE",
+          "text": "The mock cleanup checks bypassPolicy only under completionOptions; bypassReason is checked at any depth via findKey. This is enough for the only body the code sends.",
+          "resolution": "non-blocking, left"
+        },
+        {
+          "round": 2,
+          "kind": "quality",
+          "severity": "FLAG",
+          "criterion": "c-10",
+          "text": "newADOArmMock's cleanup guard only checks completionOptions.bypassPolicy == true; a bypassPolicy key at any other depth would slip past (bypassReason, by contrast, is searched at any depth with findKey). The contract says no recorded body anywhere carries bypassPolicy true. Using findKey-style traversal for bypassPolicy too would close this.",
+          "resolution": "non-blocking, left"
+        },
+        {
+          "round": 2,
+          "kind": "quality",
+          "severity": "NOTE",
+          "criterion": "c-10",
+          "text": "In TestADOArmDispatch, the github leg's zero-ADO-hits assertion is close to structural, because the gh path never reads APIBase. It still pins the dispatch order as the contract asks.",
+          "resolution": "non-blocking, left"
+        },
+        {
+          "round": 2,
+          "kind": "quality",
+          "severity": "NOTE",
+          "text": "The doc comments on ErrAutoMergeUnavailable and AutoMergeResult in automerge.go still describe GitHub only, even though AutoMergePR now returns them on azure-devops too.",
+          "resolution": "non-blocking, left"
+        }
+      ]
+    }
+  }
+}

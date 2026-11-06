@@ -110,3 +110,4 @@
   id = "d4c0a4f04bb53856"
   text = "On azure-devops, route .dross chores on a policy-protected base through a chore PR: routeBaseChores (basebranch.go), routeProtectedMilestone (milestone.go) and publishChorePR (chorepr.go) ask only GitHub whether the base refuses direct pushes, so dross phase complete (and ship's safety net) git-pushes straight to main, which any ADO branch policy rejects (TF402455). Read ADO branch policies as protection, open an ADO chore PR and arm auto-complete. Repro: the t-18 scratch repo, whose local main sits one .dross commit (a42e582) ahead with phase/shout-greeting undeleted."
   why = "Found by the t-18 live ADO smoke on 2026-11-02, outside its 11 steps; the fix spans basebranch.go, milestone.go, chorepr.go and the ADO provider, beyond t-18's files"
+  target = "azure-boards-backend"

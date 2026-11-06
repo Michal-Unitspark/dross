@@ -17,6 +17,7 @@ func enumFixture() *project.Project {
 	p.Repo.CommitConvention = "conventional"
 	p.Remote.Provider = "github"
 	p.Board.MilestoneMode = "version"
+	p.Board.AuthScheme = "bearer"
 	return p
 }
 
@@ -32,6 +33,8 @@ func enumKeyValue(p *project.Project, path string) string {
 		return p.Remote.Provider
 	case "board.milestone_mode":
 		return p.Board.MilestoneMode
+	case "board.auth_scheme":
+		return p.Board.AuthScheme
 	}
 	return ""
 }
@@ -49,6 +52,7 @@ func TestProjectSetRejectsOutOfSetValues(t *testing.T) {
 		"repo.commit_convention",
 		"remote.provider",
 		"board.milestone_mode",
+		"board.auth_scheme",
 	} {
 		t.Run(path, func(t *testing.T) {
 			p := enumFixture()
@@ -140,6 +144,7 @@ func TestEnumKeysTableCoversEveryEnumTypedField(t *testing.T) {
 		"repo.commit_convention": configenum.CommitConventions,
 		"remote.provider":        configenum.ShipProviders,
 		"board.milestone_mode":   configenum.MilestoneModes,
+		"board.auth_scheme":      configenum.AuthSchemes,
 	}
 	for path := range want {
 		if _, ok := enumKeys[path]; !ok {

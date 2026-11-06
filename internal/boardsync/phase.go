@@ -141,6 +141,22 @@ func SyncPhase(ctx *Ctx, phaseID, status string, doClose bool) error {
 		if _, err := ctx.Client.UpdateIssue(key, patch); err != nil {
 			return Wrap(err)
 		}
+		// Azure Boards' parent is its own relation (Hierarchy-Reverse), and
+		// its UpdateIssue ignores IssuePatch.Milestone, so the updated edge
+		// re-parents here: a phase whose milestone changed moves under the
+		// new Epic, and one already there is left alone. The create edge
+		// needs nothing — IssueInput.Milestone parents it. Gated on the
+		// concrete client, not forge.ParentLinker: only there is the
+		// milestone id a work item (elsewhere it is a version or a forge
+		// milestone number, which must never be linked as a parent). A
+		// failure warns rather than fails: the item is the substance, the
+		// link is grouping, and the next sync retries it.
+		if ado, ok := ctx.Client.(*forge.AzureBoardsClient); ok && milestoneID > 0 {
+			if err := ado.LinkParent(strconv.Itoa(milestoneID), key); err != nil {
+				fmt.Fprintf(os.Stderr, "warning: could not put %s under milestone %s's item %d (%v) — it carries the phase label; the next sync retries\n",
+					key, spec.Phase.Milestone, milestoneID, err)
+			}
+		}
 		// Re-record: the key may have come from the tracker rather than the
 		// cache (an adopted or re-resolved issue), and board.json has to catch
 		// up or the next run pays for the lookup again.
@@ -160,6 +176,15 @@ func SyncPhase(ctx *Ctx, phaseID, status string, doClose bool) error {
 	// SetState without failing the sync.
 	if jr, ok := ctx.Client.(*forge.JiraClient); ok && status != "" {
 		if err := jr.SetState(key, status, ctx.Proj.Board.StateMap); err != nil {
+			return Wrap(err)
+		}
+	}
+	// Azure Boards moves System.State to the first state of the status's
+	// category in the item type's own order, [board].state_map overriding by
+	// name. A state the type lacks, or a rule rejection, warns and skips
+	// inside SetState without failing the sync.
+	if ado, ok := ctx.Client.(*forge.AzureBoardsClient); ok && status != "" {
+		if err := ado.SetState(key, status, ctx.Proj.Board.StateMap); err != nil {
 			return Wrap(err)
 		}
 	}
@@ -192,8 +217,9 @@ func SyncPhase(ctx *Ctx, phaseID, status string, doClose bool) error {
 // a failed write into a false claim about the state of the work, which is what
 // c-5 exists to stop. So an unmapped status is an error, not a warning.
 // The verdict a close is verified against differs by backend, and the branch
-// below is by EXCLUSION — not YouTrack, not Jira — never a three-name allowlist
-// of the flat boards. GitHub is a fourth flat board: github.go's toIssue
+// below is by EXCLUSION — not YouTrack, not Jira, not Azure Boards — never a
+// three-name allowlist of the flat boards. GitHub is a fourth flat board:
+// github.go's toIssue
 // populates State and never Resolved, so an allowlist would either demand
 // Resolved of it and strand every card, or refuse it by name.
 func CloseIssue(ctx *Ctx, key, status string) error {
@@ -214,6 +240,14 @@ func CloseIssue(ctx *Ctx, key, status string) error {
 			return Wrap(err)
 		}
 		return verifyClosed(ctx, key, status, func(iss *forge.Issue) bool { return iss.Resolved })
+	}
+	if ado, ok := ctx.Client.(*forge.AzureBoardsClient); ok {
+		// CloseIssueAs refuses a status whose state is not Completed-category
+		// before its own write (a --status sync may already have moved the
+		// item through SetState), then re-reads the item and errors naming it
+		// unless it reads Completed. The generic close below would ignore the
+		// state_map and close every type the same way.
+		return Wrap(ado.CloseIssueAs(key, status, ctx.Proj.Board.StateMap))
 	}
 	// Every other provider: a plain close, verified on the open/closed state
 	// their toIssue populates. Requiring Resolved here would strand every flat

@@ -23,6 +23,11 @@ func CheckMilestoneClosable(ctx *Ctx) error {
 	if mode == "" {
 		mode = "version" // the documented code default
 	}
+	if _, ok := ctx.Client.(*forge.AzureBoardsClient); ok {
+		// Azure Boards: a milestone is always an Epic — a work item, closed
+		// like any other — whatever milestone_mode says (it is not read).
+		return nil
+	}
 	if _, ok := ctx.Client.(*forge.YouTrackClient); !ok {
 		return fmt.Errorf("milestone-sync --close needs a milestone that is itself an issue; %s maps a milestone to a milestone entity, not an issue — nothing to close",
 			ctx.Proj.Board.Provider)
@@ -57,6 +62,11 @@ func EnsureMilestoneLink(ctx *Ctx, version string) (string, error) {
 		// YouTrack maps a milestone to an entity per [board].milestone_mode
 		// (version bundle / agile board / epic), not a forge-style milestone.
 		id, err = c.EnsureMilestoneEntity(ctx.Proj.Board.MilestoneMode, version, desc)
+	case *forge.AzureBoardsClient:
+		// Azure Boards maps a milestone to an Epic (the locked hierarchy),
+		// found by its dross/milestone:<version> tag before one is created,
+		// so a re-clone with no board.json reuses the Epic already there.
+		id, err = c.EnsureMilestoneEpic(version, title, desc)
 	case *forge.JiraClient:
 		// Jira maps a milestone to a project VERSION (string id via the concrete
 		// path). The returned id is numeric, so the phase-sync int-milestone path

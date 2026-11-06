@@ -189,7 +189,7 @@ func TestForgeErrorsCarryNoToken(t *testing.T) {
 	})
 }
 
-// TestEveryForgeClientRedacts gives each of the four `do` implementations its
+// TestEveryForgeClientRedacts gives each of the `do` implementations its
 // own row, so removing the scrub from one fails exactly that row and no other.
 // A single combined assertion would let three clients hide behind the fourth.
 func TestEveryForgeClientRedacts(t *testing.T) {
@@ -252,6 +252,19 @@ func TestEveryForgeClientRedacts(t *testing.T) {
 				t.Fatalf("NewJira: %v", err)
 			}
 			_, e := c.GetIssue("PROJ-1")
+			return e
+		}},
+		{"AzureBoardsClient", func(t *testing.T, apiBase string) error {
+			// An Azure DevOps base_url needs its collection, so the echo
+			// server is addressed as one.
+			c, err := forge.NewAzureBoards(forge.Config{
+				Provider: "azure-devops", APIBase: apiBase + "/acme", AuthEnv: canaryEnv, Project: "Fabrikam",
+				Hosts: hostallow.Derive(apiBase, nil),
+			})
+			if err != nil {
+				t.Fatalf("NewAzureBoards: %v", err)
+			}
+			_, e := c.GetIssue("1")
 			return e
 		}},
 		{"YouTrackClient", func(t *testing.T, apiBase string) error {

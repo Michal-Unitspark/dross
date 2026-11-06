@@ -43,9 +43,23 @@ var mergeMethods = map[string]bool{"merge": true, "squash": true, "rebase": true
 // to the ruleset. Auto-merge switched off for the repo, or a refused direct
 // merge, is ErrAutoMergeUnavailable; any other refusal is a plain error and
 // makes no direct-merge attempt.
+//
+// On azure-devops it arms the chore PR's auto-complete instead
+// (adoArmAutoComplete), and only with method "merge": a chore PR lands as a
+// merge commit so every local base fast-forwards to it.
 func AutoMergePR(opts OpenOpts, n int, method string) (AutoMergeResult, error) {
-	if p := configenum.Normalize(opts.Provider); p != "github" {
-		return AutoMergeResult{}, fmt.Errorf("auto-merge is GitHub only; provider is %q", opts.Provider)
+	switch p := configenum.Normalize(opts.Provider); p {
+	case "github":
+	case "azure-devops":
+		if method != "merge" {
+			return AutoMergeResult{}, fmt.Errorf("auto-complete on azure-devops arms a merge commit only; method %q is not offered", method)
+		}
+		if n <= 0 {
+			return AutoMergeResult{}, errors.New("auto-complete needs a PR number")
+		}
+		return adoArmAutoComplete(opts, n)
+	default:
+		return AutoMergeResult{}, fmt.Errorf("auto-merge is GitHub and Azure DevOps only; provider is %q", opts.Provider)
 	}
 	if n <= 0 {
 		return AutoMergeResult{}, errors.New("auto-merge needs a PR number")

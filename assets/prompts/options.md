@@ -122,9 +122,16 @@ If the user asks to add an entirely new env var dross doesn't currently know abo
 
 ## 12. Issue board
 
-Fields: `board.provider` (forgejo · gitea · gitlab · youtrack · jira · github), `board.base_url`, `board.auth_env`, `board.auth_user`, `board.project`, `board.github_project`, `board.enabled` (bool), `board.milestone_mode` (version · agile · epic).
+Fields: `board.provider` (forgejo · gitea · gitlab · youtrack · jira · github · azure-devops), `board.base_url`, `board.auth_env`, `board.auth_user`, `board.auth_scheme`, `board.api_version`, `board.project`, `board.area_path`, `board.iteration_path`, `board.github_project`, `board.enabled` (bool), `board.milestone_mode` (version · agile · epic).
 
 `board.auth_user` is jira's account **email** for HTTP Basic — a username, never a token. `board.github_project` is a GitHub Projects v2 board node id. `board.project` is the tracker's project short-name/key, except on github where it is `owner/repo`.
+
+On azure-devops (Azure Boards), `board.base_url` is the org URL (`https://dev.azure.com/<org>`, or `https://<org>.visualstudio.com`) or, on a Server, the collection URL (`https://<host>/<collection>` or `https://<host>/tfs/<collection>`), and `board.project` is the Azure DevOps project name. `[board]` never inherits from `[remote]` — not the URL, not the auth, not the api-version — so an Azure Boards board set up beside an Azure Repos remote repeats what it needs. `board.milestone_mode` is ignored there: milestones are always Epics (`dross doctor` flags one that is set). Four keys apply to azure-devops only — surface them only for it:
+
+- `board.auth_scheme` — empty (the default) sends HTTP Basic with an empty user and the PAT from `board.auth_env`; `bearer` sends an Entra ID token instead. `private-token` and `basic` have no effect on azure-devops, and `board.auth_user` is ignored (`dross doctor` flags both).
+- `board.api_version` — the `api-version` sent on every Boards call. Empty means `7.1`, which Azure DevOps Services takes; an Azure DevOps Server caps it by release — `5.0` for Server 2019, `6.0` for 2020, `7.0` for 2022.
+- `board.area_path` — the area every work item dross creates is filed under, in Azure DevOps' backslash form (`Fabrikam\Web`; a path without the project gets it prefixed). Unset, items take the project's default area. `dross doctor` flags a path that does not exist in the project.
+- `board.iteration_path` — the iteration (sprint) every created work item lands in, same backslash form (`Fabrikam\Sprint 1`). Unset, items take the project's default iteration. `dross doctor` flags a path that does not exist.
 
 `[board.state_map]` (dross lifecycle state → tracker state value) and `[board.fields]` (`state`, `type`, `fix_versions` field-name overrides) are TOML maps — surface read-only; for changes, edit `project.toml` directly.
 

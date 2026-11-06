@@ -97,6 +97,8 @@ findings.Record.Title title
 # ---- forge — issue-tracker API payloads: ids, keys, titles, bodies, states, URLs
 forge.adfNode.Text text
 forge.adfNode.Type type
+forge.adoPatchOp.Op op
+forge.adoPatchOp.Path path
 forge.githubIssue.Body body
 forge.githubIssue.HTMLURL html_url
 forge.githubIssue.NodeID node_id
@@ -223,10 +225,14 @@ profile.Profile.Generated generated
 profile.Profile.Source source
 
 # ---- project — project.toml settings that are not paths: names, URLs, commands, branch names, env-var names, enums, prose
+project.Board.APIVersion api_version
+project.Board.AreaPath area_path
 project.Board.AuthEnv auth_env
+project.Board.AuthScheme auth_scheme
 project.Board.AuthUser auth_user
 project.Board.BaseURL base_url
 project.Board.GitHubProject github_project
+project.Board.IterationPath iteration_path
 project.Board.MilestoneMode milestone_mode
 project.Board.Project project
 project.Board.Provider provider

@@ -92,6 +92,19 @@ func TestShipRefusesOffAllowlistAPIBase(t *testing.T) {
 			_, err := OpenPRsTargeting(adoGuard(base("azure-devops")), "milestone/v1")
 			return err
 		}},
+		// The branch-policy read answers a result, not an error: a refused
+		// host is unknown, with the refusal as its Err.
+		{"azure-devops branch-policy", func() error {
+			r := ADOBranchProtection(adoGuard(base("azure-devops")), "main")
+			if r.Known {
+				return nil
+			}
+			return r.Err
+		}},
+		{"azure-devops auto-complete", func() error {
+			_, err := AutoMergePR(adoGuard(base("azure-devops")), 1, "merge")
+			return err
+		}},
 		// The identities host is checked on its own, since on Services it is
 		// not api_base: a connection whose api_base the policy never saw must
 		// still not carry its credential there.

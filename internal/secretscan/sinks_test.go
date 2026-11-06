@@ -47,12 +47,12 @@ func TestTransportRegistryValidate(t *testing.T) {
 }
 
 // TestPublishSinkFuncsAreQualified pins the registry's shape so it cannot
-// silently shrink or drift: exactly eleven entries, every one over {ship, forge},
+// silently shrink or drift: exactly twelve entries, every one over {ship, forge},
 // every Func a bare name or Recv.Method.
 func TestPublishSinkFuncsAreQualified(t *testing.T) {
 	ts := Transports()
-	if len(ts) != 11 {
-		t.Fatalf("registry holds %d transports, want 11", len(ts))
+	if len(ts) != 12 {
+		t.Fatalf("registry holds %d transports, want 12", len(ts))
 	}
 	funcShape := regexp.MustCompile(`^[A-Za-z_]\w*(\.[A-Za-z_]\w*)?$`)
 	pkgs := map[string]int{}
@@ -68,7 +68,7 @@ func TestPublishSinkFuncsAreQualified(t *testing.T) {
 	if len(pkgs) != 2 || pkgs["ship"] == 0 || pkgs["forge"] == 0 {
 		t.Errorf("packages covered = %v, want exactly {ship, forge}", pkgs)
 	}
-	if pkgs["forge"] != 4 {
-		t.Errorf("forge declares %d transports, want the 4 backend doRaw methods", pkgs["forge"])
+	if pkgs["forge"] != 5 {
+		t.Errorf("forge declares %d transports, want the 5 backend doRaw methods", pkgs["forge"])
 	}
 }

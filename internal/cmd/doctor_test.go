@@ -1091,6 +1091,10 @@ func setProjectFieldEvenIfInvalid(t *testing.T, dir, key, value string) {
 		p.Board.Provider = value
 	case "board.milestone_mode":
 		p.Board.MilestoneMode = value
+	case "board.auth_scheme":
+		p.Board.AuthScheme = value
+	case "board.api_version":
+		p.Board.APIVersion = project.APIVersion(value)
 	case "remote.provider":
 		p.Remote.Provider = value
 	case "runtime.mode":
@@ -1124,6 +1128,15 @@ func runDoctorEnum(t *testing.T, overrides map[string]string) (string, error) {
 		"board.project":        "PROJ",
 		"board.enabled":        "true",
 		"board.milestone_mode": "version",
+	}
+	// An azure-devops board is checked for an org or collection URL on an
+	// allowed host, so the youtrack address would be refused: it gets the
+	// Services org URL (a built-in allowed host) unless the test overrides it.
+	// The client it builds is real, so the stranded-mirror check would dial
+	// dev.azure.com with the test token: the case runs with no network.
+	if _, set := overrides["board.base_url"]; !set && overrides["board.provider"] == "azure-devops" {
+		fields["board.base_url"] = "https://dev.azure.com/acme"
+		noNetwork(t)
 	}
 	for k, v := range overrides {
 		if v == "" {

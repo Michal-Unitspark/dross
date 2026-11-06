@@ -3,10 +3,12 @@ package cmd
 import (
 	"errors"
 	"fmt"
+	"net/url"
 	"os"
 	"strconv"
 	"strings"
 
+	"github.com/Rivil/dross/internal/configenum"
 	"github.com/Rivil/dross/internal/gitrun"
 	"github.com/Rivil/dross/internal/project"
 	"github.com/Rivil/dross/internal/ship"
@@ -22,13 +24,17 @@ type chorePR struct {
 	URL    string
 	// Opened: this batch opened the PR; false means it joined one already open.
 	Opened bool
-	// AutoMerge: auto-merge is armed; GitHub merges the PR once base's
-	// required checks pass.
+	// AutoMerge: auto-merge (GitHub) or auto-complete (Azure DevOps) is
+	// armed; the forge merges the PR once base's checks or policies pass.
 	AutoMerge bool
 	// Merged: the PR merged at once (nothing on base to wait for).
 	Merged bool
-	// Manual: auto-merge is unavailable, so the PR waits for a human.
+	// Manual: auto-merge or auto-complete is unavailable, so the PR waits
+	// for a human.
 	Manual bool
+	// ado: the PR is on Azure Repos, so narration says auto-complete. Zero
+	// on GitHub, which keeps a GitHub chorePR exactly what it was.
+	ado bool
 }
 
 // narrate is the one line ship and complete print for a published batch.
@@ -41,8 +47,12 @@ func (c chorePR) narrate() string {
 	switch {
 	case c.Merged:
 		state = "merged"
+	case c.Manual && c.ado:
+		state = "auto-complete could not be set — complete it by hand"
 	case c.Manual:
 		state = "auto-merge is unavailable on this repo — merge it by hand"
+	case c.ado:
+		state = "auto-complete armed — it completes with a merge commit once the branch policies pass"
 	}
 	return fmt.Sprintf(".dross chores on %s go through a PR (%s is protected): %s chore PR #%d %s — %s",
 		c.Base, c.Base, verb, c.Number, c.URL, state)
@@ -75,7 +85,11 @@ func choreBranch(base string) string {
 // never base's tip against origin/<base>, which a phase squash may already
 // have bumped.
 func publishChorePR(repoDir string, opts ship.OpenOpts, base, mainBranch string) (chorePR, error) {
-	c := chorePR{Base: base, Branch: choreBranch(base)}
+	c := chorePR{Base: base, Branch: choreBranch(base), ado: configenum.Normalize(opts.Provider) == "azure-devops"}
+	arm := "Auto-merge is armed"
+	if c.ado {
+		arm = "Auto-complete is armed"
+	}
 	tip, err := gitrun.Trim(repoDir, gitRefArgs("rev-parse", []string{"--verify"}, "refs/heads/"+base)...)
 	if err != nil {
 		return c, fmt.Errorf("git rev-parse %s: %w", base, err)
@@ -104,7 +118,7 @@ func publishChorePR(repoDir string, opts ship.OpenOpts, base, mainBranch string)
 		o.Title = "chore(dross): .dross bookkeeping for " + base
 		o.Body = "Bookkeeping commits dross made under `.dross/` on `" + base + "`. `" + base +
 			"` refuses direct pushes, so they arrive through this PR.\n\n" +
-			"Auto-merge is armed with a merge commit, so the commits land on `" + base +
+			arm + " with a merge commit, so the commits land on `" + base +
 			"` unchanged and every machine's local `" + base + "` fast-forwards to the result. " +
 			"Nothing outside `.dross/` is in this PR.\n"
 		o.Reviewers = nil
@@ -114,6 +128,9 @@ func publishChorePR(repoDir string, opts ship.OpenOpts, base, mainBranch string)
 		}
 		c.Number, c.URL, c.Opened = res.Number, res.URL, true
 	}
+	if c.URL == "" {
+		c.URL = pullURL(opts.URL, c.Number)
+	}
 
 	am, err := ship.AutoMergePRFunc(opts, c.Number, "merge")
 	switch {
@@ -121,7 +138,11 @@ func publishChorePR(repoDir string, opts ship.OpenOpts, base, mainBranch string)
 		c.Manual = true
 	case err != nil:
 		fmt.Fprintf(os.Stderr, "chore PR: %s\n", c.URL)
-		return c, fmt.Errorf("the chore PR for %s is open (printed above), but arming auto-merge on it failed: %w", base, err)
+		what := "auto-merge"
+		if c.ado {
+			what = "auto-complete"
+		}
+		return c, fmt.Errorf("the chore PR for %s is open (printed above), but arming %s on it failed: %w", base, what, err)
 	default:
 		c.AutoMerge, c.Merged = am.AutoEnabled, am.Merged
 	}
@@ -193,10 +214,20 @@ func releaseTagAt(repoDir, sha string) string {
 	return tag
 }
 
-// pullURL is GitHub's URL for PR n of the repo at repoURL — built from
-// config rather than quoted from gh, so it can ride an error.
+// pullURL is the forge's URL for PR n of the repo at repoURL — built from
+// config rather than quoted from a forge answer, so it can ride an error. An
+// Azure Repos URL (it carries /_git/) gets <repo>/pullrequest/<n>, without the
+// user@ Azure DevOps puts in a clone URL; any other is GitHub's <repo>/pull/<n>.
 func pullURL(repoURL string, n int) string {
-	return strings.TrimSuffix(strings.TrimSuffix(repoURL, "/"), ".git") + "/pull/" + strconv.Itoa(n)
+	trimmed := strings.TrimSuffix(repoURL, "/")
+	if strings.Contains(trimmed, "/_git/") {
+		if u, err := url.Parse(trimmed); err == nil && u.User != nil {
+			u.User = nil
+			trimmed = u.String()
+		}
+		return trimmed + "/pullrequest/" + strconv.Itoa(n)
+	}
+	return strings.TrimSuffix(trimmed, ".git") + "/pull/" + strconv.Itoa(n)
 }
 
 func orNone(tag string) string {
